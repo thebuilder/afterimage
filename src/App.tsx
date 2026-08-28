@@ -386,18 +386,10 @@ export default function App() {
       </section>
 
       <footer className="border-line border-t bg-void">
-        <div className="mx-auto flex max-w-[100rem] flex-wrap items-center justify-between gap-4 px-5 py-8 font-mono text-[0.625rem] text-muted-foreground uppercase tracking-[0.14em] sm:px-8">
-          <span className="normal-case tracking-normal">
-            Afterimage is by <FootLink href="https://thebuilder.dk">thebuilder</FootLink>. Built
-            with <FootLink href="https://vgpu.sh">vgpu</FootLink> and styled with{" "}
-            <FootLink href="https://afterglow.thebuilder.dk">Afterglow</FootLink>.
-          </span>
-          <span className="flex items-center gap-4">
-            <span>SPACE pause</span>
-            <span>H hide ui</span>
-            <span>1-0 switch</span>
-            <span>? how it works</span>
-          </span>
+        <div className="mx-auto max-w-[100rem] px-5 py-8 font-mono text-[0.625rem] text-muted-foreground sm:px-8">
+          Afterimage is by <FootLink href="https://thebuilder.dk">thebuilder</FootLink>. Built with{" "}
+          <FootLink href="https://vgpu.sh">vgpu</FootLink> and styled with{" "}
+          <FootLink href="https://afterglow.thebuilder.dk">Afterglow</FootLink>.
         </div>
       </footer>
 
