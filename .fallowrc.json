@@ -1,0 +1,18 @@
+{
+  "$schema": "https://raw.githubusercontent.com/fallow-rs/fallow/main/schema.json",
+  "entry": [
+    "src/main.tsx",
+    "src/components/ui/**/*.tsx",
+    "src/components/alarm-button.tsx",
+    "src/components/boot-log.tsx",
+    "src/components/connector.tsx",
+    "src/components/eyebrow.tsx",
+    "src/components/glyph.tsx",
+    "src/components/led.tsx",
+    "src/components/prompt.tsx",
+    "src/components/scanlines.tsx",
+    "src/components/screen.tsx",
+    "src/components/terminal-window.tsx"
+  ],
+  "ignoreDependencies": ["@vgpu/wgsl-std"]
+}

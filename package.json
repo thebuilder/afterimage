@@ -1,0 +1,47 @@
+{
+  "name": "afterimage",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "lint": "oxlint",
+    "preview": "vite preview",
+    "check:wgsl": "./scripts/check-wgsl.sh",
+    "doctor": "vgpu doctor --pretty",
+    "render": "node scripts/render.mjs",
+    "render:multipass": "node scripts/render-multipass.mjs",
+    "shots": "./scripts/shots.sh flux blackhole reaction chrome aurora mandelbulb arcs silk hexgrid rain",
+    "typecheck": "tsc -b --noEmit"
+  },
+  "dependencies": {
+    "@base-ui/react": "^1.7.0",
+    "@vgpu/wgsl": "^0.3.1",
+    "@vgpu/wgsl-std": "^0.3.1",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "cmdk": "^1.1.1",
+    "input-otp": "^1.5.0",
+    "lucide-react": "^1.35.0",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "react-resizable-panels": "^4.12.3",
+    "sonner": "^2.0.8",
+    "tailwind-merge": "^3.6.0",
+    "tailwindcss": "^4.3.3",
+    "vgpu": "^0.3.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/node": "^24.13.3",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
+    "@vitejs/plugin-react": "^6.1.0",
+    "oxlint": "^1.79.0",
+    "pngjs": "^7.0.0",
+    "typescript": "~6.0.2",
+    "vite": "^8.2.2"
+  },
+  "description": "Full-viewport WebGPU hero effects built with vgpu, previewed in an Afterglow-styled gallery."
+}
