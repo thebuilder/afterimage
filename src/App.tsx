@@ -215,7 +215,7 @@ export default function App() {
             </div>
           </div>
 
-          <div className="pointer-events-auto grid gap-8 px-5 pb-8 sm:px-8 sm:pb-12 lg:grid-cols-[minmax(0,34rem)_1fr] lg:items-end">
+          <div className="grid gap-8 px-5 pb-8 sm:px-8 sm:pb-12 lg:grid-cols-[minmax(0,34rem)_1fr] lg:items-end">
             <div>
               <Eyebrow caret>
                 {String(EFFECTS.indexOf(active) + 1).padStart(2, "0")} / {EFFECTS.length} ·{" "}
@@ -227,7 +227,7 @@ export default function App() {
               <p className="mt-4 max-w-lg text-balance text-ink text-sm leading-relaxed [text-shadow:0_1px_12px_rgb(0_0_0/0.9)] sm:text-base">
                 {active.tagline}
               </p>
-              <div className="mt-6 flex flex-wrap items-center gap-2.5">
+              <div className="pointer-events-auto mt-6 flex flex-wrap items-center gap-2.5">
                 <Button onClick={() => setRunning((r) => !r)} size="lg">
                   {running ? "Pause" : "Resume"}
                 </Button>
@@ -237,7 +237,7 @@ export default function App() {
               </div>
             </div>
 
-            <div className="grid gap-4 border border-line bg-void/78 p-4 backdrop-blur-[3px] lg:w-[26rem] lg:justify-self-end">
+            <div className="pointer-events-auto grid gap-4 border border-line bg-void/78 p-4 backdrop-blur-[3px] lg:w-[26rem] lg:justify-self-end">
               <div className="grid gap-1.5">
                 {active.pipeline.map((stage, i) => (
                   <div className="flex items-start gap-2.5 font-mono text-[0.625rem]" key={stage}>
@@ -465,7 +465,11 @@ function EffectCard({
   return (
     <button
       className={cn(
-        "group relative isolate block bg-void text-left outline-none ring-1 ring-line transition-colors",
+        // A grid row stretches every card to the tallest one, and a button
+        // vertically centres its own content, so one card whose badges wrap to a
+        // second line pushes its neighbours' thumbnails down. Flex column pins
+        // the content to the top and lets the slack fall to the bottom.
+        "group relative isolate flex flex-col bg-void text-left outline-none ring-1 ring-line transition-colors",
         "focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-phosphor-bright"
       )}
       onClick={() => onSelect(effect)}

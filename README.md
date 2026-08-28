@@ -135,6 +135,27 @@ struct Params { res: vec2f, mouse: vec2f, time: f32, intensity: f32 }
 module may not declare `@group` or `@binding`, and vgpu's resolver rejects one
 that does.
 
+## Open Graph card
+
+`public/og.jpg` is composed rather than screenshotted. `npm run og` renders Flux
+Field headless through Dawn at exactly 1200x630, then lays the wordmark and
+tagline over it in a standalone HTML file and prints the path:
+
+```bash
+npm run og            # reuses out/og-art.png if it is already there
+npm run og -- --render  # force a fresh render of the art
+```
+
+Screenshot that file at a 1200x630 viewport and convert it:
+
+```bash
+sips -s format jpeg -s formatOptions 88 out/og-draft.png --out public/og.jpg
+```
+
+The absolute URL in the tags is filled in at build time by the `site-url` plugin
+in `vite.config.ts`, from `VERCEL_PROJECT_PRODUCTION_URL` on Vercel or `SITE_URL`
+anywhere else. With neither it collapses to a relative path.
+
 ## Housekeeping
 
 [fallow](https://www.npmjs.com/package/fallow) runs over this repo, and a

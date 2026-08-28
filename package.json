@@ -13,7 +13,8 @@
     "render": "node scripts/render.mjs",
     "render:multipass": "node scripts/render-multipass.mjs",
     "shots": "./scripts/shots.sh flux blackhole reaction chrome aurora mandelbulb arcs silk hexgrid rain",
-    "typecheck": "tsc -b --noEmit"
+    "typecheck": "tsc -b --noEmit",
+    "og": "node scripts/og.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",
