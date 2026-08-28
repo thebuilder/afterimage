@@ -122,7 +122,7 @@ const html = `<!doctype html>
 <div class="card">
   <img class="art" src="data:image/png;base64,${art}" alt="" />
   <div class="bar">
-    <span class="barGroup"><i class="led"></i><span class="meta">webgpu hero lab</span></span>
+    <span class="barGroup"><i class="led"></i><span class="meta">live visual experiments</span></span>
     <span class="meta">built with <em>vgpu</em></span>
   </div>
   <div class="body">
@@ -131,7 +131,7 @@ const html = `<!doctype html>
         <span class="mark"><i class="a"></i><i class="b"></i></span>
         <span class="name">Afterimage</span>
       </div>
-      <p class="sub">Full-viewport WebGPU hero effects, written in WGSL.</p>
+      <p class="sub">Live visual experiments, rendered in your browser.</p>
     </div>
   </div>
   <div class="scan"></div>

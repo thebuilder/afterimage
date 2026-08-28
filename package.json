@@ -44,5 +44,5 @@
     "typescript": "~6.0.2",
     "vite": "^8.2.2"
   },
-  "description": "Full-viewport WebGPU hero effects built with vgpu, previewed in an Afterglow-styled gallery."
+  "description": "A collection of live visual experiments rendered in the browser with WebGPU and vgpu."
 }

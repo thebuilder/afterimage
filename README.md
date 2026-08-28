@@ -1,8 +1,13 @@
 # Afterimage
 
-Full-viewport hero effects in WGSL, running on [vgpu](https://vgpu.sh), in a
-gallery styled with the [Afterglow](https://afterglow.thebuilder.dk) shadcn
-registry.
+A gallery of live visual experiments in WGSL, running on
+[vgpu](https://vgpu.sh), styled with the
+[Afterglow](https://afterglow.thebuilder.dk) shadcn registry.
+
+The page is deliberately quiet about how any of it works. A visitor gets the
+image, its name, one sentence and three controls. Frame graphs, WGSL terminology
+and implementation notes sit one disclosure down, and the architecture lives here
+in the README rather than standing between a visitor and the moving picture.
 
 One `Gpu` runs the whole page. The hero and every gallery tile are separate
 `Surface`s on that one device, driven from one `requestAnimationFrame` loop, so
@@ -42,6 +47,42 @@ Needs a WebGPU device: Chrome/Edge 113+, or Safari 26.
 | 18 | **Truchet** | Truchet tiling, arc-length parametrisation, travelling pulses | tile scale, flow, charge |
 | 19 | **Hex Reactor** | dual-lattice hex tiling, screen-space derivative rims | charge, cell density, sweep |
 | 20 | **Datastream** | procedural 5×7 dot-matrix font from hash bits, CRT mask | density, fall speed, phosphor |
+
+## Copy
+
+Each effect carries three layers, and the page reveals them in that order:
+
+```ts
+tagline      // one sentence about the image. Hero and card.
+summary      // what makes it, and what the controls do. "How it works" panel.
+explanation  // three named stages, in plain language.
+technical    // insight, pipeline, techniques, notes, source. Collapsed.
+```
+
+`category` is a plain word (Particles, Water, Fractal) rather than a technique,
+because `ray integration` printed above a picture of a black hole tells a visitor
+nothing they came to find out. The technical `notes` are the original
+implementation write-ups, moved down a level rather than cut.
+
+## Links
+
+The effect id is its URL slug, so `/ink` is a link to Ink and the address bar
+follows whatever is in the hero. `/ink/how-it-works` opens that effect's
+explanation directly, so an explanation is as linkable as an effect.
+
+Catalogue tiles are anchors carrying a real `href`, so right-click, cmd-click and
+"copy link address" all behave; the click handler only takes over the plain left
+click.
+
+The route is a single piece of state. Everything on the page derives from it and
+the URL and title are written from it, so nothing reads `window.location` back
+out to decide what to render. Two details that are easy to get wrong: writing the
+URL has to be idempotent, because StrictMode invokes every effect twice and a
+"first run" flag pushes on the second; and an unrecognised path is corrected with
+`replaceState`, so Back does not walk into a URL the app rewrote.
+
+`vercel.json` rewrites everything to `index.html`. Rewrites run after the
+filesystem check, so real assets are still served as themselves.
 
 ## Controls
 

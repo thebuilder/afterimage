@@ -54,16 +54,41 @@ export interface Control {
   readonly value: number
 }
 
+/** One stage of the plain-language explanation. Three per effect. */
+export interface Stage {
+  readonly title: string
+  readonly body: string
+}
+
+/**
+ * The technical layer.
+ *
+ * All of it is true and none of it belongs in front of someone who came to look
+ * at the pictures, so it lives behind a disclosure and the page never shows it
+ * by default.
+ */
+export interface Technical {
+  /** One fact worth remembering, in a sentence a non-specialist can read. */
+  readonly insight: string
+  readonly pipeline: readonly string[]
+  readonly techniques: readonly string[]
+  /** The implementation notes: why it is built this way and what it avoids. */
+  readonly notes: string
+  /** Repo-relative path to the shader or pipeline. */
+  readonly source: string
+}
+
 export interface HeroEffect {
   readonly id: string
   readonly name: string
+  /** A plain word for what you are looking at. Not a technique. */
+  readonly category: string
+  /** One sentence about the image, shown in the hero and on the card. */
   readonly tagline: string
-  readonly description: string
-  /** What the effect is doing on the GPU, in the order the frame runs it. */
-  readonly pipeline: readonly string[]
-  readonly techniques: readonly string[]
-  /** Rough cost class, for the gallery. */
-  readonly cost: "light" | "medium" | "heavy"
+  /** Two sentences on what makes the image, and what the controls do to it. */
+  readonly summary: string
+  readonly explanation: readonly Stage[]
+  readonly technical: Technical
   readonly accent: string
   /** The knobs this effect exposes. One to three; more than that is a control panel, not a hero. */
   readonly controls: readonly Control[]

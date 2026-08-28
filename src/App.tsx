@@ -1,10 +1,15 @@
 "use client"
 
 import type * as React from "react"
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible"
 import {
   Dialog,
   DialogContent,
@@ -25,62 +30,38 @@ import type { HeroEffect } from "@/effects/types"
 import { acquireGpu, type GpuStatus } from "@/lib/gpu"
 import { cn } from "@/lib/utils"
 
-
-/** The parts of vgpu that these effects actually exercise. */
-const CAPABILITIES = [
-  {
-    title: "Bindings by name",
-    body: "vgpu reflects the WGSL at build time, so you set uniforms by the names in the shader itself. Struct members nest. A binding you forget to set throws on the first draw instead of rendering black.",
-    api: "fx.set({ params: { time, mouse } })",
-  },
-  {
-    title: "Fullscreen effects",
-    body: "Most of these are a single fragment shader. effect() generates the vertex stage and hands the fragment a top-origin uv, so the shader file contains nothing but the image.",
-    api: "effect(gpu, source).draw(target)",
-  },
-  {
-    title: "Compute + instancing",
-    body: "Flux Field advects 140k particles in a compute pass, then draws them from one instanced call that reads the storage buffer directly. No vertex buffer is ever allocated.",
-    api: "compute(gpu, wgsl).dispatch(n / 64)",
-  },
-  {
-    title: "Ping-pong buffers",
-    body: "Storage halves for the particle sim, HDR render-target halves for the trail buffer and the Gray-Scott state. swap() moves the read/write pair, so no buffer is ever both source and destination in one dispatch.",
-    api: "pingPong(gpu, w, h, { format })",
-  },
-  {
-    title: "Multi-pass frames",
-    body: "A frame batches every pass into one command buffer. Membrane encodes thirteen passes per frame; Flux Field encodes a fade and an additive draw into a single pass.",
-    api: "frame(gpu, f => f.pass(target, fx))",
-  },
-  {
-    title: "Verified headless",
-    body: "Every shader ran through vgpu check and a headless Dawn render before it reached a browser. The render script reads the pixels back and prints their mean and max, which catches the two things a screenshot hides: a black frame, and one clipped to white.",
-    api: "npx vgpu check src/shaders/aurora.wgsl",
-  },
-] as const
+const REPO = "https://github.com/thebuilder/afterimage"
+const BASE_TITLE = "Afterimage | Live visual experiments"
 
 /**
- * The effect id doubles as its URL slug, so /ink is a link to Ink.
+ * The route: which effect, and whether its explanation is open.
  *
- * The route is one value: an effect id, or null for the root. Everything the
- * page shows is derived from it, and the URL and title are written from it, so
- * nothing has to read `window.location` back out to decide what to render.
+ * Both live in the path so an explanation can be linked to directly, the same
+ * way an effect can. `/ink` is Ink; `/ink/how-it-works` is Ink with the panel
+ * open. Everything the page shows derives from this one value.
  */
-function pathSlug(): string | null {
-  const slug = window.location.pathname.replace(/^\/+|\/+$/g, "")
-  return slug === "" ? null : slug
+interface Route {
+  readonly id: string | null
+  readonly how: boolean
 }
 
-const isRoute = (slug: string | null) => slug === null || EFFECTS.some((e) => e.id === slug)
+const segments = () => window.location.pathname.split("/").filter(Boolean)
 
-/** The current route, with anything unrecognised reading as the root. */
-const routeFromLocation = (): string | null => (isRoute(pathSlug()) ? pathSlug() : null)
+function routeFromLocation(): Route {
+  const [slug, sub] = segments()
+  const id = EFFECTS.some((e) => e.id === slug) ? slug : null
+  return { id, how: id !== null && sub === "how-it-works" }
+}
 
-/** Drops trailing zeroes so a range column does not read as 24.00 to 3.00. */
-const trim = (n: number) => String(Number(n.toFixed(4)))
+const pathFor = (r: Route) => (r.id === null ? "/" : r.how ? `/${r.id}/how-it-works` : `/${r.id}`)
 
-const BASE_TITLE = "Afterimage | WebGPU hero effects built with vgpu"
+/**
+ * Whether the path as written is one this app would ever produce.
+ *
+ * Asking whether it round-trips catches every kind of junk at once: an unknown
+ * slug, a trailing slash, a second segment that is not the panel.
+ */
+const pathIsRoute = () => window.location.pathname === pathFor(routeFromLocation())
 
 /**
  * A click the browser should keep for itself: open in a new tab or window, or
@@ -89,15 +70,9 @@ const BASE_TITLE = "Afterimage | WebGPU hero effects built with vgpu"
 const isModifiedClick = (ev: React.MouseEvent) =>
   ev.button !== 0 || [ev.metaKey, ev.ctrlKey, ev.shiftKey, ev.altKey].some(Boolean)
 
-const COST_VARIANT = {
-  light: "default",
-  medium: "amber",
-  heavy: "signal",
-} as const
-
 export default function App() {
   const [status, setStatus] = useState<GpuStatus>({ state: "idle" })
-  const [route, setRoute] = useState<string | null>(routeFromLocation)
+  const [route, setRoute] = useState<Route>(routeFromLocation)
   // Control values are kept per effect, so switching away and back does not
   // reset the knobs, and every effect starts from its own declared defaults.
   const [tweaks, setTweaks] = useState<Record<string, Record<string, number>>>({})
@@ -106,14 +81,15 @@ export default function App() {
   const [heroFps, setHeroFps] = useState(0)
   const [chromeVisible, setChromeVisible] = useState(true)
   const [aboutOpen, setAboutOpen] = useState(false)
+  const [diagnostics, setDiagnostics] = useState(false)
 
   useEffect(() => {
     acquireGpu().then(setStatus)
   }, [])
 
   // Reduced motion: let every canvas render for a couple of seconds so the page
-  // is not a wall of black rectangles, then freeze. A WebGPU canvas keeps its last
-  // presented frame, so stopping the loop leaves a still image behind.
+  // is not a wall of black rectangles, then freeze. A WebGPU canvas keeps its
+  // last presented frame, so stopping the loop leaves a still image behind.
   useEffect(() => {
     if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) return
     const id = window.setTimeout(() => {
@@ -123,7 +99,7 @@ export default function App() {
     return () => window.clearTimeout(id)
   }, [])
 
-  const active = useMemo(() => EFFECTS.find((e) => e.id === route) ?? EFFECTS[0], [route])
+  const active = useMemo(() => EFFECTS.find((e) => e.id === route.id) ?? EFFECTS[0], [route.id])
 
   const controls = useMemo(() => {
     const base: Record<string, number> = {}
@@ -143,24 +119,28 @@ export default function App() {
   )
 
   const select = useCallback((effect: HeroEffect) => {
-    setRoute(effect.id)
+    setRoute({ id: effect.id, how: false })
     window.scrollTo({ top: 0, behavior: "smooth" })
   }, [])
+
+  const setHow = useCallback(
+    (how: boolean) => setRoute((r) => ({ id: r.id ?? EFFECTS[0].id, how })),
+    []
+  )
 
   // Write the route to the URL. Comparing against the path makes this
   // idempotent, which StrictMode's double-invoked effects require.
   useEffect(() => {
-    const path = route === null ? "/" : `/${route}`
+    const path = pathFor(route)
     if (window.location.pathname === path) return
-    // Correcting a slug that was never a route is a normalisation, not a
+    // Correcting a path that was never a route is a normalisation, not a
     // navigation: replace it, so Back does not walk into a URL we rewrote.
-    const method = isRoute(pathSlug()) ? "pushState" : "replaceState"
-    window.history[method](null, "", path)
+    window.history[pathIsRoute() ? "pushState" : "replaceState"](null, "", path)
   }, [route])
 
   useEffect(() => {
-    document.title = route === null ? BASE_TITLE : `${active.name} | Afterimage`
-  }, [route, active.name])
+    document.title = route.id === null ? BASE_TITLE : `${active.name} | Afterimage`
+  }, [route.id, active.name])
 
   useEffect(() => {
     const onPop = () => setRoute(routeFromLocation())
@@ -168,26 +148,28 @@ export default function App() {
     return () => window.removeEventListener("popstate", onPop)
   }, [])
 
+  const modalOpen = aboutOpen || route.how
+
   useEffect(() => {
     const onKey = (ev: KeyboardEvent) => {
-      // The dialog owns the keyboard while it is open: without this, typing a
-      // digit behind the scrim would swap the hero out from under it, and Escape
-      // would both close the dialog and restore the chrome.
-      if (aboutOpen) return
+      // A dialog owns the keyboard while it is open: without this, typing a
+      // digit behind the scrim would swap the effect out from under it.
+      if (modalOpen) return
       if (ev.key === "?") setAboutOpen(true)
       if (ev.key === "Escape") setChromeVisible(true)
       if (ev.key.toLowerCase() === "h") setChromeVisible((v) => !v)
+      if (ev.key.toLowerCase() === "d") setDiagnostics((v) => !v)
       if (ev.key === " " && ev.target === document.body) {
         ev.preventDefault()
         setRunning((r) => !r)
       }
       const n = Number(ev.key)
-      if (!Number.isNaN(n) && n >= 1 && n <= 9) setRoute(EFFECTS[n - 1].id)
-      if (ev.key === "0") setRoute(EFFECTS[9].id)
+      if (!Number.isNaN(n) && n >= 1 && n <= 9) select(EFFECTS[n - 1])
+      if (ev.key === "0") select(EFFECTS[9])
     }
     window.addEventListener("keydown", onKey)
     return () => window.removeEventListener("keydown", onKey)
-  }, [aboutOpen])
+  }, [modalOpen, select])
 
   if (status.state === "unsupported") {
     return <Unsupported reason={status.reason} />
@@ -201,9 +183,9 @@ export default function App() {
       <section className="relative isolate h-dvh w-full overflow-hidden">
         <ShaderView
           className="absolute inset-0 size-full"
+          controls={controls}
           effect={active}
           enabled={running}
-          controls={controls}
           key="hero"
           maxDpr={2}
           onFps={setHeroFps}
@@ -222,8 +204,6 @@ export default function App() {
           className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,rgb(5_9_10/0.80),rgb(5_9_10/0.30)_38%,transparent_62%)]"
         />
 
-        {/* The copy sits in a column on the left so the right two thirds of the
-            frame stay clear. */}
         <div
           className={cn(
             "pointer-events-none absolute inset-0 flex flex-col justify-between transition-opacity duration-300",
@@ -233,7 +213,7 @@ export default function App() {
           <div className="pointer-events-auto flex items-center justify-between gap-4 border-line border-b bg-gradient-to-b from-void/85 to-transparent px-5 py-3 backdrop-blur-[2px] sm:px-8">
             <div className="flex items-center gap-3">
               {/* The mark: a lit square and the complementary ghost it burns in. */}
-              <span className="relative block size-3.5" aria-hidden>
+              <span aria-hidden className="relative block size-3.5">
                 <span className="absolute right-0 bottom-0 size-2.5 bg-signal" />
                 <span className="absolute top-0 left-0 size-2.5 bg-phosphor shadow-glow" />
               </span>
@@ -241,21 +221,37 @@ export default function App() {
                 Afterimage
               </span>
               <Separator className="hidden h-4 sm:block" orientation="vertical" />
+              <span className="hidden font-mono text-[0.625rem] text-muted-foreground uppercase tracking-[0.14em] sm:inline">
+                Live visual experiments
+              </span>
+            </div>
+            <div className="flex items-center gap-4 sm:gap-5">
               <button
-                className="font-mono text-[0.625rem] text-muted-foreground uppercase tracking-[0.14em] underline decoration-line decoration-dotted underline-offset-4 transition-colors hover:text-phosphor hover:decoration-phosphor"
+                className="font-mono text-[0.625rem] text-muted-foreground uppercase tracking-[0.14em] transition-colors hover:text-phosphor"
                 onClick={() => setAboutOpen(true)}
                 type="button"
               >
-                how it works
+                About
               </button>
-            </div>
-            <div className="flex items-center gap-3 sm:gap-5">
+              <a
+                className="font-mono text-[0.625rem] text-muted-foreground uppercase tracking-[0.14em] transition-colors hover:text-phosphor"
+                href={REPO}
+                rel="noreferrer"
+                target="_blank"
+              >
+                Source
+              </a>
+              {/* The adapter name and frame rate are diagnostics, not decoration.
+                  A visitor needs to know it is running, not which GPU it found. */}
+              {diagnostics ? (
+                <span className="hidden items-center gap-4 font-mono text-[0.625rem] text-phosphor-dim sm:flex">
+                  <span className="tabular-nums">{heroFps.toFixed(0).padStart(3, "0")} FPS</span>
+                  <span>{status.state === "ready" ? status.adapter : "acquiring"}</span>
+                </span>
+              ) : null}
               <Status tone={status.state === "ready" ? "ok" : "busy"}>
-                {status.state === "ready" ? status.adapter : "acquiring device"}
+                {status.state === "ready" ? "Live" : "Starting"}
               </Status>
-              <span className="hidden font-mono text-[0.625rem] text-phosphor tabular-nums sm:inline">
-                {heroFps.toFixed(0).padStart(3, "0")} FPS
-              </span>
             </div>
           </div>
 
@@ -263,7 +259,7 @@ export default function App() {
             <div>
               <Eyebrow caret>
                 {String(EFFECTS.indexOf(active) + 1).padStart(2, "0")} / {EFFECTS.length} ·{" "}
-                {active.techniques[0]}
+                {active.category}
               </Eyebrow>
               <h1 className="mt-4 font-semibold text-[clamp(2.5rem,7vw,5rem)] text-phosphor-bright leading-[0.95] tracking-[-0.03em] [text-shadow:0_0_40px_rgb(0_0_0/0.85)]">
                 {active.name}
@@ -278,48 +274,38 @@ export default function App() {
                 <Button onClick={() => setChromeVisible(false)} size="lg" variant="outline">
                   Hide UI
                 </Button>
+                <Button onClick={() => setHow(true)} size="lg" variant="outline">
+                  How it works
+                </Button>
               </div>
             </div>
 
-            <div className="pointer-events-auto grid gap-4 border border-line bg-void/78 p-4 backdrop-blur-[3px] lg:w-[26rem] lg:justify-self-end">
-              <div className="grid gap-1.5">
-                {active.pipeline.map((stage, i) => (
-                  <div className="flex items-start gap-2.5 font-mono text-[0.625rem]" key={stage}>
-                    <span className="mt-[0.15rem] text-phosphor-dim tabular-nums">
-                      {String(i + 1).padStart(2, "0")}
+            <div className="pointer-events-auto grid gap-3 border border-line bg-void/78 p-4 backdrop-blur-[3px] lg:w-[26rem] lg:justify-self-end">
+              <Eyebrow>Shape the effect</Eyebrow>
+              {active.controls.map((c) => (
+                <div className="grid gap-1.5" key={c.key}>
+                  <div className="flex items-center justify-between font-mono text-[0.625rem] text-muted-foreground uppercase tracking-[0.14em]">
+                    <span>{c.label}</span>
+                    <span className="text-phosphor tabular-nums">
+                      {controls[c.key].toFixed(c.step < 0.01 ? 4 : 2)}
                     </span>
-                    <span className="text-ink-muted">{stage}</span>
                   </div>
-                ))}
-              </div>
-              <div className="grid gap-3 border-line border-t pt-3">
-                {active.controls.map((c) => (
-                  <div className="grid gap-1.5" key={c.key}>
-                    <div className="flex items-center justify-between font-mono text-[0.625rem] text-muted-foreground uppercase tracking-[0.14em]">
-                      <span>{c.label}</span>
-                      <span className="text-phosphor tabular-nums">
-                        {controls[c.key].toFixed(c.step < 0.01 ? 4 : 2)}
-                      </span>
-                    </div>
-                    <Slider
-                      max={c.max}
-                      min={c.min}
-                      onValueChange={(v) =>
-                        setControl(active.id, c.key, Array.isArray(v) ? v[0] : v)
-                      }
-                      step={c.step}
-                      value={controls[c.key]}
-                    />
-                  </div>
-                ))}
-                <button
-                  className="justify-self-start font-mono text-[0.5625rem] text-phosphor-dim uppercase tracking-[0.14em] hover:text-phosphor"
-                  onClick={() => resetControls(active.id)}
-                  type="button"
-                >
-                  reset knobs
-                </button>
-              </div>
+                  <Slider
+                    max={c.max}
+                    min={c.min}
+                    onValueChange={(v) => setControl(active.id, c.key, Array.isArray(v) ? v[0] : v)}
+                    step={c.step}
+                    value={controls[c.key]}
+                  />
+                </div>
+              ))}
+              <button
+                className="justify-self-start font-mono text-[0.5625rem] text-phosphor-dim uppercase tracking-[0.14em] hover:text-phosphor"
+                onClick={() => resetControls(active.id)}
+                type="button"
+              >
+                Reset
+              </button>
             </div>
           </div>
         </div>
@@ -335,80 +321,25 @@ export default function App() {
         ) : null}
       </section>
 
-      {/* ── DETAIL ────────────────────────────────────────────────────────── */}
-      <section className="border-line border-t bg-panel-raised">
-        <div className="mx-auto grid max-w-[100rem] gap-10 px-5 py-14 sm:px-8 lg:grid-cols-[1fr_minmax(0,26rem)]">
-          <div>
-            <Eyebrow caret>Now showing · {active.id}</Eyebrow>
-            <h2 className="mt-3 font-semibold text-3xl text-phosphor-bright tracking-[-0.02em]">
-              {active.name}
-            </h2>
-            <p className="mt-5 max-w-3xl text-ink text-sm leading-[1.75]">{active.description}</p>
-            <div className="mt-6 flex flex-wrap gap-2">
-              {active.techniques.map((tag) => (
-                <Badge key={tag} variant="outline">
-                  {tag}
-                </Badge>
-              ))}
-            </div>
-          </div>
-          <aside className="border-line border-t pt-6 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-8">
-            <Eyebrow>Frame graph</Eyebrow>
-            <ol className="mt-4 grid gap-3">
-              {active.pipeline.map((stage, i) => (
-                <li className="flex gap-3 border-line border-b pb-3 last:border-b-0" key={stage}>
-                  <span className="font-mono text-[0.625rem] text-signal tabular-nums">
-                    {String(i + 1).padStart(2, "0")}
-                  </span>
-                  <span className="font-mono text-[0.6875rem] text-ink-muted leading-relaxed">
-                    {stage}
-                  </span>
-                </li>
-              ))}
-            </ol>
-            <Eyebrow className="mt-8">Controls</Eyebrow>
-            <div className="mt-3 grid gap-2 font-mono text-[0.625rem] text-muted-foreground uppercase tracking-[0.14em]">
-              {/* The range, not the WGSL key: for most controls the key is just the
-                  label again, and for a multi-pass effect it is not a Params
-                  member at all, so printing it would be wrong as well as noisy. */}
-              {active.controls.map((c) => (
-                <Row
-                  key={c.key}
-                  label={c.label}
-                  value={`${trim(c.min)} to ${trim(c.max)}`}
-                />
-              ))}
-            </div>
-            <div className="mt-6 grid gap-2 font-mono text-[0.625rem] text-muted-foreground uppercase tracking-[0.14em]">
-              <Row label="cost class" value={active.cost} />
-              <Row label="hero fps" value={`${heroFps.toFixed(0)}`} />
-              <Row label="device" value={status.state === "ready" ? status.adapter : "acquiring"} />
-            </div>
-          </aside>
-        </div>
-      </section>
-
-      {/* ── CATALOGUE ─────────────────────────────────────────────────────── */}
-      <section className="relative border-line border-t bg-void" id="catalogue">
+      {/* ── COLLECTION ────────────────────────────────────────────────────── */}
+      <section className="relative border-line border-t bg-void" id="collection">
         <div className="mx-auto max-w-[100rem] px-5 py-14 sm:px-8">
           <header className="flex flex-wrap items-end justify-between gap-6">
             <div>
-              <Eyebrow>The catalogue</Eyebrow>
+              <Eyebrow>The collection</Eyebrow>
               <h2 className="mt-3 font-semibold text-2xl text-phosphor-bright tracking-[-0.02em] sm:text-3xl">
-                {EFFECTS.length} full-viewport heroes
+                {EFFECTS.length} live visual experiments
               </h2>
               <Connector className="mt-4" />
               <p className="mt-4 max-w-2xl text-ink-muted text-sm leading-relaxed">
-                Every tile below is live. Each one owns a WebGPU surface, all of them drawn by
-                the same device at reduced resolution and a capped frame rate. Click a tile to
-                promote it to the hero; number keys reach the first {Math.min(10, EFFECTS.length)}. Every effect brings its
-                own knobs, wired straight to members of its WGSL uniform block.
+                Every preview is rendered live. Choose one to bring it full screen, then adjust
+                the controls or hide the interface and let it unfold.
               </p>
             </div>
             <label className="flex items-center gap-3 border border-line bg-panel px-3 py-2">
               <Switch checked={galleryLive} onCheckedChange={setGalleryLive} />
               <span className="font-mono text-[0.625rem] text-muted-foreground uppercase tracking-[0.14em]">
-                Live tiles
+                Animate previews
               </span>
               <Led tone={galleryLive ? "ok" : "idle"} />
             </label>
@@ -432,42 +363,185 @@ export default function App() {
       <footer className="border-line border-t bg-void">
         <div className="mx-auto max-w-[100rem] px-5 py-8 font-mono text-[0.625rem] text-muted-foreground sm:px-8">
           Afterimage is by <FootLink href="https://thebuilder.dk">thebuilder</FootLink>. Built with{" "}
-          <FootLink href="https://vgpu.sh">vgpu</FootLink> and styled with{" "}
-          <FootLink href="https://afterglow.thebuilder.dk">Afterglow</FootLink>.
+          <FootLink href="https://vgpu.sh">vgpu</FootLink>, styled with{" "}
+          <FootLink href="https://afterglow.thebuilder.dk">Afterglow</FootLink>, and{" "}
+          <FootLink href={REPO}>open source</FootLink>.
         </div>
       </footer>
 
-      {/* Reference material rather than part of the page's argument, so it opens
-          on demand instead of sitting under the catalogue where nobody reaches it. */}
-      <Dialog onOpenChange={setAboutOpen} open={aboutOpen}>
-        <DialogContent className="sm:max-w-3xl">
-          <DialogHeader>
-            <Eyebrow>What vgpu is doing here</Eyebrow>
-            <DialogTitle className="text-xl">
-              One device, one frame loop, every pipeline
-            </DialogTitle>
-            <DialogDescription className="sr-only">
-              How this page uses vgpu to run every effect on a single WebGPU device.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="-mx-6 max-h-[62dvh] overflow-y-auto px-6">
-            <div className="grid gap-px sm:grid-cols-2">
-              {CAPABILITIES.map((c) => (
-                <article className="bg-popover p-4 ring-1 ring-line" key={c.title}>
-                  <h3 className="font-mono text-[0.6875rem] text-phosphor uppercase tracking-[0.14em]">
-                    {c.title}
-                  </h3>
-                  <p className="mt-2.5 text-ink-muted text-xs leading-relaxed">{c.body}</p>
-                  <code className="mt-3 block overflow-x-auto border border-line bg-panel-sunken px-2.5 py-1.5 font-mono text-[0.625rem] text-phosphor-dim">
-                    {c.api}
-                  </code>
-                </article>
-              ))}
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <HowItWorks effect={active} onOpenChange={setHow} open={route.how} />
+      <About onOpenChange={setAboutOpen} open={aboutOpen} />
     </div>
+  )
+}
+
+/**
+ * The per-effect explanation: what you are looking at, how it is made, and the
+ * implementation notes folded away underneath.
+ */
+function HowItWorks({
+  effect,
+  open,
+  onOpenChange,
+}: {
+  effect: HeroEffect
+  open: boolean
+  onOpenChange: (open: boolean) => void
+}) {
+  const t = effect.technical
+  const body = useRef<HTMLDivElement>(null)
+  return (
+    <Dialog onOpenChange={onOpenChange} open={open}>
+      <DialogContent className="sm:max-w-2xl" initialFocus={body}>
+        <DialogHeader>
+          <Eyebrow>{effect.category}</Eyebrow>
+          <DialogTitle className="text-xl">{effect.name}</DialogTitle>
+          <DialogDescription className="sr-only">
+            What you are seeing in {effect.name}, and how it is made.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="-mx-6 max-h-[64dvh] overflow-y-auto px-6" ref={body} tabIndex={-1}>
+          <p className="text-ink text-sm leading-relaxed">{effect.summary}</p>
+
+          <Eyebrow className="mt-8">How it works</Eyebrow>
+          <ol className="mt-4 grid gap-px bg-line">
+            {effect.explanation.map((stage, i) => (
+              <li className="flex gap-4 bg-popover p-4" key={stage.title}>
+                <span className="font-mono text-[0.625rem] text-signal tabular-nums">
+                  {String(i + 1).padStart(2, "0")}
+                </span>
+                <div>
+                  <h3 className="font-mono text-[0.6875rem] text-phosphor uppercase tracking-[0.14em]">
+                    {stage.title}
+                  </h3>
+                  <p className="mt-2 text-ink-muted text-xs leading-relaxed">{stage.body}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
+
+          <p className="mt-6 border-phosphor-dim border-l-2 pl-4 text-ink-muted text-xs leading-relaxed">
+            {t.insight}
+          </p>
+
+          <Collapsible className="mt-8">
+            <CollapsibleTrigger className="group flex w-full items-center justify-between border-line border-t pt-4 font-mono text-[0.625rem] text-phosphor-dim uppercase tracking-[0.14em] transition-colors hover:text-phosphor">
+              Under the hood
+              <span className="transition-transform group-data-[panel-open]:rotate-45">+</span>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <div className="grid gap-5 pt-5">
+                <div>
+                  <p className="font-mono text-[0.5625rem] text-muted-foreground uppercase tracking-[0.14em]">
+                    Frame graph
+                  </p>
+                  <ol className="mt-2 grid gap-2">
+                    {t.pipeline.map((stage, i) => (
+                      <li className="flex gap-3" key={stage}>
+                        <span className="font-mono text-[0.625rem] text-phosphor-dim tabular-nums">
+                          {String(i + 1).padStart(2, "0")}
+                        </span>
+                        <span className="font-mono text-[0.625rem] text-ink-muted leading-relaxed">
+                          {stage}
+                        </span>
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {t.techniques.map((tag) => (
+                    <Badge key={tag} variant="outline">
+                      {tag}
+                    </Badge>
+                  ))}
+                </div>
+                <p className="text-ink-muted text-xs leading-relaxed">{t.notes}</p>
+                <a
+                  className="justify-self-start border border-line px-3 py-2 font-mono text-[0.625rem] text-phosphor uppercase tracking-[0.14em] transition-colors hover:border-line-strong hover:text-phosphor-bright"
+                  href={`${REPO}/blob/main/${t.source}`}
+                  rel="noreferrer"
+                  target="_blank"
+                >
+                  View source
+                </a>
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+function About({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
+  const body = useRef<HTMLDivElement>(null)
+  return (
+    <Dialog onOpenChange={onOpenChange} open={open}>
+      <DialogContent className="sm:max-w-xl" initialFocus={body}>
+        <DialogHeader>
+          <Eyebrow>About</Eyebrow>
+          <DialogTitle className="text-xl">Afterimage</DialogTitle>
+          <DialogDescription className="sr-only">
+            What Afterimage is and what it is built with.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="-mx-6 max-h-[64dvh] overflow-y-auto px-6" ref={body} tabIndex={-1}>
+          <p className="text-ink text-sm leading-relaxed">
+            A collection of live visual experiments rendered in your browser. Choose an effect,
+            shape it with a few controls, or hide the interface and let it fill the screen.
+          </p>
+          <p className="mt-4 text-ink-muted text-sm leading-relaxed">
+            The effects are built with WebGPU and vgpu. The source and the full technical notes
+            are on GitHub.
+          </p>
+
+          <div className="mt-6 flex flex-wrap gap-2.5">
+            <Button
+              onClick={() => {
+                onOpenChange(false)
+                document.getElementById("collection")?.scrollIntoView({ behavior: "smooth" })
+              }}
+            >
+              Explore the collection
+            </Button>
+            <Button
+              // Base UI needs telling that this one renders an anchor, or it
+              // warns that the native button semantics have been dropped.
+              nativeButton={false}
+              render={<a href={REPO} rel="noreferrer" target="_blank" />}
+              variant="outline"
+            >
+              View source
+            </Button>
+          </div>
+
+          <Collapsible className="mt-8">
+            <CollapsibleTrigger className="group flex w-full items-center justify-between border-line border-t pt-4 font-mono text-[0.625rem] text-phosphor-dim uppercase tracking-[0.14em] transition-colors hover:text-phosphor">
+              What is WebGPU?
+              <span className="transition-transform group-data-[panel-open]:rotate-45">+</span>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <p className="pt-4 text-ink-muted text-xs leading-relaxed">
+                WebGPU lets a website use modern graphics hardware for real-time rendering and
+                simulation. Everything in this gallery is generated live rather than played back
+                as video.
+              </p>
+            </CollapsibleContent>
+          </Collapsible>
+
+          <Eyebrow className="mt-8">Keyboard</Eyebrow>
+          <div className="mt-3 grid gap-2 font-mono text-[0.625rem] text-muted-foreground uppercase tracking-[0.14em]">
+            <Row label="Pause" value="Space" />
+            <Row label="Hide interface" value="H" />
+            <Row label="Diagnostics" value="D" />
+            <Row label="Switch effect" value="1-0" />
+            <Row label="This panel" value="?" />
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
   )
 }
 
@@ -514,7 +588,7 @@ function EffectCard({
       className={cn(
         // A grid row stretches every card to the tallest one, so the content is
         // pinned to the top and the slack falls to the bottom. Otherwise one
-        // card whose badges wrap to a second line drags its neighbours down.
+        // card with a longer tagline drags its neighbours down.
         "group relative isolate flex flex-col bg-void text-left outline-none ring-1 ring-line transition-colors",
         "focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-phosphor-bright"
       )}
@@ -542,7 +616,7 @@ function EffectCard({
           {String(index + 1).padStart(2, "0")}
         </span>
         {/* Selection is drawn as an inset outline rather than a border, so the
-            chosen tile stays exactly the same size as the other nine. */}
+            chosen tile stays exactly the same size as the others. */}
         <span
           className={cn(
             "pointer-events-none absolute inset-0 transition-colors",
@@ -554,23 +628,13 @@ function EffectCard({
       </div>
 
       <div className="grid gap-2 p-4">
-        <div className="flex items-center justify-between gap-3">
-          <h3 className="font-semibold text-phosphor-bright text-sm tracking-[-0.01em]">
-            {effect.name}
-          </h3>
-          <Badge variant={COST_VARIANT[effect.cost]}>{effect.cost}</Badge>
-        </div>
+        <p className="font-mono text-[0.5625rem] text-phosphor-dim uppercase tracking-[0.14em]">
+          {effect.category}
+        </p>
+        <h3 className="font-semibold text-phosphor-bright text-sm tracking-[-0.01em]">
+          {effect.name}
+        </h3>
         <p className="text-ink-muted text-xs leading-relaxed">{effect.tagline}</p>
-        <div className="mt-1 flex flex-wrap gap-1.5">
-          {effect.techniques.slice(0, 3).map((tag) => (
-            <span
-              className="border border-line px-1.5 py-0.5 font-mono text-[0.5625rem] text-phosphor-dim uppercase tracking-[0.1em]"
-              key={tag}
-            >
-              {tag}
-            </span>
-          ))}
-        </div>
       </div>
     </a>
   )
@@ -584,9 +648,8 @@ function Unsupported({ reason }: { reason: string }) {
         <Eyebrow caret>Device check failed</Eyebrow>
         <h1 className="mt-4 font-semibold text-2xl text-phosphor-bright">No WebGPU adapter</h1>
         <p className="mt-4 text-ink-muted text-sm leading-relaxed">
-          Every effect here compiles WGSL and renders through vgpu, so the page needs a WebGPU
-          device. Chrome 113+, Edge 113+, or Safari 26 on a machine with a supported GPU will run
-          it.
+          Everything here is rendered live on the GPU, so the page needs WebGPU. Chrome 113+,
+          Edge 113+, or Safari 26 on a machine with a supported GPU will run it.
         </p>
         <pre className="mt-6 overflow-x-auto border border-line bg-void p-3 font-mono text-[0.625rem] text-signal">
           {reason}
