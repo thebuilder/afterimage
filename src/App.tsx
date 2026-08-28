@@ -1,9 +1,17 @@
 "use client"
 
+import type * as React from "react"
 import { useCallback, useEffect, useMemo, useState } from "react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { Separator } from "@/components/ui/separator"
 import { Slider } from "@/components/ui/slider"
 import { Switch } from "@/components/ui/switch"
@@ -71,6 +79,7 @@ export default function App() {
   const [galleryLive, setGalleryLive] = useState(true)
   const [heroFps, setHeroFps] = useState(0)
   const [chromeVisible, setChromeVisible] = useState(true)
+  const [aboutOpen, setAboutOpen] = useState(false)
 
   useEffect(() => {
     acquireGpu().then(setStatus)
@@ -117,6 +126,11 @@ export default function App() {
 
   useEffect(() => {
     const onKey = (ev: KeyboardEvent) => {
+      // The dialog owns the keyboard while it is open: without this, typing a
+      // digit behind the scrim would swap the hero out from under it, and Escape
+      // would both close the dialog and restore the chrome.
+      if (aboutOpen) return
+      if (ev.key === "?") setAboutOpen(true)
       if (ev.key === "Escape") setChromeVisible(true)
       if (ev.key.toLowerCase() === "h") setChromeVisible((v) => !v)
       if (ev.key === " " && ev.target === document.body) {
@@ -129,7 +143,7 @@ export default function App() {
     }
     window.addEventListener("keydown", onKey)
     return () => window.removeEventListener("keydown", onKey)
-  }, [])
+  }, [aboutOpen])
 
   if (status.state === "unsupported") {
     return <Unsupported reason={status.reason} />
@@ -183,9 +197,13 @@ export default function App() {
                 Afterimage
               </span>
               <Separator className="hidden h-4 sm:block" orientation="vertical" />
-              <span className="hidden font-mono text-[0.625rem] text-muted-foreground uppercase tracking-[0.14em] sm:inline">
-                vgpu · webgpu hero lab
-              </span>
+              <button
+                className="font-mono text-[0.625rem] text-muted-foreground uppercase tracking-[0.14em] underline decoration-line decoration-dotted underline-offset-4 transition-colors hover:text-phosphor hover:decoration-phosphor"
+                onClick={() => setAboutOpen(true)}
+                type="button"
+              >
+                how it works
+              </button>
             </div>
             <div className="flex items-center gap-3 sm:gap-5">
               <Status tone={status.state === "ready" ? "ok" : "busy"}>
@@ -215,20 +233,6 @@ export default function App() {
                 </Button>
                 <Button onClick={() => setChromeVisible(false)} size="lg" variant="outline">
                   Hide UI
-                </Button>
-                {/* The eyebrow above already reads "01 / 20", so this only has to
-                    point down, not restate the count. Ghost weight keeps it from
-                    competing with the two controls that actually change the hero. */}
-                <Button
-                  onClick={() =>
-                    document
-                      .getElementById("catalogue")
-                      ?.scrollIntoView({ behavior: "smooth", block: "start" })
-                  }
-                  size="lg"
-                  variant="ghost"
-                >
-                  ↓ Catalogue
                 </Button>
               </div>
             </div>
@@ -366,7 +370,7 @@ export default function App() {
             </label>
           </header>
 
-          <div className="mt-10 grid gap-px bg-line sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+          <div className="mt-10 grid gap-px sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
             {EFFECTS.map((effect, index) => (
               <EffectCard
                 effect={effect}
@@ -381,41 +385,66 @@ export default function App() {
         </div>
       </section>
 
-      {/* ── CAPABILITIES ──────────────────────────────────────────────────── */}
-      <section className="border-line border-t bg-void">
-        <div className="mx-auto max-w-[100rem] px-5 py-14 sm:px-8">
-          <Eyebrow>What vgpu is doing here</Eyebrow>
-          <h2 className="mt-3 max-w-2xl font-semibold text-2xl text-phosphor-bright tracking-[-0.02em]">
-            One device, one frame loop, every pipeline
-          </h2>
-          <Connector className="mt-4" />
-          <div className="mt-8 grid gap-px bg-line md:grid-cols-2 xl:grid-cols-3">
-            {CAPABILITIES.map((c) => (
-              <article className="bg-void p-5" key={c.title}>
-                <h3 className="font-mono text-[0.6875rem] text-phosphor uppercase tracking-[0.14em]">
-                  {c.title}
-                </h3>
-                <p className="mt-3 text-ink-muted text-xs leading-relaxed">{c.body}</p>
-                <code className="mt-3 block overflow-x-auto border border-line bg-panel-sunken px-2.5 py-1.5 font-mono text-[0.625rem] text-phosphor-dim">
-                  {c.api}
-                </code>
-              </article>
-            ))}
-          </div>
-        </div>
-      </section>
-
       <footer className="border-line border-t bg-void">
         <div className="mx-auto flex max-w-[100rem] flex-wrap items-center justify-between gap-4 px-5 py-8 font-mono text-[0.625rem] text-muted-foreground uppercase tracking-[0.14em] sm:px-8">
-          <span>Built with vgpu · WGSL · WebGPU</span>
+          <span className="normal-case tracking-normal">
+            Afterimage is by <FootLink href="https://thebuilder.dk">thebuilder</FootLink>. Built
+            with <FootLink href="https://vgpu.sh">vgpu</FootLink> and styled with{" "}
+            <FootLink href="https://afterglow.thebuilder.dk">Afterglow</FootLink>.
+          </span>
           <span className="flex items-center gap-4">
             <span>SPACE pause</span>
             <span>H hide ui</span>
             <span>1-0 switch</span>
+            <span>? how it works</span>
           </span>
         </div>
       </footer>
+
+      {/* Reference material rather than part of the page's argument, so it opens
+          on demand instead of sitting under the catalogue where nobody reaches it. */}
+      <Dialog onOpenChange={setAboutOpen} open={aboutOpen}>
+        <DialogContent className="sm:max-w-3xl">
+          <DialogHeader>
+            <Eyebrow>What vgpu is doing here</Eyebrow>
+            <DialogTitle className="text-xl">
+              One device, one frame loop, every pipeline
+            </DialogTitle>
+            <DialogDescription className="sr-only">
+              How this page uses vgpu to run every effect on a single WebGPU device.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="-mx-6 max-h-[62dvh] overflow-y-auto px-6">
+            <div className="grid gap-px sm:grid-cols-2">
+              {CAPABILITIES.map((c) => (
+                <article className="bg-popover p-4 ring-1 ring-line" key={c.title}>
+                  <h3 className="font-mono text-[0.6875rem] text-phosphor uppercase tracking-[0.14em]">
+                    {c.title}
+                  </h3>
+                  <p className="mt-2.5 text-ink-muted text-xs leading-relaxed">{c.body}</p>
+                  <code className="mt-3 block overflow-x-auto border border-line bg-panel-sunken px-2.5 py-1.5 font-mono text-[0.625rem] text-phosphor-dim">
+                    {c.api}
+                  </code>
+                </article>
+              ))}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
+  )
+}
+
+function FootLink({ href, children }: { href: string; children: React.ReactNode }) {
+  return (
+    <a
+      className="text-phosphor-dim underline decoration-line decoration-dotted underline-offset-4 transition-colors hover:text-phosphor hover:decoration-phosphor"
+      href={href}
+      rel="noreferrer"
+      target="_blank"
+    >
+      {children}
+    </a>
   )
 }
 
@@ -444,7 +473,7 @@ function EffectCard({
   return (
     <button
       className={cn(
-        "group relative isolate block bg-void text-left outline-none transition-colors",
+        "group relative isolate block bg-void text-left outline-none ring-1 ring-line transition-colors",
         "focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-phosphor-bright"
       )}
       onClick={() => onSelect(effect)}
