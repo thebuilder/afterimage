@@ -60,8 +60,34 @@ const CAPABILITIES = [
   },
 ] as const
 
+/**
+ * The effect id doubles as its URL slug, so /ink is a link to Ink.
+ *
+ * The route is one value: an effect id, or null for the root. Everything the
+ * page shows is derived from it, and the URL and title are written from it, so
+ * nothing has to read `window.location` back out to decide what to render.
+ */
+function pathSlug(): string | null {
+  const slug = window.location.pathname.replace(/^\/+|\/+$/g, "")
+  return slug === "" ? null : slug
+}
+
+const isRoute = (slug: string | null) => slug === null || EFFECTS.some((e) => e.id === slug)
+
+/** The current route, with anything unrecognised reading as the root. */
+const routeFromLocation = (): string | null => (isRoute(pathSlug()) ? pathSlug() : null)
+
 /** Drops trailing zeroes so a range column does not read as 24.00 to 3.00. */
 const trim = (n: number) => String(Number(n.toFixed(4)))
+
+const BASE_TITLE = "Afterimage | WebGPU hero effects built with vgpu"
+
+/**
+ * A click the browser should keep for itself: open in a new tab or window, or
+ * anything that is not a plain primary-button press.
+ */
+const isModifiedClick = (ev: React.MouseEvent) =>
+  ev.button !== 0 || [ev.metaKey, ev.ctrlKey, ev.shiftKey, ev.altKey].some(Boolean)
 
 const COST_VARIANT = {
   light: "default",
@@ -71,7 +97,7 @@ const COST_VARIANT = {
 
 export default function App() {
   const [status, setStatus] = useState<GpuStatus>({ state: "idle" })
-  const [activeId, setActiveId] = useState(EFFECTS[0].id)
+  const [route, setRoute] = useState<string | null>(routeFromLocation)
   // Control values are kept per effect, so switching away and back does not
   // reset the knobs, and every effect starts from its own declared defaults.
   const [tweaks, setTweaks] = useState<Record<string, Record<string, number>>>({})
@@ -97,10 +123,7 @@ export default function App() {
     return () => window.clearTimeout(id)
   }, [])
 
-  const active = useMemo(
-    () => EFFECTS.find((e) => e.id === activeId) ?? EFFECTS[0],
-    [activeId]
-  )
+  const active = useMemo(() => EFFECTS.find((e) => e.id === route) ?? EFFECTS[0], [route])
 
   const controls = useMemo(() => {
     const base: Record<string, number> = {}
@@ -120,8 +143,29 @@ export default function App() {
   )
 
   const select = useCallback((effect: HeroEffect) => {
-    setActiveId(effect.id)
+    setRoute(effect.id)
     window.scrollTo({ top: 0, behavior: "smooth" })
+  }, [])
+
+  // Write the route to the URL. Comparing against the path makes this
+  // idempotent, which StrictMode's double-invoked effects require.
+  useEffect(() => {
+    const path = route === null ? "/" : `/${route}`
+    if (window.location.pathname === path) return
+    // Correcting a slug that was never a route is a normalisation, not a
+    // navigation: replace it, so Back does not walk into a URL we rewrote.
+    const method = isRoute(pathSlug()) ? "pushState" : "replaceState"
+    window.history[method](null, "", path)
+  }, [route])
+
+  useEffect(() => {
+    document.title = route === null ? BASE_TITLE : `${active.name} | Afterimage`
+  }, [route, active.name])
+
+  useEffect(() => {
+    const onPop = () => setRoute(routeFromLocation())
+    window.addEventListener("popstate", onPop)
+    return () => window.removeEventListener("popstate", onPop)
   }, [])
 
   useEffect(() => {
@@ -138,8 +182,8 @@ export default function App() {
         setRunning((r) => !r)
       }
       const n = Number(ev.key)
-      if (!Number.isNaN(n) && n >= 1 && n <= 9) setActiveId(EFFECTS[n - 1].id)
-      if (ev.key === "0") setActiveId(EFFECTS[9].id)
+      if (!Number.isNaN(n) && n >= 1 && n <= 9) setRoute(EFFECTS[n - 1].id)
+      if (ev.key === "0") setRoute(EFFECTS[9].id)
     }
     window.addEventListener("keydown", onKey)
     return () => window.removeEventListener("keydown", onKey)
@@ -463,17 +507,23 @@ function EffectCard({
   selected: boolean
 }) {
   return (
-    <button
+    // A real anchor, not a button: this navigates, so right-click, cmd-click
+    // and "copy link address" should all do what they look like they do. The
+    // handler only takes over the plain left click.
+    <a
       className={cn(
-        // A grid row stretches every card to the tallest one, and a button
-        // vertically centres its own content, so one card whose badges wrap to a
-        // second line pushes its neighbours' thumbnails down. Flex column pins
-        // the content to the top and lets the slack fall to the bottom.
+        // A grid row stretches every card to the tallest one, so the content is
+        // pinned to the top and the slack falls to the bottom. Otherwise one
+        // card whose badges wrap to a second line drags its neighbours down.
         "group relative isolate flex flex-col bg-void text-left outline-none ring-1 ring-line transition-colors",
         "focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-phosphor-bright"
       )}
-      onClick={() => onSelect(effect)}
-      type="button"
+      href={`/${effect.id}`}
+      onClick={(ev) => {
+        if (isModifiedClick(ev)) return
+        ev.preventDefault()
+        onSelect(effect)
+      }}
     >
       <div className="relative aspect-[16/10] w-full overflow-hidden">
         <ShaderView
@@ -522,7 +572,7 @@ function EffectCard({
           ))}
         </div>
       </div>
-    </button>
+    </a>
   )
 }
 
