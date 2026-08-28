@@ -12,6 +12,18 @@
         "5177"
       ],
       "port": 5177
+    },
+    {
+      "name": "afterimage-preview",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "preview",
+        "--",
+        "--port",
+        "4177"
+      ],
+      "port": 4177
     }
   ]
 }
