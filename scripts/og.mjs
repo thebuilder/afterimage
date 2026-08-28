@@ -64,48 +64,75 @@ const html = `<!doctype html>
 <style>
   :root {
     --void: #05090a;
+    --panel: #0b1515;
+    --line: rgb(132 255 224 / .22);
+    --line-strong: rgb(132 255 224 / .55);
     --phosphor: #86fadd;
     --phosphor-bright: #d9ffef;
+    --phosphor-dim: #4d8477;
     --signal: #ff5b82;
     --ink: #e9f6f1;
+    --ink-muted: #87a39d;
     --mono: "SFMono-Regular", "IBM Plex Mono", Consolas, monospace;
     --sans: "Helvetica Neue", Inter, Arial, sans-serif;
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { width: ${W}px; height: ${H}px; overflow: hidden; background: var(--void); }
   .card { position: relative; width: ${W}px; height: ${H}px; isolation: isolate;
-    display: grid; place-items: center; text-align: center; }
-  .art { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-  /* The wordmark sits in the middle, which is where the filaments are brightest,
-     so the scrim is radial rather than a bottom-up gradient. */
-  .scrim { position: absolute; inset: 0;
-    background: radial-gradient(ellipse 62% 58% at 50% 50%, rgb(5 9 10 / .88) 0%, rgb(5 9 10 / .70) 45%, rgb(5 9 10 / .18) 78%, transparent 100%); }
-  .scan { position: absolute; inset: 0; mix-blend-mode: multiply;
-    background: repeating-linear-gradient(to bottom, transparent 0 2px, rgb(0 0 0 / .18) 2px 3px); }
-  .frame { position: absolute; inset: 0; border: 1px solid rgb(132 255 224 / .22); }
+    display: grid; grid-template-rows: auto 1fr; }
+  .art { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: -1; }
 
-  .stack { position: relative; display: grid; justify-items: center; gap: 30px; padding: 0 60px; }
-  .lockup { display: flex; align-items: center; gap: 28px; }
-  .mark { position: relative; width: 60px; height: 60px; flex: none; }
-  .mark i { position: absolute; width: 42px; height: 42px; }
+  /* The copy sits on a real surface rather than on a gradient: hairline border,
+     a little of the void, and the art blurred behind it. That is the same panel
+     the hero's controls live in, which is the point. */
+  .bar { display: flex; align-items: center; justify-content: space-between;
+    padding: 0 34px; height: 62px;
+    background: rgb(9 18 18 / .82); backdrop-filter: blur(3px);
+    border-bottom: 1px solid var(--line); }
+  .barGroup { display: flex; align-items: center; gap: 13px; }
+  .led { width: 8px; height: 8px; border-radius: 50%; background: var(--phosphor);
+    box-shadow: 0 0 10px var(--phosphor); }
+  .meta { font: 600 13px/1 var(--mono); letter-spacing: .18em; text-transform: uppercase; color: var(--ink-muted); }
+  .meta em { font-style: normal; color: var(--phosphor); }
+
+  .body { display: grid; place-items: center; padding: 0 56px; }
+  .panel { position: relative; display: grid; justify-items: start; gap: 26px;
+    padding: 46px 56px 48px;
+    background: rgb(5 9 10 / .66); backdrop-filter: blur(9px);
+    border: 1px solid var(--line-strong);
+    box-shadow: 0 2rem 5rem rgb(0 0 0 / .7), 0 0 60px rgb(134 250 221 / .06); }
+  /* Corner ticks, the way the system marks a live panel. */
+  .panel::before, .panel::after { content: ""; position: absolute; width: 16px; height: 16px; }
+  .panel::before { top: -2px; left: -2px; border-top: 3px solid var(--phosphor); border-left: 3px solid var(--phosphor); }
+  .panel::after { right: -2px; bottom: -2px; border-right: 3px solid var(--phosphor); border-bottom: 3px solid var(--phosphor); }
+
+  .lockup { display: flex; align-items: center; gap: 26px; }
+  .mark { position: relative; width: 56px; height: 56px; flex: none; }
+  .mark i { position: absolute; width: 39px; height: 39px; }
   .mark .a { right: 0; bottom: 0; background: var(--signal); }
-  .mark .b { top: 0; left: 0; background: var(--phosphor); box-shadow: 0 0 40px rgb(134 250 221 / .5); }
-  .name { font: 700 76px/1 var(--mono); letter-spacing: .2em; color: var(--phosphor-bright);
-          text-transform: uppercase; text-shadow: 0 0 70px rgb(0 0 0 / .95); padding-left: .2em; }
-  .rule { width: 132px; height: 1px; background: rgb(132 255 224 / .38); }
-  .sub { font: 400 25px/1.45 var(--sans); color: var(--ink); white-space: nowrap;
-         text-shadow: 0 1px 18px rgb(0 0 0 / .95); }
+  .mark .b { top: 0; left: 0; background: var(--phosphor); box-shadow: 0 0 34px rgb(134 250 221 / .45); }
+  .name { font: 700 66px/1 var(--mono); letter-spacing: .2em; color: var(--phosphor-bright);
+          text-transform: uppercase; padding-left: .2em; }
+  .sub { font: 400 24px/1.4 var(--sans); color: var(--ink); }
+
+  .scan { position: absolute; inset: 0; mix-blend-mode: multiply; z-index: 2;
+    background: repeating-linear-gradient(to bottom, transparent 0 2px, rgb(0 0 0 / .17) 2px 3px); }
+  .frame { position: absolute; inset: 0; z-index: 3; border: 1px solid var(--line); }
 </style>
 <div class="card">
   <img class="art" src="data:image/png;base64,${art}" alt="" />
-  <div class="scrim"></div>
-  <div class="stack">
-    <div class="lockup">
-      <span class="mark"><i class="a"></i><i class="b"></i></span>
-      <span class="name">Afterimage</span>
+  <div class="bar">
+    <span class="barGroup"><i class="led"></i><span class="meta">webgpu hero lab</span></span>
+    <span class="meta">built with <em>vgpu</em></span>
+  </div>
+  <div class="body">
+    <div class="panel">
+      <div class="lockup">
+        <span class="mark"><i class="a"></i><i class="b"></i></span>
+        <span class="name">Afterimage</span>
+      </div>
+      <p class="sub">Full-viewport WebGPU hero effects, written in WGSL.</p>
     </div>
-    <span class="rule"></span>
-    <p class="sub">Full-viewport WebGPU hero effects, built with vgpu.</p>
   </div>
   <div class="scan"></div>
   <div class="frame"></div>
