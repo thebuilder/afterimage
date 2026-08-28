@@ -1,0 +1,67 @@
+/*
+ * Project tokens.
+ *
+ * These live outside index.css on purpose: the Afterglow registry owns that
+ * file and rewrites it on `shadcn add`, so anything of ours in there is one
+ * update away from disappearing.
+ *
+ * Afterglow ships colours, radii, shadows and easing, but no type scale. The
+ * sizes and tracking below were the scale anyway, written out as arbitrary
+ * values forty-odd times across the app. Naming them is the only change.
+ */
+@theme {
+  /* Mono readouts: every label, tag, status line and control name. */
+  --text-readout: 0.625rem;
+  --text-label: 0.6875rem;
+  --text-tag: 0.5625rem;
+  /* The hero name, which has to hold a line from a phone to a wide display. */
+  --text-hero: clamp(2.5rem, 7vw, 5rem);
+
+  --tracking-readout: 0.14em;
+  --tracking-brand: 0.28em;
+  /* Display type tightens as it grows. */
+  --tracking-card: -0.01em;
+  --tracking-heading: -0.02em;
+  --tracking-hero: -0.03em;
+
+  --leading-hero: 0.95;
+
+  --container-page: 100rem;
+  --container-panel: 26rem;
+
+  --aspect-tile: 16 / 10;
+
+  --blur-bar: 2px;
+  --blur-panel: 3px;
+
+  --shadow-tile-selected: inset 0 0 40px rgb(134 250 221 / 0.18);
+}
+
+/*
+ * The hero scrims. A hero has to survive having words on it, and these effects
+ * fill the frame with bright, high-frequency detail, so the copy needs a ground
+ * of its own. Utilities rather than tokens because they are gradients, which is
+ * also how Afterglow ships `scanlines`.
+ */
+@utility hero-scrim-bottom {
+  background: linear-gradient(
+    to top,
+    rgb(5 9 10 / 0.94) 0%,
+    rgb(5 9 10 / 0.72) 22%,
+    rgb(5 9 10 / 0.18) 48%,
+    transparent 70%
+  );
+}
+
+@utility hero-scrim-left {
+  background: linear-gradient(to right, rgb(5 9 10 / 0.8), rgb(5 9 10 / 0.3) 38%, transparent 62%);
+}
+
+/*
+ * How tall a dialog body may get before it scrolls. Both panels make the same
+ * call, so it is stated once rather than twice.
+ */
+@utility dialog-scroll {
+  max-height: 64dvh;
+  overflow-y: auto;
+}

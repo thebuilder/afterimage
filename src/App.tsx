@@ -197,11 +197,11 @@ export default function App() {
             needs a ground of its own, and a text-shadow will not carry it. */}
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_top,rgb(5_9_10/0.94)_0%,rgb(5_9_10/0.72)_22%,rgb(5_9_10/0.18)_48%,transparent_70%)]"
+          className="pointer-events-none absolute inset-0 hero-scrim-bottom"
         />
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,rgb(5_9_10/0.80),rgb(5_9_10/0.30)_38%,transparent_62%)]"
+          className="pointer-events-none absolute inset-0 hero-scrim-left"
         />
 
         <div
@@ -210,31 +210,31 @@ export default function App() {
             chromeVisible ? "opacity-100" : "opacity-0"
           )}
         >
-          <div className="pointer-events-auto flex items-center justify-between gap-4 border-line border-b bg-gradient-to-b from-void/85 to-transparent px-5 py-3 backdrop-blur-[2px] sm:px-8">
+          <div className="pointer-events-auto flex items-center justify-between gap-4 border-line border-b bg-gradient-to-b from-void/85 to-transparent px-5 py-3 backdrop-blur-bar sm:px-8">
             <div className="flex items-center gap-3">
               {/* The mark: a lit square and the complementary ghost it burns in. */}
               <span aria-hidden className="relative block size-3.5">
                 <span className="absolute right-0 bottom-0 size-2.5 bg-signal" />
                 <span className="absolute top-0 left-0 size-2.5 bg-phosphor shadow-glow" />
               </span>
-              <span className="font-bold font-mono text-[0.6875rem] text-phosphor-bright uppercase tracking-[0.28em]">
+              <span className="font-bold font-mono text-label text-phosphor-bright uppercase tracking-brand">
                 Afterimage
               </span>
               <Separator className="hidden h-4 sm:block" orientation="vertical" />
-              <span className="hidden font-mono text-[0.625rem] text-muted-foreground uppercase tracking-[0.14em] sm:inline">
+              <span className="hidden font-mono text-readout text-muted-foreground uppercase tracking-readout sm:inline">
                 Live visual experiments
               </span>
             </div>
             <div className="flex items-center gap-4 sm:gap-5">
               <button
-                className="font-mono text-[0.625rem] text-muted-foreground uppercase tracking-[0.14em] transition-colors hover:text-phosphor"
+                className="font-mono text-readout text-muted-foreground uppercase tracking-readout transition-colors hover:text-phosphor"
                 onClick={() => setAboutOpen(true)}
                 type="button"
               >
                 About
               </button>
               <a
-                className="font-mono text-[0.625rem] text-muted-foreground uppercase tracking-[0.14em] transition-colors hover:text-phosphor"
+                className="font-mono text-readout text-muted-foreground uppercase tracking-readout transition-colors hover:text-phosphor"
                 href={REPO}
                 rel="noreferrer"
                 target="_blank"
@@ -244,7 +244,7 @@ export default function App() {
               {/* The adapter name and frame rate are diagnostics, not decoration.
                   A visitor needs to know it is running, not which GPU it found. */}
               {diagnostics ? (
-                <span className="hidden items-center gap-4 font-mono text-[0.625rem] text-phosphor-dim sm:flex">
+                <span className="hidden items-center gap-4 font-mono text-readout text-phosphor-dim sm:flex">
                   <span className="tabular-nums">{heroFps.toFixed(0).padStart(3, "0")} FPS</span>
                   <span>{status.state === "ready" ? status.adapter : "acquiring"}</span>
                 </span>
@@ -261,7 +261,7 @@ export default function App() {
                 {String(EFFECTS.indexOf(active) + 1).padStart(2, "0")} / {EFFECTS.length} ·{" "}
                 {active.category}
               </Eyebrow>
-              <h1 className="mt-4 font-semibold text-[clamp(2.5rem,7vw,5rem)] text-phosphor-bright leading-[0.95] tracking-[-0.03em] [text-shadow:0_0_40px_rgb(0_0_0/0.85)]">
+              <h1 className="mt-4 font-semibold text-hero text-phosphor-bright leading-hero tracking-hero [text-shadow:0_0_40px_rgb(0_0_0/0.85)]">
                 {active.name}
               </h1>
               <p className="mt-4 max-w-lg text-balance text-ink text-sm leading-relaxed [text-shadow:0_1px_12px_rgb(0_0_0/0.9)] sm:text-base">
@@ -280,11 +280,11 @@ export default function App() {
               </div>
             </div>
 
-            <div className="pointer-events-auto grid gap-3 border border-line bg-void/78 p-4 backdrop-blur-[3px] lg:w-[26rem] lg:justify-self-end">
+            <div className="pointer-events-auto grid gap-3 border border-line bg-void/78 p-4 backdrop-blur-panel lg:w-panel lg:justify-self-end">
               <Eyebrow>Shape the effect</Eyebrow>
               {active.controls.map((c) => (
                 <div className="grid gap-1.5" key={c.key}>
-                  <div className="flex items-center justify-between font-mono text-[0.625rem] text-muted-foreground uppercase tracking-[0.14em]">
+                  <div className="flex items-center justify-between font-mono text-readout text-muted-foreground uppercase tracking-readout">
                     <span>{c.label}</span>
                     <span className="text-phosphor tabular-nums">
                       {controls[c.key].toFixed(c.step < 0.01 ? 4 : 2)}
@@ -300,7 +300,7 @@ export default function App() {
                 </div>
               ))}
               <button
-                className="justify-self-start font-mono text-[0.5625rem] text-phosphor-dim uppercase tracking-[0.14em] hover:text-phosphor"
+                className="justify-self-start font-mono text-tag text-phosphor-dim uppercase tracking-readout hover:text-phosphor"
                 onClick={() => resetControls(active.id)}
                 type="button"
               >
@@ -312,7 +312,7 @@ export default function App() {
 
         {!chromeVisible ? (
           <button
-            className="pointer-events-auto absolute right-4 bottom-4 z-50 border border-line bg-void/70 px-2.5 py-1.5 font-mono text-[0.625rem] text-phosphor-dim uppercase tracking-[0.14em] hover:text-phosphor"
+            className="pointer-events-auto absolute right-4 bottom-4 z-50 border border-line bg-void/70 px-2.5 py-1.5 font-mono text-readout text-phosphor-dim uppercase tracking-readout hover:text-phosphor"
             onClick={() => setChromeVisible(true)}
             type="button"
           >
@@ -323,11 +323,11 @@ export default function App() {
 
       {/* ── COLLECTION ────────────────────────────────────────────────────── */}
       <section className="relative border-line border-t bg-void" id="collection">
-        <div className="mx-auto max-w-[100rem] px-5 py-14 sm:px-8">
+        <div className="mx-auto max-w-page px-5 py-14 sm:px-8">
           <header className="flex flex-wrap items-end justify-between gap-6">
             <div>
               <Eyebrow>The collection</Eyebrow>
-              <h2 className="mt-3 font-semibold text-2xl text-phosphor-bright tracking-[-0.02em] sm:text-3xl">
+              <h2 className="mt-3 font-semibold text-2xl text-phosphor-bright tracking-heading sm:text-3xl">
                 {EFFECTS.length} live visual experiments
               </h2>
               <Connector className="mt-4" />
@@ -338,7 +338,7 @@ export default function App() {
             </div>
             <label className="flex items-center gap-3 border border-line bg-panel px-3 py-2">
               <Switch checked={galleryLive} onCheckedChange={setGalleryLive} />
-              <span className="font-mono text-[0.625rem] text-muted-foreground uppercase tracking-[0.14em]">
+              <span className="font-mono text-readout text-muted-foreground uppercase tracking-readout">
                 Animate previews
               </span>
               <Led tone={galleryLive ? "ok" : "idle"} />
@@ -361,7 +361,7 @@ export default function App() {
       </section>
 
       <footer className="border-line border-t bg-void">
-        <div className="mx-auto max-w-[100rem] px-5 py-8 font-mono text-[0.625rem] text-muted-foreground sm:px-8">
+        <div className="mx-auto max-w-page px-5 py-8 font-mono text-readout text-muted-foreground sm:px-8">
           Afterimage is by <FootLink href="https://thebuilder.dk">thebuilder</FootLink>. Built with{" "}
           <FootLink href="https://vgpu.sh">vgpu</FootLink>, styled with{" "}
           <FootLink href="https://afterglow.thebuilder.dk">Afterglow</FootLink>, and{" "}
@@ -401,18 +401,18 @@ function HowItWorks({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="-mx-6 max-h-[64dvh] overflow-y-auto px-6" ref={body} tabIndex={-1}>
+        <div className="-mx-6 dialog-scroll px-6" ref={body} tabIndex={-1}>
           <p className="text-ink text-sm leading-relaxed">{effect.summary}</p>
 
           <Eyebrow className="mt-8">How it works</Eyebrow>
           <ol className="mt-4 grid gap-px bg-line">
             {effect.explanation.map((stage, i) => (
               <li className="flex gap-4 bg-popover p-4" key={stage.title}>
-                <span className="font-mono text-[0.625rem] text-signal tabular-nums">
+                <span className="font-mono text-readout text-signal tabular-nums">
                   {String(i + 1).padStart(2, "0")}
                 </span>
                 <div>
-                  <h3 className="font-mono text-[0.6875rem] text-phosphor uppercase tracking-[0.14em]">
+                  <h3 className="font-mono text-label text-phosphor uppercase tracking-readout">
                     {stage.title}
                   </h3>
                   <p className="mt-2 text-ink-muted text-xs leading-relaxed">{stage.body}</p>
@@ -426,23 +426,23 @@ function HowItWorks({
           </p>
 
           <Collapsible className="mt-8">
-            <CollapsibleTrigger className="group flex w-full items-center justify-between border-line border-t pt-4 font-mono text-[0.625rem] text-phosphor-dim uppercase tracking-[0.14em] transition-colors hover:text-phosphor">
+            <CollapsibleTrigger className="group flex w-full items-center justify-between border-line border-t pt-4 font-mono text-readout text-phosphor-dim uppercase tracking-readout transition-colors hover:text-phosphor">
               Under the hood
               <span className="transition-transform group-data-[panel-open]:rotate-45">+</span>
             </CollapsibleTrigger>
             <CollapsibleContent>
               <div className="grid gap-5 pt-5">
                 <div>
-                  <p className="font-mono text-[0.5625rem] text-muted-foreground uppercase tracking-[0.14em]">
+                  <p className="font-mono text-tag text-muted-foreground uppercase tracking-readout">
                     Frame graph
                   </p>
                   <ol className="mt-2 grid gap-2">
                     {t.pipeline.map((stage, i) => (
                       <li className="flex gap-3" key={stage}>
-                        <span className="font-mono text-[0.625rem] text-phosphor-dim tabular-nums">
+                        <span className="font-mono text-readout text-phosphor-dim tabular-nums">
                           {String(i + 1).padStart(2, "0")}
                         </span>
-                        <span className="font-mono text-[0.625rem] text-ink-muted leading-relaxed">
+                        <span className="font-mono text-readout text-ink-muted leading-relaxed">
                           {stage}
                         </span>
                       </li>
@@ -458,7 +458,7 @@ function HowItWorks({
                 </div>
                 <p className="text-ink-muted text-xs leading-relaxed">{t.notes}</p>
                 <a
-                  className="justify-self-start border border-line px-3 py-2 font-mono text-[0.625rem] text-phosphor uppercase tracking-[0.14em] transition-colors hover:border-line-strong hover:text-phosphor-bright"
+                  className="justify-self-start border border-line px-3 py-2 font-mono text-readout text-phosphor uppercase tracking-readout transition-colors hover:border-line-strong hover:text-phosphor-bright"
                   href={`${REPO}/blob/main/${t.source}`}
                   rel="noreferrer"
                   target="_blank"
@@ -487,7 +487,7 @@ function About({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boo
           </DialogDescription>
         </DialogHeader>
 
-        <div className="-mx-6 max-h-[64dvh] overflow-y-auto px-6" ref={body} tabIndex={-1}>
+        <div className="-mx-6 dialog-scroll px-6" ref={body} tabIndex={-1}>
           <p className="text-ink text-sm leading-relaxed">
             A collection of live visual experiments rendered in your browser. Choose an effect,
             shape it with a few controls, or hide the interface and let it fill the screen.
@@ -518,7 +518,7 @@ function About({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boo
           </div>
 
           <Collapsible className="mt-8">
-            <CollapsibleTrigger className="group flex w-full items-center justify-between border-line border-t pt-4 font-mono text-[0.625rem] text-phosphor-dim uppercase tracking-[0.14em] transition-colors hover:text-phosphor">
+            <CollapsibleTrigger className="group flex w-full items-center justify-between border-line border-t pt-4 font-mono text-readout text-phosphor-dim uppercase tracking-readout transition-colors hover:text-phosphor">
               What is WebGPU?
               <span className="transition-transform group-data-[panel-open]:rotate-45">+</span>
             </CollapsibleTrigger>
@@ -532,7 +532,7 @@ function About({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boo
           </Collapsible>
 
           <Eyebrow className="mt-8">Keyboard</Eyebrow>
-          <div className="mt-3 grid gap-2 font-mono text-[0.625rem] text-muted-foreground uppercase tracking-[0.14em]">
+          <div className="mt-3 grid gap-2 font-mono text-readout text-muted-foreground uppercase tracking-readout">
             <Row label="Pause" value="Space" />
             <Row label="Hide interface" value="H" />
             <Row label="Diagnostics" value="D" />
@@ -599,7 +599,7 @@ function EffectCard({
         onSelect(effect)
       }}
     >
-      <div className="relative aspect-[16/10] w-full overflow-hidden">
+      <div className="relative aspect-tile w-full overflow-hidden">
         <ShaderView
           className="absolute inset-0 size-full transition-[filter] duration-300 group-hover:brightness-115"
           effect={effect}
@@ -610,7 +610,7 @@ function EffectCard({
         />
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-void via-void/10 to-transparent" />
         <span
-          className="pointer-events-none absolute top-3 left-3 font-mono text-[0.625rem] tabular-nums"
+          className="pointer-events-none absolute top-3 left-3 font-mono text-readout tabular-nums"
           style={{ color: effect.accent }}
         >
           {String(index + 1).padStart(2, "0")}
@@ -621,17 +621,17 @@ function EffectCard({
           className={cn(
             "pointer-events-none absolute inset-0 transition-colors",
             selected
-              ? "outline-2 -outline-offset-2 outline-phosphor shadow-[inset_0_0_40px_rgb(134_250_221/0.18)]"
+              ? "outline-2 -outline-offset-2 outline-phosphor shadow-tile-selected"
               : "outline outline-transparent -outline-offset-1 group-hover:outline-line-strong"
           )}
         />
       </div>
 
       <div className="grid gap-2 p-4">
-        <p className="font-mono text-[0.5625rem] text-phosphor-dim uppercase tracking-[0.14em]">
+        <p className="font-mono text-tag text-phosphor-dim uppercase tracking-readout">
           {effect.category}
         </p>
-        <h3 className="font-semibold text-phosphor-bright text-sm tracking-[-0.01em]">
+        <h3 className="font-semibold text-phosphor-bright text-sm tracking-card">
           {effect.name}
         </h3>
         <p className="text-ink-muted text-xs leading-relaxed">{effect.tagline}</p>
@@ -651,7 +651,7 @@ function Unsupported({ reason }: { reason: string }) {
           Everything here is rendered live on the GPU, so the page needs WebGPU. Chrome 113+,
           Edge 113+, or Safari 26 on a machine with a supported GPU will run it.
         </p>
-        <pre className="mt-6 overflow-x-auto border border-line bg-void p-3 font-mono text-[0.625rem] text-signal">
+        <pre className="mt-6 overflow-x-auto border border-line bg-void p-3 font-mono text-readout text-signal">
           {reason}
         </pre>
       </div>
