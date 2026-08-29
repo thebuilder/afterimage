@@ -188,7 +188,7 @@ export default function App() {
           enabled={running}
           key="hero"
           maxDpr={2}
-          onFps={setHeroFps}
+          onFps={diagnostics ? setHeroFps : undefined}
           quality={1}
         />
 

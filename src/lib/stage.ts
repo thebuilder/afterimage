@@ -33,6 +33,7 @@ interface Entry {
   pointer: number
   mouse: [number, number]
   lastDraw: number
+  hasDrawn: boolean
   frames: number
   fpsWindow: number
   fps: number
@@ -41,7 +42,6 @@ interface Entry {
 
 const entries = new Set<Entry>()
 let raf = 0
-let last = 0
 
 /**
  * One requestAnimationFrame for the whole page.
@@ -53,17 +53,22 @@ let last = 0
  */
 function tick(now: number) {
   raf = requestAnimationFrame(tick)
-  const dtRaw = last === 0 ? 1 / 60 : (now - last) / 1000
-  last = now
-  // A backgrounded tab returns a delta of seconds. Clamping keeps a simulation
-  // from integrating one enormous step and blowing up.
-  const dt = Math.min(dtRaw, 1 / 20)
 
   for (const e of entries) {
     if (!e.active) continue
-    const minStep = e.opts.fps > 0 ? 1 / e.opts.fps - 0.002 : 0
-    if (now - e.lastDraw < minStep * 1000) continue
-    e.lastDraw = now
+    const minStepMs = e.opts.fps > 0 ? 1000 / e.opts.fps : 0
+    if (now - e.lastDraw < minStepMs) continue
+
+    // Each entry advances by its own elapsed time, so a capped tile plays at
+    // the same speed as the hero instead of at cap/refresh speed. The clamp
+    // keeps a backgrounded tab from integrating one enormous step.
+    const dt = e.hasDrawn ? Math.min((now - e.lastDraw) / 1000, 1 / 20) : 1 / 60
+    e.hasDrawn = true
+    // Advance by the step, not to `now`: snapping to `now` quantizes a 24fps
+    // cap up to whole rAF ticks (~20fps). If we fell behind more than one
+    // step, drop the backlog rather than spiraling to catch up.
+    e.lastDraw = minStepMs > 0 ? e.lastDraw + minStepMs : now
+    if (now - e.lastDraw > minStepMs) e.lastDraw = now
 
     e.time += dt
     e.pointer = Math.max(0, e.pointer - dt * 1.6)
@@ -96,7 +101,6 @@ function tick(now: number) {
 
 function ensureLoop() {
   if (!raf) {
-    last = 0
     raf = requestAnimationFrame(tick)
   }
 }
@@ -162,12 +166,15 @@ export async function mountStage(
     effect,
     instance: effect.create({ gpu, target: surf, quality: opts.quality }),
     opts,
-    active: true,
+    active: false,
     controls: Object.fromEntries(effect.controls.map((c) => [c.key, c.value])),
     time: Math.random() * 40, // stagger, so a grid of cards is not in lockstep
     pointer: 0,
     mouse: [0.5, 0.45],
-    lastDraw: 0,
+    // Stagger the first draw across the cap window so 20 tiles capped at the
+    // same fps do not all land on the same rAF tick and arrive as a burst.
+    lastDraw: performance.now() - Math.random() * (opts.fps > 0 ? 1000 / opts.fps : 0),
+    hasDrawn: false,
     frames: 0,
     fpsWindow: 0,
     fps: 0,
