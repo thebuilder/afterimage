@@ -7,6 +7,7 @@ import { PNG } from "pngjs"
 import { resolveShader } from "@vgpu/wgsl/runtime"
 import { reflectSource } from "@vgpu/wgsl/reflect-source"
 import { effect, init, target } from "vgpu/node"
+import { frameViolations, luminance } from "./lib/stats.mjs"
 
 const root = path.resolve(fileURLToPath(new URL("..", import.meta.url)))
 const args = process.argv.slice(2)
@@ -33,6 +34,13 @@ const TIMES = (flags.t ?? "3.7").split(",").map(Number)
 
 mkdirSync(path.join(root, "out"), { recursive: true })
 const gpu = await init()
+// Validation errors arrive asynchronously, so a shader can fail without the
+// draw call throwing. Count them and fail the process at the end.
+let gpuErrors = 0
+gpu.onError((err) => {
+  gpuErrors++
+  console.error(`gpu-error: ${err?.code ?? ""} ${err?.message ?? err}`)
+})
 const tgt = target(gpu, { size: [W, H] })
 
 for (const name of names) {
@@ -63,19 +71,18 @@ for (const name of names) {
       const suffix = TIMES.length > 1 ? `-t${t}` : ""
       writeFileSync(path.join(root, "out", `${name}${suffix}.png`), PNG.sync.write(png))
       // Cheap sanity numbers: a black frame and a blown-out frame both show up here.
-      let sum = 0
-      let max = 0
-      for (let i = 0; i < pixels.length; i += 4) {
-        const l = (pixels[i] + pixels[i + 1] + pixels[i + 2]) / 3
-        sum += l
-        if (l > max) max = l
+      const { mean, max } = luminance(pixels)
+      console.log(`${name}${suffix}: mean=${mean.toFixed(1)} max=${max}`)
+      for (const violation of frameViolations(`${name}${suffix}`, pixels, W, H)) {
+        console.error(`ASSERT-FAIL ${violation}`)
+        process.exitCode = 1
       }
-      console.log(
-        `${name}${suffix}: mean=${(sum / (pixels.length / 4)).toFixed(1)} max=${max}`
-      )
     }
   } catch (err) {
     console.error(`${name}: FAILED: ${err?.message ?? err}`)
+    process.exitCode = 1
   }
 }
+await gpu.settled()
+if (gpuErrors > 0) process.exitCode = 1
 gpu.dispose()

@@ -6,6 +6,7 @@ import path from "node:path"
 import { PNG } from "pngjs"
 import { resolveShader } from "@vgpu/wgsl/runtime"
 import { frame, init, target } from "vgpu/node"
+import { frameViolations, luminance } from "./lib/stats.mjs"
 
 const root = path.resolve(fileURLToPath(new URL("..", import.meta.url)))
 const args = process.argv.slice(2)
@@ -28,6 +29,13 @@ const load = async (p) => (await resolveShader({ entry: path.join(root, p) })).w
 
 mkdirSync(path.join(root, "out"), { recursive: true })
 const gpu = await init()
+// Validation errors arrive asynchronously, so a pass can fail without the
+// frame call throwing. Count them and fail the process at the end.
+let gpuErrors = 0
+gpu.onError((err) => {
+  gpuErrors++
+  console.error(`gpu-error: ${err?.code ?? ""} ${err?.message ?? err}`)
+})
 const tgt = target(gpu, { size: [W, H] })
 
 const specs = {
@@ -82,22 +90,22 @@ for (const name of which.length ? which : Object.keys(specs)) {
       const dt = 1 / 60
       t += dt
       frame(gpu, (f) => inst.render(f, tgt, { time: t, dt, mouse: [0.5, 0.45], pointer: 0, controls: CONTROLS[name] ?? {} }))
-      await f_done()
     }
     const pixels = await tgt.read()
     const png = new PNG({ width: W, height: H })
     png.data.set(pixels)
     writeFileSync(path.join(root, "out", `${name}.png`), PNG.sync.write(png))
-    let sum = 0, max = 0
-    for (let i = 0; i < pixels.length; i += 4) {
-      const l = (pixels[i] + pixels[i + 1] + pixels[i + 2]) / 3
-      sum += l
-      if (l > max) max = l
+    const { mean, max } = luminance(pixels)
+    console.log(`${name}: frames=${FRAMES} mean=${mean.toFixed(1)} max=${max}`)
+    for (const violation of frameViolations(name, pixels, W, H)) {
+      console.error(`ASSERT-FAIL ${violation}`)
+      process.exitCode = 1
     }
-    console.log(`${name}: frames=${FRAMES} mean=${(sum / (pixels.length / 4)).toFixed(1)} max=${max}`)
   } catch (err) {
     console.error(`${name}: FAILED: ${err?.stack ?? err}`)
+    process.exitCode = 1
   }
 }
-async function f_done() {}
+await gpu.settled()
+if (gpuErrors > 0) process.exitCode = 1
 gpu.dispose()
