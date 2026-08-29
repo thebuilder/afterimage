@@ -25,15 +25,11 @@ jobs:
       - run: npm run build
 
   shaders:
-    # Validates all 30 WGSL files with `vgpu check`. A stock ubuntu runner has
-    # no GPU adapter, so the software renderer is installed first; without it
-    # vgpu skips device validation and every shader reports NOT VALIDATED.
-    # The doctor line exists so a future failure explains itself in the log.
-    # Informational until observed green on GitHub: to promote it to a
-    # required gate, delete the continue-on-error line after a green run.
-    name: WGSL validation (informational)
+    # Validates all 30 WGSL files with `vgpu check` on the software renderer,
+    # observed green on ubuntu-latest and therefore a required gate. The
+    # doctor line exists so a future failure explains itself in the log.
+    name: WGSL validation
     runs-on: ubuntu-latest
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -44,3 +40,8 @@ jobs:
       - run: npx vgpu install-software-renderer
       - run: npx vgpu doctor --pretty || true
       - run: npm run check:wgsl
+        env:
+          # "auto" silently degrades to parse-only when no device can be
+          # acquired; require turns that into a hard failure, which is the
+          # only honest mode for a required gate.
+          VGPU_VALIDATE: require
