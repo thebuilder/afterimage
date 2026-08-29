@@ -197,14 +197,21 @@ export default function App() {
 
         {/* Scrims. A hero has to survive having words on it, and several of these
             effects fill the frame with bright, high-frequency detail. The copy
-            needs a ground of its own, and a text-shadow will not carry it. */}
+            needs a ground of its own, and a text-shadow will not carry it.
+            The scrims fade with the chrome: they exist for the copy, not the picture. */}
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-0 hero-scrim-bottom"
+          className={cn(
+            "pointer-events-none absolute inset-0 hero-scrim-bottom transition-opacity duration-300",
+            chromeVisible ? "opacity-100" : "opacity-0"
+          )}
         />
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-0 hero-scrim-left"
+          className={cn(
+            "pointer-events-none absolute inset-0 hero-scrim-left transition-opacity duration-300",
+            chromeVisible ? "opacity-100" : "opacity-0"
+          )}
         />
 
         <div
