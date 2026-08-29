@@ -22,7 +22,7 @@ import { Slider } from "@/components/ui/slider"
 import { Switch } from "@/components/ui/switch"
 import { Connector } from "@/components/connector"
 import { Eyebrow } from "@/components/eyebrow"
-import { Led, Status } from "@/components/led"
+import { Led } from "@/components/led"
 import { Scanlines } from "@/components/scanlines"
 import { ShaderView } from "@/components/shader-view"
 import { EFFECTS } from "@/effects"
@@ -69,21 +69,6 @@ const pathIsRoute = () => window.location.pathname === pathFor(routeFromLocation
  */
 const isModifiedClick = (ev: React.MouseEvent) =>
   ev.button !== 0 || [ev.metaKey, ev.ctrlKey, ev.shiftKey, ev.altKey].some(Boolean)
-
-/** The header lamp. "Unsupported" never reaches it: that state replaces the page. */
-const STATUS_TONE = {
-  idle: "busy",
-  lost: "error",
-  ready: "ok",
-  unsupported: "error",
-} as const
-
-const STATUS_LABEL = {
-  idle: "Starting",
-  lost: "Lost",
-  ready: "Live",
-  unsupported: "No GPU",
-} as const
 
 export default function App() {
   const [status, setStatus] = useState<GpuStatus>({ state: "idle" })
@@ -282,7 +267,6 @@ export default function App() {
                   <span>{status.state === "ready" ? status.adapter : "acquiring"}</span>
                 </span>
               ) : null}
-              <Status tone={STATUS_TONE[status.state]}>{STATUS_LABEL[status.state]}</Status>
             </div>
           </div>
 
