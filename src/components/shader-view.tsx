@@ -51,7 +51,7 @@ export function ShaderView({
     const canvas = canvasRef.current
     if (!canvas) return
     let disposed = false
-    mountStage(canvas, effect, { quality, maxDpr, fps })
+    mountStage(canvas, effect, { quality, maxDpr, fps, onFail: () => setFailed(true) })
       .then((handle) => {
         if (!handle) {
           // A null handle also means "this mount was superseded", which is the

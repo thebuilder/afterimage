@@ -27,7 +27,7 @@ import { Scanlines } from "@/components/scanlines"
 import { ShaderView } from "@/components/shader-view"
 import { EFFECTS } from "@/effects"
 import type { HeroEffect } from "@/effects/types"
-import { acquireGpu, type GpuStatus } from "@/lib/gpu"
+import { acquireGpu, onGpuLost, type GpuStatus } from "@/lib/gpu"
 import { cn } from "@/lib/utils"
 
 const REPO = "https://github.com/thebuilder/afterimage"
@@ -70,6 +70,21 @@ const pathIsRoute = () => window.location.pathname === pathFor(routeFromLocation
 const isModifiedClick = (ev: React.MouseEvent) =>
   ev.button !== 0 || [ev.metaKey, ev.ctrlKey, ev.shiftKey, ev.altKey].some(Boolean)
 
+/** The header lamp. "Unsupported" never reaches it: that state replaces the page. */
+const STATUS_TONE = {
+  idle: "busy",
+  lost: "error",
+  ready: "ok",
+  unsupported: "error",
+} as const
+
+const STATUS_LABEL = {
+  idle: "Starting",
+  lost: "Lost",
+  ready: "Live",
+  unsupported: "No GPU",
+} as const
+
 export default function App() {
   const [status, setStatus] = useState<GpuStatus>({ state: "idle" })
   const [route, setRoute] = useState<Route>(routeFromLocation)
@@ -86,6 +101,10 @@ export default function App() {
   useEffect(() => {
     acquireGpu().then(setStatus)
   }, [])
+
+  // A driver reset or a GPU switch kills every canvas at once. Nothing here can
+  // repair that, so the page stops claiming to be live and asks for a reload.
+  useEffect(() => onGpuLost(setStatus), [])
 
   // Reduced motion: let every canvas render for a couple of seconds so the page
   // is not a wall of black rectangles, then freeze. A WebGPU canvas keeps its
@@ -263,9 +282,7 @@ export default function App() {
                   <span>{status.state === "ready" ? status.adapter : "acquiring"}</span>
                 </span>
               ) : null}
-              <Status tone={status.state === "ready" ? "ok" : "busy"}>
-                {status.state === "ready" ? "Live" : "Starting"}
-              </Status>
+              <Status tone={STATUS_TONE[status.state]}>{STATUS_LABEL[status.state]}</Status>
             </div>
           </div>
 
@@ -385,6 +402,19 @@ export default function App() {
 
       <HowItWorks effect={active} onOpenChange={setHow} open={route.how} />
       <About onOpenChange={setAboutOpen} open={aboutOpen} />
+
+      {status.state === "lost" ? (
+        <div className="fixed inset-x-0 bottom-0 z-50 border-line border-t bg-void/95 px-5 py-3 text-center font-mono text-readout text-signal uppercase tracking-readout">
+          GPU connection lost.{" "}
+          <button
+            className="underline decoration-dotted underline-offset-4"
+            onClick={() => window.location.reload()}
+            type="button"
+          >
+            Reload
+          </button>
+        </div>
+      ) : null}
     </div>
   )
 }
