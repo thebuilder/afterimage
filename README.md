@@ -18,10 +18,13 @@ many times too fast as there are canvases.
 
 ```bash
 npm install
-npm run dev
+npm run dev          # http://localhost:5177
 ```
 
-Needs a WebGPU device: Chrome/Edge 113+, or Safari 26.
+Needs a WebGPU device: Chrome/Edge 113+, or Safari 26. Node 22.18 or newer,
+because the headless scripts import `.ts` files directly. The dev port is 5177
+with `strictPort`, so a busy port fails loudly instead of moving; `shots.sh` and
+`.claude/launch.json` both assume it.
 
 ## The effects
 
@@ -105,6 +108,10 @@ Field turns `trail` into the decay constant of its feedback buffer.
 
 ```
 src/
+  main.tsx          mounts App, imports index.css
+  App.tsx           the whole page: route state, hero, catalogue, panels
+  index.css         owned by the Afterglow registry, rewritten on `shadcn add`. Do not edit
+  theme.css         project tokens, imported by index.css. Ours to edit
   shaders/          single-pass effects, one .wgsl each, plus common.wgsl helpers
   effects/
     types.ts        the EffectInstance / HeroEffect contract
@@ -118,7 +125,13 @@ src/
   lib/
     gpu.ts          the one Gpu for the page
     stage.ts        surface lifecycle and the single rAF loop
-  components/       Afterglow components plus ShaderView
+    utils.ts        the registry's `cn` helper
+  components/
+    ui/             vendored Afterglow primitives, replaced wholesale by `shadcn add`
+    shader-view.tsx the canvas element every Surface attaches to
+    *.tsx           the rest are project components: screen, terminal-window, led, ...
+scripts/
+  lib/              shared by the headless scripts: registry parsing, frame statistics
 ```
 
 Each multi-pass effect splits into a `pipeline.ts` that takes its WGSL as
@@ -134,13 +147,52 @@ at as numbers. `scripts/render.mjs` reads each shader's `Params` struct through
 `reflectSource`, so it fills whatever controls that shader happens to declare
 rather than assuming a fixed uniform shape.
 
+These five are the gate, and the first four need nothing but Node:
+
+```bash
+npm run typecheck           # tsc -b --noEmit
+npm run lint                # oxlint
+npm run build               # tsc -b && vite build
+npm run check:registry      # registry invariants: "20 effects checked, 0 problems"
+npm run check:wgsl          # every .wgsl file: "30 shaders checked, 0 failing"
+```
+
+`check:wgsl` prints a line per shader only for the ones that fail, and the
+summary either way. To see a shader's reflection, run `vgpu check` on it
+directly. It is fifth rather than first because `vgpu check` validates through
+Dawn where it can find an adapter, which is why CI runs it as a separate,
+informational job.
+
+The rest need an adapter outright, so they run on my machine:
+
 ```bash
 npm run doctor              # confirm this machine can acquire an adapter and render
-npm run check:wgsl          # validate every .wgsl file and print its reflection
-npm run render              # render each single-pass shader to out/*.png via Dawn
+npm run render              # render all 15 single-pass shaders to out/*.png via Dawn
 npm run render -- aurora --t=3,14 --w=960 --h=540
-npm run render:multipass    # step flux and reaction for N frames, then read back
-npm run shots               # capture each hero from the running dev server
+npm run render -- ocean --set=swell=2.0   # override one control, repeatable
+npm run render:multipass    # step flux, ink, boids, lattice and reaction 120 frames each
+npm run og                  # compose the Open Graph card
+```
+
+`--set` takes `--set=name=value`, one flag per control, and the name is a
+`Params` member. Anything the harness does not recognise and you do not set
+gets 1.
+
+Both render scripts exit non-zero on failure: a shader that throws, an
+asynchronous validation error off `gpu.onError`, or a frame that trips the
+assertions in `scripts/lib/stats.mjs`, which is where a black frame and a
+blown-out one both get caught. `ASSERT-FAIL` on stderr is the line to look for.
+
+`npm run shots` captures the hero for every effect from a running dev server. It
+picks effects by URL (`/<id>`), so it reaches all 20 and stays correct when the
+registry is reordered. It needs the `agent-browser` CLI on `PATH` and a dev
+server on port 5177, and it says which one is missing rather than producing
+blank PNGs. Pass ids to capture a subset:
+
+```bash
+npm run dev                 # in another shell, port 5177
+npm run shots               # all 20
+npm run shots ocean ink     # just these
 ```
 
 `scripts/render.mjs` prints the mean and max luminance of every frame it writes.
@@ -164,13 +216,26 @@ exactly one shader and exits happy. `scripts/check-wgsl.sh` loops instead.
 
 ## Notes on the WGSL
 
-Every single-pass shader declares the same uniform block, which is why one
-adapter covers all of them:
+Every single-pass shader declares a `Params` block that opens with the same
+three members and then names its own controls, one `f32` each. That prefix is
+what lets one adapter cover all of them, and the tail is what makes the knobs
+per-effect. `src/shaders/ocean.wgsl` is the shape:
 
 ```wgsl
-struct Params { res: vec2f, mouse: vec2f, time: f32, intensity: f32 }
+struct Params {
+  res: vec2f,
+  mouse: vec2f,
+  time: f32,
+  swell: f32,
+  wind: f32,
+  sun: f32,
+}
 @group(0) @binding(0) var<uniform> params: Params;
 ```
+
+`res`, `mouse` and `time` are required; `npm run check:registry` fails the build
+if one is missing, if a control key names no member, or if a member a control
+names is not an `f32`.
 
 `src/shaders/common.wgsl` holds helpers and nothing else. An imported WGSL
 module may not declare `@group` or `@binding`, and vgpu's resolver rejects one
@@ -187,7 +252,9 @@ npm run og            # reuses out/og-art.png if it is already there
 npm run og -- --render  # force a fresh render of the art
 ```
 
-Screenshot that file at a 1200x630 viewport and convert it:
+The last two steps are manual. Open `out/og-card.html`, screenshot it at a
+1200x630 viewport, and save the PNG as `out/og-draft.png` yourself; no script
+writes that file. Then convert it:
 
 ```bash
 sips -s format jpeg -s formatOptions 88 out/og-draft.png --out public/og.jpg
@@ -198,6 +265,12 @@ in `vite.config.ts`, from `VERCEL_PROJECT_PRODUCTION_URL` on Vercel or `SITE_URL
 anywhere else. With neither it collapses to a relative path.
 
 ## Housekeeping
+
+`.github/workflows/ci.yml` runs on every push to `main` and every pull request.
+The `verify` job is the gate: `typecheck`, `check:registry`, `lint`, `build`. A
+second job runs `check:wgsl`, but it is `continue-on-error` until it has been
+seen green on a GPU-less Linux runner, because `vgpu check` may not find a Dawn
+adapter there. It is proven on macOS and Metal, which is where I run it.
 
 [fallow](https://www.npmjs.com/package/fallow) runs over this repo, and a
 PreToolUse hook in `.claude/settings.json` gates `git commit` and `git push` on

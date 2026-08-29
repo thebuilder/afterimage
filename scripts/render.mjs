@@ -14,7 +14,7 @@ const args = process.argv.slice(2)
 const flags = Object.fromEntries(
   args.filter((a) => a.startsWith("--")).map((a) => a.slice(2).split("="))
 )
-// --set name=value, repeatable, overrides one control default.
+// --set=name=value, repeatable, overrides one control default.
 const SET = Object.fromEntries(
   args
     .filter((a) => a.startsWith("--set="))
