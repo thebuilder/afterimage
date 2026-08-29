@@ -23,6 +23,13 @@ const artPath = path.join(root, "out", "og-art.png")
 
 if (!existsSync(artPath) || process.argv.includes("--render")) {
   const gpu = await init()
+  // Validation errors arrive asynchronously, so drain them before disposing
+  // rather than shipping a card rendered by a broken pipeline.
+  let gpuErrors = 0
+  gpu.onError((err) => {
+    gpuErrors++
+    console.error(`gpu-error: ${err?.code ?? ""} ${err?.message ?? err}`)
+  })
   const tgt = target(gpu, { size: [W, H] })
   const { createFlux } = await import(path.join(root, "src/effects/flux/pipeline.ts"))
   const effect = createFlux(
@@ -53,6 +60,8 @@ if (!existsSync(artPath) || process.argv.includes("--render")) {
   const png = new PNG({ width: W, height: H })
   png.data.set(pixels)
   writeFileSync(artPath, PNG.sync.write(png))
+  await gpu.settled()
+  if (gpuErrors > 0) process.exitCode = 1
   gpu.dispose()
   console.log("rendered art")
 }
