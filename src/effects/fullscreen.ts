@@ -32,12 +32,17 @@ const BLIT = `
  * `quality` below 1 renders into a smaller offscreen target and stretches it
  * over the surface. A gallery tile is displayed at thumbnail size, so paying for
  * every one of its pixels buys nothing an upscale does not.
+ *
+ * `renderScale` is the same lever held by the effect rather than the caller: an
+ * effect that costs far more per pixel than the rest can ask to be drawn small
+ * everywhere, the hero included.
  */
-export function fullscreen(source: Wgsl, controls: readonly Control[] = []) {
+export function fullscreen(source: Wgsl, controls: readonly Control[] = [], renderScale = 1) {
   const defaults: Record<string, number> = {}
   for (const c of controls) defaults[c.key] = c.value
 
   return ({ gpu, target, quality }: EffectSetup): EffectInstance => {
+    const q = Math.min(1, quality * renderScale)
     const fx = effect(gpu, source, {
       set: {
         params: {
@@ -62,8 +67,9 @@ export function fullscreen(source: Wgsl, controls: readonly Control[] = []) {
 
     // Branch once, at create time. The hero and the headless harness both run at
     // quality 1 and take the direct path: no offscreen target, no second pass,
-    // no per-frame conditional to decide that.
-    if (quality >= 0.999) {
+    // no per-frame conditional to decide that. An effect with a `renderScale`
+    // below 1 takes the scaled path everywhere instead.
+    if (q >= 0.999) {
       return {
         render(frame: Frame, tgt: Target, inputs: FrameInputs) {
           writeFrame(inputs)
@@ -76,8 +82,8 @@ export function fullscreen(source: Wgsl, controls: readonly Control[] = []) {
     }
 
     const dims = (w: number, h: number): [number, number] => [
-      Math.max(2, Math.round(w * quality)),
-      Math.max(2, Math.round(h * quality)),
+      Math.max(2, Math.round(w * q)),
+      Math.max(2, Math.round(h * q)),
     ]
     const [w0, h0] = dims(target.size[0], target.size[1])
 
