@@ -1,5 +1,6 @@
 import { compute, draw, effect, pingPong, pingPongStorage, sampler } from "vgpu"
 import type { Frame, Target } from "vgpu"
+import { release } from "../release.ts"
 import type { EffectInstance, EffectSetup, FrameInputs, Wgsl } from "../types"
 
 /** WGSL sources, passed in so the same pipeline runs under Vite and under Node. */
@@ -122,6 +123,9 @@ export function createFlux(
       trails.read.resize([w, h])
       trails.write.resize([w, h])
       reset = 1
+    },
+    dispose() {
+      release(trails.read, trails.write, particles.read, particles.write)
     },
   }
 }

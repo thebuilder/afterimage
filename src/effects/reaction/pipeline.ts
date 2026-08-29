@@ -1,5 +1,6 @@
 import { effect, pingPong, sampler } from "vgpu"
 import type { Frame, Target } from "vgpu"
+import { release } from "../release.ts"
 import type { EffectInstance, EffectSetup, FrameInputs, Wgsl } from "../types"
 
 export interface ReactionSources {
@@ -108,6 +109,9 @@ export function createReaction(
       state.read.resize([w, h])
       state.write.resize([w, h])
       needsSeed = true
+    },
+    dispose() {
+      release(state.read, state.write)
     },
   }
 }

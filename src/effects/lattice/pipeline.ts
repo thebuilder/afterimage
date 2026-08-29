@@ -1,6 +1,7 @@
 import { draw, effect, geometry, sampler, target as makeTarget } from "vgpu"
 import type { Frame, Target } from "vgpu"
 import { icosphere, orbit, perspectiveCamera } from "vgpu/scene"
+import { release } from "../release.ts"
 import type { EffectInstance, EffectSetup, FrameInputs, Wgsl } from "../types"
 
 export interface LatticeSources {
@@ -81,6 +82,9 @@ export function createLattice(setup: EffectSetup, src: LatticeSources): EffectIn
       const [w, h] = dims(width, height)
       scene.resize([w, h])
       camera.set({ aspect: w / Math.max(h, 1) })
+    },
+    dispose() {
+      release(scene)
     },
   }
 }
