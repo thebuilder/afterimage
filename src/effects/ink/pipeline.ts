@@ -80,7 +80,8 @@ export function createInk(setup: EffectSetup, src: InkSources): EffectInstance {
       present: {
         texel: state.read.texelSize,
         time: inputs.time,
-        glow: inputs.controls.glow ?? 1,
+        // No glow control is declared for this effect; the shader input is fixed.
+        glow: 1,
       },
     })
     frame.pass(tgt, present)

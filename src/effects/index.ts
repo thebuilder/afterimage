@@ -99,7 +99,12 @@ const ENTRIES: readonly Entry[] = [
       createFlux(
         setup,
         { advect: fluxAdvect, splat: fluxSplat, fade: fluxFade, present: fluxPresent },
-        { count: 140_000 }
+        // Quality scales area, so the population follows it squared: a tile at
+        // 0.85 draws into ~72% of the pixels and gets ~72% of the particles,
+        // which keeps the density of the streaks the same as the hero's. The
+        // floor keeps a tile from thinning out into visible specks, and the
+        // pipeline divides sprite energy by the count, so exposure is unmoved.
+        { count: Math.max(30_000, Math.round(140_000 * Math.min(1, setup.quality) ** 2)) }
       ),
   },
   {

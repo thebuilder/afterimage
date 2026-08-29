@@ -63,7 +63,8 @@ export function createLattice(setup: EffectSetup, src: LatticeSources): EffectIn
         time: inputs.time,
         morph: inputs.controls.morph ?? 0.35,
         facets: inputs.controls.facets ?? 7,
-        glow: inputs.controls.glow ?? 1,
+        // No glow control is declared for this effect; the shader input is fixed.
+        glow: 1,
       },
     })
 
@@ -73,7 +74,8 @@ export function createLattice(setup: EffectSetup, src: LatticeSources): EffectIn
 
     present.set({
       src: scene.color,
-      present: { texel: scene.texelSize, glow: inputs.controls.glow ?? 1, time: inputs.time },
+      // No glow control is declared for this effect; the shader input is fixed.
+      present: { texel: scene.texelSize, glow: 1, time: inputs.time },
     })
     frame.pass(tgt, present)
   }

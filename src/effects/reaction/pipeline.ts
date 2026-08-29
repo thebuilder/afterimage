@@ -20,7 +20,10 @@ export function createReaction(
   opts: ReactionOptions = {}
 ): EffectInstance {
   const { gpu, target, quality } = setup
-  const substeps = opts.substeps ?? 12
+  // A tile is watched for a few seconds at thumbnail size, so it can afford to
+  // grow its pattern a third slower than the hero does and spend the difference
+  // on the rest of the page.
+  const substeps = opts.substeps ?? (quality < 1 ? 8 : 12)
 
   // Gray-Scott has no intrinsic scale: its features are a fixed number of
   // texels across, so running it at native resolution on a 4K hero produces
