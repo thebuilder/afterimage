@@ -15,7 +15,7 @@ struct Params {
 
 const SLAB_LO: f32 = 1.0;
 const SLAB_HI: f32 = 5.0;
-const STEPS: i32 = 46;
+const STEPS: i32 = 36;
 const LIGHT_STEPS: i32 = 4;
 
 /// Density at a point. `coverage` subtracts a constant before the clamp, which
@@ -26,6 +26,18 @@ fn cloud(p: vec3f, t: f32, coverage: f32) -> f32 {
   d = d * 0.5 + 0.5;
   // Fade to nothing at the top and bottom of the slab so clouds have a base and
   // a cap instead of being cut off by the march bounds.
+  let hi = smoothstep(SLAB_HI, SLAB_HI - 1.6, p.y);
+  let lo = smoothstep(SLAB_LO, SLAB_LO + 0.5, p.y);
+  return clamp((d - (1.0 - coverage)) * 2.4, 0.0, 1.0) * hi * lo;
+}
+
+/// The same field at two octaves, for the light march only. A shadow term is an
+/// integral along a ray, and integrating washes the high frequencies out anyway,
+/// so the detail octaves are paid for and then thrown away.
+fn cloudLight(p: vec3f, t: f32, coverage: f32) -> f32 {
+  let q = p + vec3f(t * 0.16, 0.0, t * 0.05);
+  var d = fbmSimplex3d(q * 0.34, 2, 2.10, 0.50);
+  d = d * 0.5 + 0.5;
   let hi = smoothstep(SLAB_HI, SLAB_HI - 1.6, p.y);
   let lo = smoothstep(SLAB_LO, SLAB_LO + 0.5, p.y);
   return clamp((d - (1.0 - coverage)) * 2.4, 0.0, 1.0) * hi * lo;
@@ -83,7 +95,7 @@ fn sky(rd: vec3f, sunDir: vec3f) -> vec3f {
       var shadow = 0.0;
       for (var j = 1; j <= LIGHT_STEPS; j++) {
         let lp = pos + sunDir * (f32(j) * 0.32);
-        shadow += cloud(lp, t, params.coverage) * params.density;
+        shadow += cloudLight(lp, t, params.coverage) * params.density;
       }
       let sunlight = exp(-shadow * 0.62);
 

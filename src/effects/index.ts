@@ -55,7 +55,11 @@ const ctl = (
  * A single-pass entry carries its shader instead of a `create`; the adapter is
  * added below. Multi-pass entries build their own pipeline and bring their own.
  */
-type SinglePass = Omit<HeroEffect, "create"> & { readonly wgsl: Wgsl }
+type SinglePass = Omit<HeroEffect, "create"> & {
+  readonly wgsl: Wgsl
+  /** Draw at this fraction of the surface, on top of whatever `quality` asks for. */
+  readonly renderScale?: number
+}
 type Entry = HeroEffect | SinglePass
 
 const ENTRIES: readonly Entry[] = [
@@ -366,6 +370,8 @@ const ENTRIES: readonly Entry[] = [
   {
     id: "clouds",
     wgsl: cloudsWgsl,
+    // Volumetrics are soft and low frequency: half resolution costs no detail.
+    renderScale: 0.5,
     name: "Cumulus",
     category: "Atmosphere",
     tagline: "Clouds gather, thin and catch the sun from within.",
@@ -785,7 +791,7 @@ const ENTRIES: readonly Entry[] = [
 ]
 
 export const EFFECTS: readonly HeroEffect[] = ENTRIES.map((e) =>
-  "wgsl" in e ? { ...e, create: fullscreen(e.wgsl, e.controls) } : e
+  "wgsl" in e ? { ...e, create: fullscreen(e.wgsl, e.controls, e.renderScale) } : e
 )
 
 export type { HeroEffect } from "./types"
