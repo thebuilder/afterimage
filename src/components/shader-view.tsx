@@ -38,8 +38,12 @@ export function ShaderView({
 }: ShaderViewProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const handleRef = useRef<StageHandle | null>(null)
-  const [visible, setVisible] = useState(false)
+  // `null` means "not yet observed". An observed `false` is a different value, so
+  // the observer's first callback always changes state and the gate effect runs.
+  const [visible, setVisible] = useState<boolean | null>(null)
   const [failed, setFailed] = useState(false)
+  // The desired state, readable by the async mount once the device resolves.
+  const latest = useRef({ effect, controls, active: false })
 
   // Mount once. Swapping effects later goes through setEffect so the surface,
   // and every pipeline the gpu has already compiled, survive the change.
@@ -60,6 +64,11 @@ export function ShaderView({
           return
         }
         handleRef.current = handle
+        // Everything set while the device was still being acquired landed on a
+        // null handle and was dropped. Replay the latest desired state now.
+        handle.setEffect(latest.current.effect)
+        if (latest.current.controls) handle.setControls(latest.current.controls)
+        handle.setActive(latest.current.active)
       })
       .catch((err) => {
         console.error(`[shader-view:${effect.id}]`, err)
@@ -73,15 +82,18 @@ export function ShaderView({
   }, [])
 
   useEffect(() => {
+    latest.current.effect = effect
     handleRef.current?.setEffect(effect)
   }, [effect])
 
   useEffect(() => {
+    latest.current.controls = controls
     if (controls) handleRef.current?.setControls(controls)
   }, [controls])
 
   useEffect(() => {
-    handleRef.current?.setActive(visible && enabled)
+    latest.current.active = (visible ?? false) && enabled
+    handleRef.current?.setActive(latest.current.active)
   }, [visible, enabled])
 
   useEffect(() => {
