@@ -152,6 +152,9 @@ export default function App() {
 
   useEffect(() => {
     const onKey = (ev: KeyboardEvent) => {
+      // Browser chords stay the browser's: Cmd/Ctrl+D is bookmark, Cmd/Ctrl+1-9 is
+      // tab switching. Shift stays allowed because "?" needs it.
+      if (ev.metaKey || ev.ctrlKey || ev.altKey) return
       // A dialog owns the keyboard while it is open: without this, typing a
       // digit behind the scrim would swap the effect out from under it.
       if (modalOpen) return
@@ -194,17 +197,28 @@ export default function App() {
 
         {/* Scrims. A hero has to survive having words on it, and several of these
             effects fill the frame with bright, high-frequency detail. The copy
-            needs a ground of its own, and a text-shadow will not carry it. */}
+            needs a ground of its own, and a text-shadow will not carry it.
+            The scrims fade with the chrome: they exist for the copy, not the picture. */}
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-0 hero-scrim-bottom"
+          className={cn(
+            "pointer-events-none absolute inset-0 hero-scrim-bottom transition-opacity duration-300",
+            chromeVisible ? "opacity-100" : "opacity-0"
+          )}
         />
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-0 hero-scrim-left"
+          className={cn(
+            "pointer-events-none absolute inset-0 hero-scrim-left transition-opacity duration-300",
+            chromeVisible ? "opacity-100" : "opacity-0"
+          )}
         />
 
         <div
+          // inert removes the whole subtree from hit-testing, focus order and the
+          // accessibility tree while hidden, which the children's pointer-events-auto
+          // would otherwise re-enable underneath the fade.
+          inert={!chromeVisible}
           className={cn(
             "pointer-events-none absolute inset-0 flex flex-col justify-between transition-opacity duration-300",
             chromeVisible ? "opacity-100" : "opacity-0"
