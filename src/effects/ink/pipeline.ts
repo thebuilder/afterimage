@@ -1,5 +1,6 @@
 import { effect, pingPong, sampler } from "vgpu"
 import type { Frame, Target } from "vgpu"
+import { release } from "../release.ts"
 import type { EffectInstance, EffectSetup, FrameInputs, Wgsl } from "../types"
 
 export interface InkSources {
@@ -90,6 +91,9 @@ export function createInk(setup: EffectSetup, src: InkSources): EffectInstance {
       const [w, h] = dims(width, height)
       state.read.resize([w, h])
       state.write.resize([w, h])
+    },
+    dispose() {
+      release(state.read, state.write)
     },
   }
 }

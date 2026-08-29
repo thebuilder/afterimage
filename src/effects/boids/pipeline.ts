@@ -1,5 +1,6 @@
 import { compute, draw, effect, pingPongStorage, sampler, target as makeTarget } from "vgpu"
 import type { Frame, Target } from "vgpu"
+import { release } from "../release.ts"
 import type { EffectInstance, EffectSetup, FrameInputs, Wgsl } from "../types"
 
 export interface BoidsSources {
@@ -97,6 +98,9 @@ export function createBoids(
     resize(width, height) {
       flockBuffer.resize(dims(width, height))
       reset = 1
+    },
+    dispose() {
+      release(flockBuffer, birds.read, birds.write)
     },
   }
 }
