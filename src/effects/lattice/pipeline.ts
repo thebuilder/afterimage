@@ -35,6 +35,8 @@ export function createLattice(setup: EffectSetup, src: LatticeSources): EffectIn
   })
   const present = effect(gpu, src.present, { set: { samp: linear } })
 
+  let lastDims: readonly [number, number] = [w0, h0]
+
   const camera = perspectiveCamera({
     fov: 42,
     aspect: w0 / Math.max(h0, 1),
@@ -80,6 +82,10 @@ export function createLattice(setup: EffectSetup, src: LatticeSources): EffectIn
     render,
     resize(width, height) {
       const [w, h] = dims(width, height)
+      // Rounding means many surface resizes land on identical buffer dimensions.
+      // The camera aspect derives from the same w/h, so nothing changes either.
+      if (w === lastDims[0] && h === lastDims[1]) return
+      lastDims = [w, h]
       scene.resize([w, h])
       camera.set({ aspect: w / Math.max(h, 1) })
     },

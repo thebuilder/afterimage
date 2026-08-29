@@ -190,14 +190,21 @@ export async function mountStage(
   canvas.addEventListener("pointermove", onPointer, { passive: true })
   entry.detachPointer = () => canvas.removeEventListener("pointermove", onPointer)
 
+  // Coalesce the resize storm a window drag produces: a simulation treats a
+  // resize as "start over", so forwarding every event reseeds the sim once per
+  // frame for the whole drag. The canvas shows a stretched frame for 150ms,
+  // which is the standard tradeoff.
+  let resizeTimer = 0
   surf.onResize(({ width, height }) => {
-    entry.instance.resize?.(width, height)
+    window.clearTimeout(resizeTimer)
+    resizeTimer = window.setTimeout(() => entry.instance.resize?.(width, height), 150)
   })
 
   entries.add(entry)
   ensureLoop()
 
   live = () => {
+    window.clearTimeout(resizeTimer)
     entry.detachPointer()
     entry.instance.dispose?.()
     entries.delete(entry)
