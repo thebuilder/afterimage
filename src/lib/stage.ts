@@ -181,14 +181,35 @@ export async function mountStage(
     detachPointer: () => {},
   }
 
-  const onPointer = (ev: PointerEvent) => {
+  // Vertical swipes stay the browser's so the page remains scrollable on touch;
+  // horizontal and diagonal drags become pointer events that drive the effect.
+  canvas.style.touchAction = "pan-y"
+
+  const updateFromEvent = (ev: PointerEvent) => {
     const r = canvas.getBoundingClientRect()
     if (r.width === 0 || r.height === 0) return
     entry.mouse = [(ev.clientX - r.left) / r.width, (ev.clientY - r.top) / r.height]
     entry.pointer = 1
   }
-  canvas.addEventListener("pointermove", onPointer, { passive: true })
-  entry.detachPointer = () => canvas.removeEventListener("pointermove", onPointer)
+  const onPointerDown = (ev: PointerEvent) => {
+    // Capture keeps the stream when a drag leaves the canvas, and makes a bare
+    // tap a poke instead of a no-op.
+    canvas.setPointerCapture(ev.pointerId)
+    updateFromEvent(ev)
+  }
+  const onPointerUp = (ev: PointerEvent) => {
+    if (canvas.hasPointerCapture(ev.pointerId)) canvas.releasePointerCapture(ev.pointerId)
+  }
+  canvas.addEventListener("pointerdown", onPointerDown, { passive: true })
+  canvas.addEventListener("pointermove", updateFromEvent, { passive: true })
+  canvas.addEventListener("pointerup", onPointerUp, { passive: true })
+  canvas.addEventListener("pointercancel", onPointerUp, { passive: true })
+  entry.detachPointer = () => {
+    canvas.removeEventListener("pointerdown", onPointerDown)
+    canvas.removeEventListener("pointermove", updateFromEvent)
+    canvas.removeEventListener("pointerup", onPointerUp)
+    canvas.removeEventListener("pointercancel", onPointerUp)
+  }
 
   // Coalesce the resize storm a window drag produces: a simulation treats a
   // resize as "start over", so forwarding every event reseeds the sim once per
