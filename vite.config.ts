@@ -26,6 +26,8 @@ const siteUrlPlugin = {
 
 export default defineConfig({
   plugins: [siteUrlPlugin, wgslVitePlugin(), react(), tailwindcss()],
+  // One port everywhere: launch.json, shots.sh and the README all assume it.
+  server: { port: 5177, strictPort: true },
   resolve: {
     alias: { "@": new URL("./src", import.meta.url).pathname },
   },

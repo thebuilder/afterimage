@@ -14,7 +14,7 @@
     "doctor": "vgpu doctor --pretty",
     "render": "node scripts/render.mjs",
     "render:multipass": "node scripts/render-multipass.mjs",
-    "shots": "./scripts/shots.sh flux blackhole reaction chrome aurora mandelbulb arcs silk hexgrid rain",
+    "shots": "./scripts/shots.sh",
     "typecheck": "tsc -b --noEmit",
     "og": "node scripts/og.mjs"
   },
