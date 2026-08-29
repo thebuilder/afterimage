@@ -10,6 +10,7 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "check:wgsl": "./scripts/check-wgsl.sh",
+    "check:registry": "node scripts/check-registry.mjs",
     "doctor": "vgpu doctor --pretty",
     "render": "node scripts/render.mjs",
     "render:multipass": "node scripts/render-multipass.mjs",

@@ -7,6 +7,7 @@ import { PNG } from "pngjs"
 import { resolveShader } from "@vgpu/wgsl/runtime"
 import { frame, init, target } from "vgpu/node"
 import { frameViolations, luminance } from "./lib/stats.mjs"
+import { parseEffects } from "./lib/registry.mjs"
 
 const root = path.resolve(fileURLToPath(new URL("..", import.meta.url)))
 const args = process.argv.slice(2)
@@ -16,14 +17,11 @@ const W = Number(flags.w ?? 480)
 const H = Number(flags.h ?? 270)
 const FRAMES = Number(flags.frames ?? 120)
 
-// Control defaults per effect, mirroring what the registry declares.
-const CONTROLS = {
-  flux: { exposure: 1, flow: 1, persistence: 0.92 },
-  reaction: { feed: 0.0367, kill: 0.0605, relief: 1 },
-  ink: { swirl: 1, dissipation: 0.5, dye: 1, glow: 1 },
-  boids: { cohesion: 1, separation: 1, speed: 1, glow: 1 },
-  lattice: { morph: 0.35, spin: 1, facets: 7, glow: 1 },
-}
+// Control defaults per effect, read straight out of the registry so the
+// headless run and the page cannot disagree.
+const CONTROLS = Object.fromEntries(
+  parseEffects().map((e) => [e.id, Object.fromEntries(e.controls.map((c) => [c.key, c.value]))])
+)
 
 const load = async (p) => (await resolveShader({ entry: path.join(root, p) })).wgsl
 
