@@ -24,8 +24,10 @@ export function createBoids(
   const { gpu, target, quality } = setup
   // The flock update is O(n²). 1400 birds is 2M pair tests a frame, which a
   // modern GPU eats; ten times that would not fit in a frame budget this canvas
-  // shares with every other preview on the page.
-  const count = opts.count ?? 1400
+  // shares with every other preview on the page. Scaling with quality is worth
+  // more here than anywhere else for the same reason: the cost is quadratic in
+  // the number the tile trims.
+  const count = opts.count ?? Math.max(500, Math.round(1400 * Math.min(1, quality)))
 
   const birds = pingPongStorage(gpu, count * BIRD_BYTES)
 
@@ -81,7 +83,8 @@ export function createBoids(
       view: {
         aspect,
         size: 0.030,
-        glow: inputs.controls.glow ?? 1,
+        // No glow control is declared for this effect; the shader input is fixed.
+        glow: 1,
         time: inputs.time,
       },
     })
@@ -89,7 +92,8 @@ export function createBoids(
 
     present.set({
       src: flockBuffer.color,
-      present: { texel: flockBuffer.texelSize, glow: inputs.controls.glow ?? 1, time: inputs.time },
+      // No glow control is declared for this effect; the shader input is fixed.
+      present: { texel: flockBuffer.texelSize, glow: 1, time: inputs.time },
     })
     frame.pass(tgt, present)
   }
