@@ -48,6 +48,7 @@ export function createBoids(
   const present = effect(gpu, src.present, { set: { samp: linear } })
 
   let reset = 1
+  let lastDims: readonly [number, number] = [w0, h0]
 
   function render(frame: Frame, tgt: Target, inputs: FrameInputs) {
     const aspect = tgt.size[0] / Math.max(tgt.size[1], 1)
@@ -96,7 +97,12 @@ export function createBoids(
   return {
     render,
     resize(width, height) {
-      flockBuffer.resize(dims(width, height))
+      const [w, h] = dims(width, height)
+      // Rounding means many surface resizes land on identical buffer dimensions.
+      // Re-seeding the flock for those scatters a settled murmuration for nothing.
+      if (w === lastDims[0] && h === lastDims[1]) return
+      lastDims = [w, h]
+      flockBuffer.resize([w, h])
       reset = 1
     },
     dispose() {

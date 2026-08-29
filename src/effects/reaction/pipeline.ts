@@ -51,6 +51,7 @@ export function createReaction(
   const present = effect(gpu, src.present, { set: { samp: linear } })
 
   let needsSeed = true
+  let lastDims: readonly [number, number] = [w0, h0]
 
   function reseed(frame: Frame, time: number) {
     seed.set({ seed: { res: state.write.size, time, _pad: 0 } })
@@ -106,6 +107,11 @@ export function createReaction(
     render,
     resize(width, height) {
       const [w, h] = dims(width, height)
+      // The grid long edge is capped, so many surface resizes land on identical
+      // internal dimensions. Reseeding for those throws the grown pattern away
+      // and pays two extra passes for nothing.
+      if (w === lastDims[0] && h === lastDims[1]) return
+      lastDims = [w, h]
       state.read.resize([w, h])
       state.write.resize([w, h])
       needsSeed = true

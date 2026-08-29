@@ -41,6 +41,7 @@ export function createInk(setup: EffectSetup, src: InkSources): EffectInstance {
   const present = effect(gpu, src.present, { set: { samp: linear } })
 
   let prevMouse: [number, number] = [0.5, 0.5]
+  let lastDims: readonly [number, number] = [w0, h0]
 
   function render(frame: Frame, tgt: Target, inputs: FrameInputs) {
     const aspect = tgt.size[0] / Math.max(tgt.size[1], 1)
@@ -89,6 +90,10 @@ export function createInk(setup: EffectSetup, src: InkSources): EffectInstance {
     render,
     resize(width, height) {
       const [w, h] = dims(width, height)
+      // The grid long edge is capped, so many surface resizes land on identical
+      // internal dimensions. Reallocating for those disturbs the solve for nothing.
+      if (w === lastDims[0] && h === lastDims[1]) return
+      lastDims = [w, h]
       state.read.resize([w, h])
       state.write.resize([w, h])
     },

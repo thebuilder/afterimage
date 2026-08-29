@@ -29,12 +29,15 @@ export function createFlux(
   // Two halves so the advection never reads the buffer it is writing.
   const particles = pingPongStorage(gpu, count * PARTICLE_BYTES)
 
-  const bufW = () => Math.max(2, Math.round(target.size[0] * quality))
-  const bufH = () => Math.max(2, Math.round(target.size[1] * quality))
+  const dims = (w: number, h: number): [number, number] => [
+    Math.max(2, Math.round(w * quality)),
+    Math.max(2, Math.round(h * quality)),
+  ]
+  const [w0, h0] = dims(target.size[0], target.size[1])
 
   // The trail buffer is HDR: additive sprites stack well past 1.0, and clipping
   // them in an 8-bit target is what turns a plume into a flat white blob.
-  const trails = pingPong(gpu, bufW(), bufH(), { format: "rgba16float" })
+  const trails = pingPong(gpu, w0, h0, { format: "rgba16float" })
   const linear = sampler(gpu, { minFilter: "linear", magFilter: "linear" })
 
   const advect = compute(gpu, src.advect)
@@ -51,6 +54,7 @@ export function createFlux(
 
   let reset = 1
   let aspect = target.size[0] / Math.max(target.size[1], 1)
+  let lastDims: readonly [number, number] = [w0, h0]
 
   function render(frame: Frame, tgt: Target, inputs: FrameInputs) {
     aspect = tgt.size[0] / Math.max(tgt.size[1], 1)
@@ -118,8 +122,11 @@ export function createFlux(
   return {
     render,
     resize(width, height) {
-      const w = Math.max(2, Math.round(width * quality))
-      const h = Math.max(2, Math.round(height * quality))
+      const [w, h] = dims(width, height)
+      // Rounding means many surface resizes land on identical buffer dimensions.
+      // Respawning 140k particles for those throws the plume away for nothing.
+      if (w === lastDims[0] && h === lastDims[1]) return
+      lastDims = [w, h]
       trails.read.resize([w, h])
       trails.write.resize([w, h])
       reset = 1
