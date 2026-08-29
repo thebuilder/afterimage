@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Typecheck, lint, build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm run build
+
+  shaders:
+    # Validates all 30 WGSL files with `vgpu check`. Proven on macOS/Metal;
+    # UNPROVEN on a GPU-less Linux runner (vgpu may not acquire a Dawn
+    # adapter there), so this job is informational until it has been
+    # observed green on GitHub. To promote it to a required gate: delete
+    # the continue-on-error line after the first green run.
+    name: WGSL validation (informational)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run check:wgsl
