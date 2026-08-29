@@ -9,7 +9,16 @@ export interface StageOptions {
   readonly maxDpr?: number
   /** Frames per second cap. Omit for uncapped. */
   readonly fps?: number
+  /**
+   * Called once when this entry's render throws and the loop drops it. The
+   * canvas is dead from here on, so the owner can say so instead of leaving a
+   * frozen frame that still looks live.
+   */
+  readonly onFail?: () => void
 }
+
+/** Options with the numeric defaults filled in; `onFail` stays as given. */
+type ResolvedOptions = Required<Omit<StageOptions, "onFail">> & Pick<StageOptions, "onFail">
 
 export interface StageHandle {
   setEffect(effect: HeroEffect): void
@@ -26,7 +35,7 @@ interface Entry {
   surface: Surface
   effect: HeroEffect
   instance: EffectInstance
-  opts: Required<StageOptions>
+  opts: ResolvedOptions
   active: boolean
   controls: Record<string, number>
   time: number
@@ -86,6 +95,7 @@ function tick(now: number) {
       const v = err as { code?: string; message?: string; where?: string }
       console.error(`vgpu-fail ${e.effect.id} code=${v?.code} where=${v?.where} msg=${v?.message}`)
       e.active = false
+      e.opts.onFail?.()
       continue
     }
 
@@ -149,10 +159,11 @@ export async function mountStage(
   if (cancelled || status.state !== "ready") return null
   const gpu = status.gpu
 
-  const opts: Required<StageOptions> = {
+  const opts: ResolvedOptions = {
     quality: options.quality ?? 1,
     maxDpr: options.maxDpr ?? 2,
     fps: options.fps ?? 0,
+    onFail: options.onFail,
   }
 
   // `dpr: [1, max]` lets the surface track the device pixel ratio but stops it
