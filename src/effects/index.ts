@@ -685,9 +685,9 @@ const ENTRIES: readonly Entry[] = [
     published: "2026-11-02",
     wgsl: harborWgsl,
     category: "Pixel art",
-    tagline: "A dithered harbour at dusk, its lighthouse turning to follow you.",
+    tagline: "A dithered harbour at dusk, its lighthouse turning through the night.",
     summary:
-      "The lighthouse beam tracks your pointer across a pixel-art harbour, and the water mirrors it all and ripples wherever you hover. Palette repaints the scene by colour slot, and Resolution sets how big each pixel is.",
+      "Twin lighthouse beams sweep across a pixel-art harbour and flare as they swing toward you, while the water mirrors it all and ripples wherever you hover. Palette repaints the scene by colour slot, and Resolution sets how big each pixel is.",
     explanation: [
       { title: "Build the scene", body: "Sky, moon, three ridgelines, an island and a lighthouse, all drawn from formulas at a coarse pixel grid." },
       { title: "Mirror it", body: "Below the horizon each pixel looks up at its reflection, nudged sideways row by row by the swell." },

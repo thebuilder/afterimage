@@ -1,5 +1,5 @@
-// Lowlight Harbor: a pixel-art harbour at dusk. The lighthouse beam follows the
-// pointer, the water mirrors everything above it, and every pixel is dithered
+// Lowlight Harbor: a pixel-art harbour at dusk. The lighthouse beams turn on
+// their own, the water mirrors everything above it, and every pixel is dithered
 // onto a sixteen-colour palette that can be swapped by index.
 import { hash11 } from "./common.wgsl";
 
@@ -78,7 +78,7 @@ var<private> Y0: f32;
 var<private> Y1: f32;
 var<private> MOON: vec2f;
 var<private> LAMP: vec2f;
-var<private> AIM: vec2f;
+var<private> ROT: f32;
 var<private> T: f32;
 var<private> PAR: f32;
 
@@ -178,19 +178,31 @@ fn above(q: vec2f) -> vec3f {
     }
   }
 
-  // The beam: a widening cone from the lamp toward the pointer, with dust in it.
-  var bd = AIM - LAMP;
-  bd = select(normalize(bd), vec2f(1.0, 0.0), length(bd) < 1e-3);
+  // Two opposed beams turning on the lamp's vertical axis, seen side on. Each
+  // one's screen length is the sine of its heading, so it shrinks to a flare
+  // as it swings toward the viewer and back out the other side.
   let v = q - LAMP;
-  let along = dot(v, bd);
-  let perp = abs(v.x * bd.y - v.y * bd.x);
-  let cone = along * 0.115 + 0.007;
-  let fwd = step(0.0, along);
-  let beam = smoothstep(cone, cone * 0.45, perp) * fwd * exp(-along * 0.85) * params.beam;
-  let core = smoothstep(cone * 0.3, 0.0, perp) * fwd * exp(-along * 1.6) * params.beam;
-  let mote = step(0.988, h2(floor((q + vec2f(T * 0.01, T * 0.004)) / PU))) * beam;
-  col = mix(col, DUSK[15], clamp(beam * 0.6 + core * 0.5 + mote, 0.0, 1.0));
-  col += DUSK[15] * exp(-length(v) * 34.0) * 0.9;
+  var light = 0.0;
+  for (var k = 0; k < 2; k++) {
+    let th = ROT + f32(k) * 3.14159265;
+    let sx = sin(th);
+    let facing = cos(th);
+    let reach = abs(sx);
+    let bd = normalize(vec2f(sign(sx + 1e-4), 0.045));
+    let along = dot(v, bd);
+    let perp = abs(v.x * bd.y - v.y * bd.x);
+    let cone = along * (0.13 + 0.18 * (1.0 - reach)) + 0.007;
+    let fwd = step(0.0, along) * smoothstep(0.08 + 1.5 * reach, 0.02 + 0.6 * reach, along);
+    // The beam on the far side of the tower is dimmer than the one swinging toward us.
+    let gain = (0.65 + 0.45 * facing) * params.beam;
+    let beam = smoothstep(cone, cone * 0.45, perp) * fwd * exp(-along * 0.85) * gain;
+    let core = smoothstep(cone * 0.3, 0.0, perp) * fwd * exp(-along * 1.6) * gain;
+    light += beam * 0.6 + core * 0.5 + step(0.988, h2(floor((q + vec2f(T * 0.01, T * 0.004)) / PU))) * beam;
+  }
+  col = mix(col, DUSK[15], clamp(light, 0.0, 1.0));
+  // Flash when a beam points straight out of the screen.
+  let flash = pow(max(cos(ROT), cos(ROT + 3.14159265)), 24.0) * params.beam;
+  col += DUSK[15] * exp(-length(v) * mix(34.0, 15.0, flash)) * (0.9 + 0.5 * flash);
 
   // Island.
   if (q.y < islandH(q.x)) {
@@ -260,8 +272,8 @@ fn bayer4(a: vec2f) -> f32 { return bayer2(0.5 * a) * 0.25 + bayer2(a); }
   let m = vec2f(params.mouse.x * A, 1.0 - params.mouse.y);
   PAR = params.mouse.x - 0.5;
   MOON = vec2f(A * 0.77 + sin(T * 0.04) * 0.015 - PAR * 0.008, 0.76);
-  // The lamp aims at the pointer and keeps a slow sway so it never hangs still.
-  AIM = m + vec2f(sin(T * 0.6), cos(T * 0.47)) * 0.04;
+  // One full turn of the lamp every twelve seconds.
+  ROT = T * 0.5236;
 
   var col: vec3f;
   if (q.y >= H) {
