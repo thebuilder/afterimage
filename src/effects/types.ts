@@ -90,6 +90,12 @@ export interface HeroEffect {
   readonly explanation: readonly Stage[]
   readonly technical: Technical
   readonly accent: string
+  /**
+   * The day this effect went live, `YYYY-MM-DD`. Shown next to its number.
+   * The original seventeen predate the one-a-day run and leave it out; every effect
+   * added since carries one, and `check:registry` holds new entries to it.
+   */
+  readonly published?: string
   /** The knobs this effect exposes. One to three; more than that is a control panel, not a hero. */
   readonly controls: readonly Control[]
   create(setup: EffectSetup): EffectInstance

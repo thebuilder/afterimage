@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  <rect width="32" height="32" fill="#05090a"/>
-  <!-- The ghost: a bright shape burns in, and what stays behind is its complement. -->
-  <rect x="11.5" y="11.5" width="14" height="14" fill="#ff5b82"/>
-  <rect x="6.5" y="6.5" width="14" height="14" fill="#86fadd"/>
+  <!-- The mark: a lit square, and the faint ghost it leaves behind. -->
+  <rect width="32" height="32" rx="7" fill="#050505"/>
+  <rect x="12" y="12" width="13" height="13" fill="#f3f1ec" fill-opacity="0.32"/>
+  <rect x="7" y="7" width="13" height="13" fill="#f3f1ec"/>
 </svg>

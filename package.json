@@ -22,15 +22,10 @@
     "og": "node scripts/og.mjs"
   },
   "dependencies": {
-    "@base-ui/react": "^1.7.0",
     "@vgpu/wgsl": "^0.3.1",
     "@vgpu/wgsl-std": "^0.3.1",
-    "class-variance-authority": "^0.7.1",
-    "clsx": "^2.1.1",
-    "lucide-react": "^1.35.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
-    "tailwind-merge": "^3.6.0",
     "tailwindcss": "^4.3.3",
     "vgpu": "^0.3.1"
   },
