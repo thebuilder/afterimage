@@ -17,7 +17,18 @@ export interface ShaderViewProps extends React.ComponentProps<"div"> {
   /** Master switch from the page: paused, or not the effect on screen. */
   enabled?: boolean
   onFps?: (fps: number) => void
+  /**
+   * Render briefly on mount even while off screen, then stop. Compiles the
+   * pipelines and leaves a real frame on the canvas, so a screen that is about
+   * to scroll into view arrives with a picture instead of black.
+   */
+  prime?: boolean
+  /** How far outside the viewport counts as visible. */
+  rootMargin?: string
 }
+
+/** How long a primed view renders off screen. Long enough to compile and settle. */
+const PRIME_MS = 700
 
 /**
  * A canvas bound to one effect.
@@ -33,6 +44,8 @@ export function ShaderView({
   controls,
   enabled = true,
   onFps,
+  prime = false,
+  rootMargin = "160px",
   className,
   ...props
 }: ShaderViewProps) {
@@ -42,6 +55,8 @@ export function ShaderView({
   // the observer's first callback always changes state and the gate effect runs.
   const [visible, setVisible] = useState<boolean | null>(null)
   const [failed, setFailed] = useState(false)
+  // True from mount until the primed frames have been drawn.
+  const [priming, setPriming] = useState(prime)
   // The desired state, readable by the async mount once the device resolves.
   const latest = useRef({ effect, controls, active: false })
 
@@ -69,6 +84,11 @@ export function ShaderView({
         handle.setEffect(latest.current.effect)
         if (latest.current.controls) handle.setControls(latest.current.controls)
         handle.setActive(latest.current.active)
+        // The clock for priming starts once the device is ours, not at mount,
+        // so a slow adapter cannot use the whole window up before a frame.
+        window.setTimeout(() => {
+          if (!disposed) setPriming(false)
+        }, PRIME_MS)
       })
       .catch((err) => {
         console.error(`[shader-view:${effect.id}]`, err)
@@ -92,19 +112,19 @@ export function ShaderView({
   }, [controls])
 
   useEffect(() => {
-    latest.current.active = (visible ?? false) && enabled
+    latest.current.active = priming || ((visible ?? false) && enabled)
     handleRef.current?.setActive(latest.current.active)
-  }, [visible, enabled])
+  }, [visible, enabled, priming])
 
   useEffect(() => {
     const el = canvasRef.current
     if (!el) return
     const io = new IntersectionObserver(([entry]) => setVisible(entry.isIntersecting), {
-      rootMargin: "160px",
+      rootMargin,
     })
     io.observe(el)
     return () => io.disconnect()
-  }, [])
+  }, [rootMargin])
 
   useEffect(() => {
     if (!onFps) return

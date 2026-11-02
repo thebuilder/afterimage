@@ -335,9 +335,15 @@ function Screen({
           className="absolute inset-0 size-full"
           controls={controls}
           effect={effect}
-          enabled={running && active}
+          // Neighbours run too, but only while some of them is on screen: the
+          // view's own observer stops them the moment they are fully off.
+          enabled={running}
           maxDpr={2}
+          // Neighbours mount while the current screen is settled, so they
+          // render a few frames up front and arrive with a picture.
+          prime={!active}
           quality={1}
+          rootMargin="0px"
         />
       ) : (
         // Far from view: a quiet stand-in in the effect's own colour.
