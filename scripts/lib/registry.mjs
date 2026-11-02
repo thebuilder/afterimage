@@ -17,6 +17,7 @@ const ID = /^ {4}id: "([a-z0-9-]+)",$/
 const WGSL = /^ {4}wgsl: (\w+),$/
 const CATEGORY = /^ {4}category: "(.+)",$/
 const SOURCE = /^ {6}source: "(.+)",$/
+const PUBLISHED = /^ {4}published: "(.*)",$/
 const CTL =
   /^ {6}ctl\("([^"]+)", "([^"]+)", (-?[\d.]+), (-?[\d.]+), ([\d.]+), (-?[\d.]+)\),$/
 const IMPORT = /^import (\w+) from "@\/(.+\.wgsl)"$/
@@ -56,7 +57,15 @@ export function parseEffects(sourcePath) {
     const id = ID.exec(line)
     if (id) {
       close()
-      current = { id: id[1], line: i + 1, category: "", wgslIdent: null, source: "", controls: [] }
+      current = {
+        id: id[1],
+        line: i + 1,
+        category: "",
+        wgslIdent: null,
+        source: "",
+        published: null,
+        controls: [],
+      }
       continue
     }
     if (!current) continue
@@ -69,6 +78,11 @@ export function parseEffects(sourcePath) {
     const category = CATEGORY.exec(line)
     if (category) {
       current.category = category[1]
+      continue
+    }
+    const published = PUBLISHED.exec(line)
+    if (published) {
+      current.published = published[1]
       continue
     }
     const source = SOURCE.exec(line)

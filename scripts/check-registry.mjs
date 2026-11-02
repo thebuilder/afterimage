@@ -12,6 +12,9 @@ import { parseEffects, paramsMembers, root, wgslImports } from "./lib/registry.m
 
 const MIN_ENTRIES = 15
 const REQUIRED_PARAMS = ["res", "mouse", "time"]
+// The first twenty effects predate the one-a-day run and carry no date.
+// Everything after them is a daily drop and must say which day it went live.
+const UNDATED = 20
 
 const arg = process.argv[2]
 const sourcePath = arg ? path.resolve(arg) : undefined
@@ -28,7 +31,7 @@ if (effects.length < MIN_ENTRIES) {
   )
 }
 
-// 2. Ids are the URL scheme and the keyboard shortcuts, so they must be unique.
+// 2. Ids are the URL scheme, so they must be unique.
 const seen = new Set()
 for (const e of effects) {
   if (seen.has(e.id)) problems.push(`${e.id} (line ${e.line}): duplicate id`)
@@ -36,8 +39,22 @@ for (const e of effects) {
   if (!/^[a-z0-9-]+$/.test(e.id)) problems.push(`${e.id} (line ${e.line}): id is not kebab-case`)
 }
 
-for (const e of effects) {
+let lastDate = ""
+for (const [index, e] of effects.entries()) {
   const at = `${e.id} (line ${e.line})`
+
+  // 3a. Daily drops carry a real date, and the registry stays in publish order,
+  // because an effect's number is its position and `/` opens the last one.
+  if (e.published !== null || index >= UNDATED) {
+    const d = e.published ?? ""
+    const valid = /^\d{4}-\d{2}-\d{2}$/.test(d) && !Number.isNaN(Date.parse(`${d}T00:00:00Z`))
+    if (!valid) {
+      problems.push(`${at}: published "${d}" is missing or not a YYYY-MM-DD date`)
+    } else {
+      if (d < lastDate) problems.push(`${at}: published ${d} is earlier than the entry before it (${lastDate})`)
+      lastDate = d
+    }
+  }
 
   // 3. Shape of the entry and of every control.
   if (!e.category) problems.push(`${at}: empty or missing category`)

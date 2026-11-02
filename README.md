@@ -1,20 +1,26 @@
 # Afterimage
 
-A gallery of live visual experiments in WGSL, running on
+Live visual experiments in WGSL, one at a time, running on
 [vgpu](https://vgpu.sh), styled with the
 [Afterglow](https://afterglow.thebuilder.dk) shadcn registry.
+
+Each experiment gets the whole screen. The front page is always the newest one,
+and a new one lands most days: the first twenty were the original collection,
+everything from No. 21 on is a daily drop with a publish date. Older ones are a
+step back with the arrow keys, or one click away in the index.
 
 The page is deliberately quiet about how any of it works. A visitor gets the
 image, its name, one sentence and three controls. Frame graphs, WGSL terminology
 and implementation notes sit one disclosure down, and the architecture lives here
 in the README rather than standing between a visitor and the moving picture.
 
-One `Gpu` runs the whole page. The hero and every gallery tile are separate
-`Surface`s on that one device, driven from one `requestAnimationFrame` loop, so
-they share pipelines, bind groups, samplers and shader modules instead of
-allocating a fresh set per canvas. Giving each canvas its own `frameLoop` looks
-tidier and is wrong: every loop advances vgpu's frame clock, so time would run as
-many times too fast as there are canvases.
+One `Gpu` runs the whole page, and `src/lib/stage.ts` drives every `Surface` on
+it from one `requestAnimationFrame` loop. The page only shows one canvas now, but
+the stage still supports several (the headless scripts and any future preview
+use it), so they share pipelines, bind groups, samplers and shader modules
+instead of allocating a fresh set per canvas. Giving each canvas its own
+`frameLoop` looks tidier and is wrong: every loop advances vgpu's frame clock, so
+time would run as many times too fast as there are canvases.
 
 ```bash
 npm install
@@ -70,12 +76,17 @@ implementation write-ups, moved down a level rather than cut.
 ## Links
 
 The effect id is its URL slug, so `/ink` is a link to Ink and the address bar
-follows whatever is in the hero. `/ink/how-it-works` opens that effect's
+follows whatever is on screen. `/ink/how-it-works` opens that effect's
 explanation directly, so an explanation is as linkable as an effect.
 
-Catalogue tiles are anchors carrying a real `href`, so right-click, cmd-click and
-"copy link address" all behave; the click handler only takes over the plain left
-click.
+`/` is the newest effect, whichever that is today, and `/how-it-works` is its
+explanation. The newest effect also answers at its own `/<id>`, and that is the
+link to share, because `/` moves on tomorrow. Stepping to the newest effect from
+inside the site lands on `/`, so the front page stays the front page.
+
+The previous / next pair, the index entries and the wordmark are anchors carrying
+a real `href`, so right-click, cmd-click and "copy link address" all behave; the
+click handler only takes over the plain left click.
 
 The route is a single piece of state. Everything on the page derives from it and
 the URL and title are written from it, so nothing reads `window.location` back
@@ -109,7 +120,7 @@ Field turns `trail` into the decay constant of its feedback buffer.
 ```
 src/
   main.tsx          mounts App, imports index.css
-  App.tsx           the whole page: route state, hero, catalogue, panels
+  App.tsx           the whole page: route state, hero, previous / next, index, panels
   index.css         owned by the Afterglow registry, rewritten on `shadcn add`. Do not edit
   theme.css         project tokens, imported by index.css. Ours to edit
   shaders/          single-pass effects, one .wgsl each, plus common.wgsl helpers

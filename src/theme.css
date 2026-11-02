@@ -26,15 +26,10 @@
 
   --leading-hero: 0.95;
 
-  --container-page: 100rem;
   --container-panel: 26rem;
-
-  --aspect-tile: 16 / 10;
 
   --blur-bar: 2px;
   --blur-panel: 3px;
-
-  --shadow-tile-selected: inset 0 0 40px rgb(134 250 221 / 0.18);
 }
 
 /*

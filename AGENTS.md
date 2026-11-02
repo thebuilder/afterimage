@@ -34,13 +34,35 @@ components live one level up in `src/components/`.
 
 ## Adding an effect
 
-1. One entry in `src/effects/index.ts`: unique kebab-case id, a `category`, 1 to
+The registry is in publish order. An effect's number is its position, and `/`
+shows the last entry, so a new effect is always appended at the end, never
+inserted. Every entry from No. 21 on is a daily drop and carries
+`published: "YYYY-MM-DD"` on its own line directly under `name`; the parser in
+`scripts/lib/registry.mjs` matches that exact shape, and `check:registry` fails
+a missing, malformed or out-of-order date.
+
+1. One entry at the end of `src/effects/index.ts`: unique kebab-case id, a `category`, 1 to
    3 controls, and a `technical.source` path that exists on disk. `App.tsx`
    publishes `source` as a live GitHub link, so a wrong path ships a public 404.
 2. For a single-pass effect, one `f32` in that shader's `Params` per control
    key. A control key with no matching member is a dead knob: the adapter falls
    back to the declared default and the slider does nothing.
 3. `npm run check:registry` enforces all of the above.
+4. Add a row to the effects table in the README.
+
+### Today's effect, start to finish
+
+```bash
+git switch -c effect/<id>
+# single pass: src/shaders/<id>.wgsl   multi-pass: src/effects/<id>/{*.wgsl,pipeline.ts}
+# append the registry entry with published: "<today>"
+npm run check:wgsl && npm run check:registry && npm run typecheck && npm run lint && npm run build
+npm run render -- <id> --t=1,4,9   # single pass, GPU machine; read the luminance numbers
+```
+
+The effect is a hero, not a demo reel: it has to read at full screen with the
+title and controls over its lower left, respond to the pointer, and settle into
+something worth leaving on with the UI hidden. One to three controls.
 
 ## Verify in this order
 
