@@ -12,9 +12,9 @@ import { parseEffects, paramsMembers, root, wgslImports } from "./lib/registry.m
 
 const MIN_ENTRIES = 15
 const REQUIRED_PARAMS = ["res", "mouse", "time"]
-// The first twenty effects predate the one-a-day run and carry no date.
+// The original seventeen effects predate the one-a-day run and carry no date.
 // Everything after them is a daily drop and must say which day it went live.
-const UNDATED = 20
+const UNDATED = 17
 
 const arg = process.argv[2]
 const sourcePath = arg ? path.resolve(arg) : undefined
@@ -102,6 +102,23 @@ for (const [index, e] of effects.entries()) {
       problems.push(`${at}: control "${c.key}" has no matching member in ${shader} Params`)
     } else if (type !== "f32") {
       problems.push(`${at}: control "${c.key}" is ${type} in ${shader} Params, expected f32`)
+    }
+  }
+}
+
+// 6. The social card shows the newest effect. `npm run og` writes the card and
+// records its effect in public/og.json; a new drop without a new card fails here.
+const latest = effects.at(-1)
+const ogPath = path.join(root, "public/og.json")
+if (!arg && latest) {
+  if (!existsSync(ogPath) || !existsSync(path.join(root, "public/og.jpg"))) {
+    problems.push(`public/og.jpg or public/og.json is missing — run \`npm run og\``)
+  } else {
+    const og = JSON.parse(readFileSync(ogPath, "utf8"))
+    if (og.id !== latest.id) {
+      problems.push(
+        `public/og.json shows "${og.id}" but the newest effect is "${latest.id}" — run \`npm run og\``
+      )
     }
   }
 }

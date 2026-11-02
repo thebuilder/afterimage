@@ -4,10 +4,10 @@ import { writeFileSync, mkdirSync } from "node:fs"
 import { fileURLToPath } from "node:url"
 import path from "node:path"
 import { PNG } from "pngjs"
-import { resolveShader } from "@vgpu/wgsl/runtime"
 import { frame, init, target } from "vgpu/node"
 import { frameViolations, luminance } from "./lib/stats.mjs"
 import { parseEffects } from "./lib/registry.mjs"
+import { multipassSpecs } from "./lib/multipass.mjs"
 
 const root = path.resolve(fileURLToPath(new URL("..", import.meta.url)))
 const args = process.argv.slice(2)
@@ -23,8 +23,6 @@ const CONTROLS = Object.fromEntries(
   parseEffects().map((e) => [e.id, Object.fromEntries(e.controls.map((c) => [c.key, c.value]))])
 )
 
-const load = async (p) => (await resolveShader({ entry: path.join(root, p) })).wgsl
-
 mkdirSync(path.join(root, "out"), { recursive: true })
 const gpu = await init()
 // Validation errors arrive asynchronously, so a pass can fail without the
@@ -36,49 +34,7 @@ gpu.onError((err) => {
 })
 const tgt = target(gpu, { size: [W, H] })
 
-const specs = {
-  flux: async () => {
-    const { createFlux } = await import(path.join(root, "src/effects/flux/pipeline.ts"))
-    const src = {
-      advect: await load("src/effects/flux/advect.wgsl"),
-      splat: await load("src/effects/flux/splat.wgsl"),
-      fade: await load("src/effects/flux/fade.wgsl"),
-      present: await load("src/effects/flux/present.wgsl"),
-    }
-    return createFlux({ gpu, target: tgt, quality: 1 }, src, { count: 60_000 })
-  },
-  ink: async () => {
-    const { createInk } = await import(path.join(root, "src/effects/ink/pipeline.ts"))
-    return createInk({ gpu, target: tgt, quality: 1 }, {
-      step: await load("src/effects/ink/step.wgsl"),
-      present: await load("src/effects/ink/present.wgsl"),
-    })
-  },
-  boids: async () => {
-    const { createBoids } = await import(path.join(root, "src/effects/boids/pipeline.ts"))
-    return createBoids({ gpu, target: tgt, quality: 1 }, {
-      flock: await load("src/effects/boids/flock.wgsl"),
-      draw: await load("src/effects/boids/draw.wgsl"),
-      present: await load("src/effects/boids/present.wgsl"),
-    }, { count: 700 })
-  },
-  lattice: async () => {
-    const { createLattice } = await import(path.join(root, "src/effects/lattice/pipeline.ts"))
-    return createLattice({ gpu, target: tgt, quality: 1 }, {
-      mesh: await load("src/effects/lattice/mesh.wgsl"),
-      present: await load("src/effects/lattice/present.wgsl"),
-    })
-  },
-  reaction: async () => {
-    const { createReaction } = await import(path.join(root, "src/effects/reaction/pipeline.ts"))
-    const src = {
-      seed: await load("src/effects/reaction/seed.wgsl"),
-      step: await load("src/effects/reaction/step.wgsl"),
-      present: await load("src/effects/reaction/present.wgsl"),
-    }
-    return createReaction({ gpu, target: tgt, quality: 1 }, src)
-  },
-}
+const specs = multipassSpecs(gpu, tgt)
 
 for (const name of which.length ? which : Object.keys(specs)) {
   try {

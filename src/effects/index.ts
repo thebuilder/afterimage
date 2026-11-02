@@ -6,7 +6,6 @@ import chromeWgsl from "@/shaders/chrome.wgsl"
 import hexgridWgsl from "@/shaders/hexgrid.wgsl"
 import arcsWgsl from "@/shaders/arcs.wgsl"
 import blackholeWgsl from "@/shaders/blackhole.wgsl"
-import mandelbulbWgsl from "@/shaders/mandelbulb.wgsl"
 import silkWgsl from "@/shaders/silk.wgsl"
 import rainWgsl from "@/shaders/rain.wgsl"
 import prismWgsl from "@/shaders/prism.wgsl"
@@ -14,8 +13,6 @@ import truchetWgsl from "@/shaders/truchet.wgsl"
 import mandalaWgsl from "@/shaders/mandala.wgsl"
 import wormholeWgsl from "@/shaders/wormhole.wgsl"
 import oceanWgsl from "@/shaders/ocean.wgsl"
-import cloudsWgsl from "@/shaders/clouds.wgsl"
-import terrainWgsl from "@/shaders/terrain.wgsl"
 
 import { createFlux } from "./flux/pipeline"
 import fluxAdvect from "./flux/advect.wgsl"
@@ -182,41 +179,6 @@ const ENTRIES: readonly Entry[] = [
     ],
   },
   {
-    id: "terrain",
-    wgsl: terrainWgsl,
-    name: "Ridgeline",
-    category: "Landscape",
-    tagline: "An endless mountain range forming out of noise and haze.",
-    summary:
-      "Noise folded back on itself becomes ridges, valleys and a snow line, and distance does the rest. Erosion sharpens the ridges, Haze sets how far you can see.",
-    explanation: [
-      { title: "Fold noise", body: "Folding noise turns smooth hills into sharp ridges." },
-      { title: "Find the ground", body: "The view steps forward until it meets the surface." },
-      { title: "Add air", body: "Distant peaks fade into the colour of the sky." },
-    ],
-    technical: {
-      insight: "None of the terrain is stored. It is worked out where you look.",
-      pipeline: [
-        "single pass · growing-step march, 9-step bisection refine, aerial perspective",
-      ],
-      techniques: [
-        "ridged multifractal",
-        "bisection refine",
-        "slope shading",
-        "atmospheric scattering",
-      ],
-      notes:
-        "Folding each noise octave with 1−|n| turns the rolling hills of plain fbm into creases, and weighting every octave by the previous one keeps the detail on the ridges and off the valley floors, roughly where erosion leaves it. The march grows its step with distance and then bisects the bracketing interval nine times, because a step fine enough for the near ground would never reach the horizon. Aerial perspective does the rest.",
-      source: "src/shaders/terrain.wgsl",
-    },
-    accent: "#ffbc57",
-    controls: [
-      ctl("altitude", "Altitude", 0, 1.4, 0.01, 0.5),
-      ctl("ruggedness", "Erosion", 0, 1, 0.01, 0.8),
-      ctl("haze", "Haze", 0.2, 2.5, 0.01, 1),
-    ],
-  },
-  {
     id: "reaction",
     name: "Membrane",
     category: "Simulation",
@@ -368,43 +330,6 @@ const ENTRIES: readonly Entry[] = [
       createBoids(setup, { flock: boidsFlock, draw: boidsDraw, present: boidsPresent }),
   },
   {
-    id: "clouds",
-    wgsl: cloudsWgsl,
-    // Volumetrics are soft and low frequency: half resolution costs no detail.
-    renderScale: 0.5,
-    name: "Cumulus",
-    category: "Atmosphere",
-    tagline: "Clouds gather, thin and catch the sun from within.",
-    summary:
-      "Your view walks through a volume of noise and gathers light as it goes. Coverage decides how much sky fills in, Density how solid it becomes.",
-    explanation: [
-      { title: "Step through", body: "The view takes many small steps through a layer of cloud." },
-      { title: "Measure the light", body: "At every step it looks toward the sun to see how much survives." },
-      { title: "Build up", body: "The steps stack into shape, shadow, and a bright rim." },
-    ],
-    technical: {
-      insight: "Nothing here is solid. Each pixel is hundreds of samples added up.",
-      pipeline: [
-        "single pass · 46-step volume march, 4-step light march per sample",
-      ],
-      techniques: [
-        "volumetric raymarch",
-        "Beer-Lambert",
-        "forward scattering",
-        "blue-noise offset",
-      ],
-      notes:
-        "Forty-six steps through a 3D noise slab, each one taking four more steps toward the sun to work out how much light survives to it. Coverage subtracts a constant before the clamp, which is what turns one noise field into anything from wisps to overcast. Two details do most of the work: the march span is capped, because a near-horizontal ray crosses unbounded slab and accumulates an opaque wall, and the first sample is dithered per pixel, because uniform starts put the step pattern on screen as banding.",
-      source: "src/shaders/clouds.wgsl",
-    },
-    accent: "#e9f6f1",
-    controls: [
-      ctl("coverage", "Coverage", 0.15, 0.85, 0.01, 0.42),
-      ctl("density", "Density", 0.3, 2.5, 0.01, 1),
-      ctl("sun", "Sun height", 0, 1, 0.01, 0.4),
-    ],
-  },
-  {
     id: "chrome",
     wgsl: chromeWgsl,
     name: "Liquid Chrome",
@@ -472,41 +397,6 @@ const ENTRIES: readonly Entry[] = [
       ctl("shards", "Shards", 2, 18, 0.1, 7),
       ctl("refraction", "Refraction", 0, 1, 0.01, 0.35),
       ctl("chroma", "Dispersion", 0, 3, 0.01, 1),
-    ],
-  },
-  {
-    id: "mandelbulb",
-    wgsl: mandelbulbWgsl,
-    name: "Fractal Monolith",
-    category: "Fractal",
-    tagline: "An impossible structure turns inside an endless fractal.",
-    summary:
-      "One equation, repeated, decides whether a point sits inside the shape or outside it. Power changes that equation, and the whole structure reorganises around it.",
-    explanation: [
-      { title: "Repeat", body: "A point goes through the same equation ten times over." },
-      { title: "Measure", body: "How fast it escapes says how far the nearest surface is." },
-      { title: "Walk", body: "The view steps exactly that far, then asks again." },
-    ],
-    technical: {
-      insight: "The surface is never built. Each step works out how far away it still is.",
-      pipeline: [
-        "single pass · distance-estimated raymarch, soft shadows, 5-tap AO",
-      ],
-      techniques: [
-        "distance estimation",
-        "orbit traps",
-        "soft shadows",
-        "ambient occlusion",
-      ],
-      notes:
-        "Ten iterations of z → zⁿ + c in spherical coordinates, with the running derivative giving a distance estimate the raymarcher can trust. The exponent breathes, so the fractal reorganises itself instead of just spinning. The hit epsilon scales with distance to match the pixel footprint. A fixed threshold either speckles at the silhouette or eats detail up close. Colour comes from an orbit trap: how close the iteration came to the origin, which separates the exposed lobes from the cold recesses inside them.",
-      source: "src/shaders/mandelbulb.wgsl",
-    },
-    accent: "#ffbc57",
-    controls: [
-      ctl("power", "Power", 3, 12, 0.1, 8),
-      ctl("spin", "Spin", 0, 4, 0.01, 1),
-      ctl("glow", "Glow", 0.2, 2, 0.01, 1),
     ],
   },
   {

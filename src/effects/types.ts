@@ -92,7 +92,7 @@ export interface HeroEffect {
   readonly accent: string
   /**
    * The day this effect went live, `YYYY-MM-DD`. Shown next to its number.
-   * The first twenty predate the one-a-day run and leave it out; every effect
+   * The original seventeen predate the one-a-day run and leave it out; every effect
    * added since carries one, and `check:registry` holds new entries to it.
    */
   readonly published?: string

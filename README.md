@@ -4,15 +4,15 @@ Live visual experiments in WGSL, one at a time, running on
 [vgpu](https://vgpu.sh).
 
 The site is a vertical feed of full-screen effects with scroll snapping, newest
-at the top. A new one lands most days: the first twenty were the original
-collection, everything from No. 21 on is a daily drop with a publish date. Scroll,
-swipe or press ↓ for older ones; the tick rail on the right and the Index sheet
+at the top. A new one lands most days: the first seventeen were the original
+collection, everything from No. 18 on is a daily drop with a publish date. Scroll,
+swipe or press ↓ for older ones; the tick rail on the right and the Archive (with search)
 jump straight to any of them.
 
 Only the screen in view and its two neighbours hold a canvas. Everything further
 away is a flat gradient in the effect's accent colour, so the feed can grow to a
 year of daily effects without a year of GPU surfaces. The interface stays at the
-edges: a wordmark, Index and About at the top, and a small pill at the bottom
+edges: a wordmark, Archive and About at the top, and a small pill at the bottom
 right with Tune (the controls, collapsed by default), How it works, pause and
 hide.
 
@@ -46,23 +46,20 @@ with `strictPort`, so a busy port fails loudly instead of moving; `shots.sh` and
 | 01 | **Flux Field** | compute shader, storage ping-pong, instanced draw from a storage buffer, HDR feedback | exposure, flow, trail |
 | 02 | **Event Horizon** | 180-step geodesic integration per pixel, relativistic beaming | disk, orbit, tilt |
 | 03 | **Deep Water** | heightfield solved by Newton iteration against the ray, procedural sky | swell, chop, sun |
-| 04 | **Ridgeline** | ridged multifractal, growing-step march plus bisection refine | altitude, erosion, haze |
-| 05 | **Membrane** | 12 Gray-Scott passes per frame on an `rgba16float` ping-pong pair | feed, kill, relief |
-| 06 | **Ink** | semi-Lagrangian advection, vorticity confinement, pointer forces | vorticity, dissipation, dye |
-| 07 | **Lattice** | scene geometry, real vertex stage, offscreen depth target | displace, facets, spin |
-| 08 | **Murmuration** | O(n²) flocking in compute, instanced oriented darts | cohesion, separation, speed |
-| 09 | **Cumulus** | volumetric march with a per-sample light march, Beer-Lambert | coverage, density, sun |
-| 10 | **Liquid Chrome** | sphere-traced SDF, smooth minimum, procedural studio HDRI | melt, spin, exposure |
-| 11 | **Prism** | Voronoi cells, per-shard refraction, chromatic split | shards, refraction, dispersion |
-| 12 | **Fractal Monolith** | Mandelbulb distance estimator, soft shadows, orbit-trap colour | power, spin, glow |
-| 13 | **Aurora Veil** | layered fbm drapes, domain shear, parallax | brightness, drift, fringe |
-| 14 | **Wormhole** | perspective by inverse radius, cylindrical panel mapping | speed, twist, flare |
-| 15 | **Iridescent Silk** | double domain warp, analytic normals, thin-film interference | fold scale, film, sheen |
-| 16 | **Tesla Arc** | polar filaments, separated steering and jag noise scales | energy, chaos, fire rate |
-| 17 | **Mandala** | kaleidoscopic fold, radial twist, zero-crossing filigree | segments, twist, zoom |
-| 18 | **Truchet** | Truchet tiling, arc-length parametrisation, travelling pulses | tile scale, flow, charge |
-| 19 | **Hex Reactor** | dual-lattice hex tiling, screen-space derivative rims | charge, cell density, sweep |
-| 20 | **Datastream** | procedural 5×7 dot-matrix font from hash bits, CRT mask | density, fall speed, phosphor |
+| 04 | **Membrane** | 12 Gray-Scott passes per frame on an `rgba16float` ping-pong pair | feed, kill, relief |
+| 05 | **Ink** | semi-Lagrangian advection, vorticity confinement, pointer forces | vorticity, dissipation, dye |
+| 06 | **Lattice** | scene geometry, real vertex stage, offscreen depth target | displace, facets, spin |
+| 07 | **Murmuration** | O(n²) flocking in compute, instanced oriented darts | cohesion, separation, speed |
+| 08 | **Liquid Chrome** | sphere-traced SDF, smooth minimum, procedural studio HDRI | melt, spin, exposure |
+| 09 | **Prism** | Voronoi cells, per-shard refraction, chromatic split | shards, refraction, dispersion |
+| 10 | **Aurora Veil** | layered fbm drapes, domain shear, parallax | brightness, drift, fringe |
+| 11 | **Wormhole** | perspective by inverse radius, cylindrical panel mapping | speed, twist, flare |
+| 12 | **Iridescent Silk** | double domain warp, analytic normals, thin-film interference | fold scale, film, sheen |
+| 13 | **Tesla Arc** | polar filaments, separated steering and jag noise scales | energy, chaos, fire rate |
+| 14 | **Mandala** | kaleidoscopic fold, radial twist, zero-crossing filigree | segments, twist, zoom |
+| 15 | **Truchet** | Truchet tiling, arc-length parametrisation, travelling pulses | tile scale, flow, charge |
+| 16 | **Hex Reactor** | dual-lattice hex tiling, screen-space derivative rims | charge, cell density, sweep |
+| 17 | **Datastream** | procedural 5×7 dot-matrix font from hash bits, CRT mask | density, fall speed, phosphor |
 
 ## Copy
 
@@ -166,8 +163,8 @@ These five are the gate, and the first four need nothing but Node:
 npm run typecheck           # tsc -b --noEmit
 npm run lint                # oxlint
 npm run build               # tsc -b && vite build
-npm run check:registry      # registry invariants: "20 effects checked, 0 problems"
-npm run check:wgsl          # every .wgsl file: "30 shaders checked, 0 failing"
+npm run check:registry      # registry invariants: "17 effects checked, 0 problems"
+npm run check:wgsl          # every .wgsl file: "27 shaders checked, 0 failing"
 ```
 
 `check:wgsl` prints a line per shader only for the ones that fail, and the
@@ -180,11 +177,11 @@ The rest need an adapter outright, so they run on my machine:
 
 ```bash
 npm run doctor              # confirm this machine can acquire an adapter and render
-npm run render              # render all 15 single-pass shaders to out/*.png via Dawn
+npm run render              # render all 12 single-pass shaders to out/*.png via Dawn
 npm run render -- aurora --t=3,14 --w=960 --h=540
 npm run render -- ocean --set=swell=2.0   # override one control, repeatable
 npm run render:multipass    # step flux, ink, boids, lattice and reaction 120 frames each
-npm run og                  # compose the Open Graph card
+npm run og                  # render the newest effect into the Open Graph card
 ```
 
 `--set` takes `--set=name=value`, one flag per control, and the name is a
@@ -197,14 +194,14 @@ assertions in `scripts/lib/stats.mjs`, which is where a black frame and a
 blown-out one both get caught. `ASSERT-FAIL` on stderr is the line to look for.
 
 `npm run shots` captures the hero for every effect from a running dev server. It
-picks effects by URL (`/<id>`), so it reaches all 20 and stays correct when the
+picks effects by URL (`/<id>`), so it reaches every effect and stays correct when the
 registry is reordered. It needs the `agent-browser` CLI on `PATH` and a dev
 server on port 5177, and it says which one is missing rather than producing
 blank PNGs. Pass ids to capture a subset:
 
 ```bash
 npm run dev                 # in another shell, port 5177
-npm run shots               # all 20
+npm run shots               # all of them
 npm run shots ocean ink     # just these
 ```
 
@@ -256,22 +253,26 @@ that does.
 
 ## Open Graph card
 
-`public/og.jpg` is composed rather than screenshotted. `npm run og` renders Flux
-Field headless through Dawn at exactly 1200x630, then lays the wordmark and
-tagline over it in a standalone HTML file and prints the path:
+The social card is always the newest effect. `npm run og` renders it headless
+through Dawn at exactly 1200x630 and at its declared control defaults, lays the
+wordmark, number, name and tagline over it, and screenshots that to
+`public/og.jpg` with Playwright. It also writes `public/og.json`, recording which
+effect the card shows:
 
 ```bash
-npm run og            # reuses out/og-art.png if it is already there
-npm run og -- --render  # force a fresh render of the art
+npm run og            # the newest registry entry
+npm run og -- ink     # any other effect, for a one-off
 ```
 
-The last two steps are manual. Open `out/og-card.html`, screenshot it at a
-1200x630 viewport, and save the PNG as `out/og-draft.png` yourself; no script
-writes that file. Then convert it:
+Playwright is not a dependency; the script uses it when it can resolve it and
+otherwise leaves `out/og-card.html` to screenshot by hand. On a machine without a
+GPU, `npx vgpu install-software-renderer` once lets Dawn render on the CPU.
 
-```bash
-sips -s format jpeg -s formatOptions 88 out/og-draft.png --out public/og.jpg
-```
+`check:registry` fails when `public/og.json` does not name the newest effect, so
+a daily drop cannot ship with yesterday's card. At build time the `og` plugin in
+`vite.config.ts` reads the same file into the `og:` and `twitter:` tags, and
+versions the image URL with the effect id so link previews fetch the new card
+instead of a cached one.
 
 The absolute URL in the tags is filled in at build time by the `site-url` plugin
 in `vite.config.ts`, from `VERCEL_PROJECT_PRODUCTION_URL` on Vercel or `SITE_URL`

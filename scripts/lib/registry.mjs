@@ -18,6 +18,9 @@ const WGSL = /^ {4}wgsl: (\w+),$/
 const CATEGORY = /^ {4}category: "(.+)",$/
 const SOURCE = /^ {6}source: "(.+)",$/
 const PUBLISHED = /^ {4}published: "(.*)",$/
+const NAME = /^ {4}name: "(.+)",$/
+const TAGLINE = /^ {4}tagline: "(.+)",$/
+const ACCENT = /^ {4}accent: "(.+)",$/
 const CTL =
   /^ {6}ctl\("([^"]+)", "([^"]+)", (-?[\d.]+), (-?[\d.]+), ([\d.]+), (-?[\d.]+)\),$/
 const IMPORT = /^import (\w+) from "@\/(.+\.wgsl)"$/
@@ -64,6 +67,9 @@ export function parseEffects(sourcePath) {
         wgslIdent: null,
         source: "",
         published: null,
+        name: "",
+        tagline: "",
+        accent: "",
         controls: [],
       }
       continue
@@ -80,6 +86,15 @@ export function parseEffects(sourcePath) {
       current.category = category[1]
       continue
     }
+    let text = false
+    for (const [key, pattern] of [["name", NAME], ["tagline", TAGLINE], ["accent", ACCENT]]) {
+      const m = pattern.exec(line)
+      if (m) {
+        current[key] = m[1]
+        text = true
+      }
+    }
+    if (text) continue
     const published = PUBLISHED.exec(line)
     if (published) {
       current.published = published[1]

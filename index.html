@@ -14,23 +14,25 @@
     <title>Afterimage | One live experiment at a time</title>
     <meta name="description" content="Interactive visual experiments rendered live in your browser, one at a time, with a new one most days. Shape it with the controls, or hide the interface and let it fill the screen." />
 
-    <!-- __SITE_URL__ is filled in at build time by the site-url plugin in
-         vite.config.ts. It resolves to the deployment's own origin, and to an
-         empty string locally, which leaves these as relative paths. -->
+    <!-- The __PLACEHOLDERS__ are filled in at build time by the plugins in
+         vite.config.ts. __SITE_URL__ is the deployment's own origin (empty
+         locally, which leaves relative paths). The __OG_*__ values describe the
+         newest effect, read from public/og.json, which `npm run og` writes
+         alongside the card. -->
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Afterimage" />
-    <meta property="og:title" content="Afterimage" />
-    <meta property="og:description" content="Live visual experiments, rendered in your browser." />
+    <meta property="og:title" content="__OG_TITLE__" />
+    <meta property="og:description" content="__OG_DESCRIPTION__" />
     <meta property="og:url" content="__SITE_URL__/" />
-    <meta property="og:image" content="__SITE_URL__/og.jpg" />
+    <meta property="og:image" content="__SITE_URL__/og.jpg?v=__OG_VERSION__" />
     <meta property="og:image:type" content="image/jpeg" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
-    <meta property="og:image:alt" content="The Afterimage wordmark over a field of glowing particle filaments." />
+    <meta property="og:image:alt" content="__OG_ALT__" />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Afterimage" />
-    <meta name="twitter:description" content="Live visual experiments, rendered in your browser." />
-    <meta name="twitter:image" content="__SITE_URL__/og.jpg" />
+    <meta name="twitter:title" content="__OG_TITLE__" />
+    <meta name="twitter:description" content="__OG_DESCRIPTION__" />
+    <meta name="twitter:image" content="__SITE_URL__/og.jpg?v=__OG_VERSION__" />
   </head>
   <body>
     <div id="root"></div>

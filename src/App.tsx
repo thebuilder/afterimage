@@ -71,7 +71,7 @@ export default function App() {
   const [running, setRunning] = useState(true)
   const [chrome, setChrome] = useState(true)
   const [tuneOpen, setTuneOpen] = useState(false)
-  const [indexOpen, setIndexOpen] = useState(false)
+  const [archiveOpen, setArchiveOpen] = useState(false)
   const [aboutOpen, setAboutOpen] = useState(false)
   const [scrolled, setScrolled] = useState(initial.index !== 0)
 
@@ -147,7 +147,7 @@ export default function App() {
     []
   )
 
-  const modalOpen = how || indexOpen || aboutOpen
+  const modalOpen = how || archiveOpen || aboutOpen
 
   useEffect(() => {
     const onKey = (ev: KeyboardEvent) => {
@@ -169,7 +169,10 @@ export default function App() {
         setRunning((r) => !r)
       } else if (key === "h") setChrome((v) => !v)
       else if (key === "t") setTuneOpen((v) => !v)
-      else if (key === "i") setIndexOpen(true)
+      else if (key === "a" || ev.key === "/") {
+        ev.preventDefault()
+        setArchiveOpen(true)
+      }
       else if (ev.key === "?") setAboutOpen(true)
       else if (ev.key === "Escape") {
         setTuneOpen(false)
@@ -184,7 +187,12 @@ export default function App() {
 
   return (
     <>
-      <main aria-label="Experiments, newest first" className="feed" ref={feedRef}>
+      <main
+        aria-label="Experiments, newest first"
+        // A drag on the feed steers the effect; it should never select the title.
+        className="feed select-none"
+        ref={feedRef}
+      >
         {FEED.map((e, i) => (
           <Screen
             active={i === active}
@@ -207,7 +215,7 @@ export default function App() {
       {/* ── Chrome: thin edges over the picture ─────────────────────────── */}
       <div
         className={cn(
-          "pointer-events-none fixed inset-0 z-10 transition-opacity duration-300",
+          "pointer-events-none fixed inset-0 z-10 select-none transition-opacity duration-300",
           chrome ? "opacity-100" : "opacity-0"
         )}
         inert={!chrome}
@@ -226,8 +234,8 @@ export default function App() {
             <span className="font-medium text-sm tracking-tight">Afterimage</span>
           </a>
           <nav className="pointer-events-auto flex items-center gap-1">
-            <TextButton onClick={() => setIndexOpen(true)}>
-              Index <span className="text-faint">{FEED.length}</span>
+            <TextButton onClick={() => setArchiveOpen(true)}>
+              Archive <span className="text-faint">{FEED.length}</span>
             </TextButton>
             <TextButton onClick={() => setAboutOpen(true)}>About</TextButton>
           </nav>
@@ -279,14 +287,14 @@ export default function App() {
       ) : null}
 
       <HowItWorks effect={effect} onClose={() => setHow(false)} open={how} />
-      <IndexSheet
+      <ArchiveSheet
         active={active}
-        onClose={() => setIndexOpen(false)}
+        onClose={() => setArchiveOpen(false)}
         onGo={(i) => {
-          setIndexOpen(false)
+          setArchiveOpen(false)
           goTo(i, false)
         }}
-        open={indexOpen}
+        open={archiveOpen}
       />
       <About onClose={() => setAboutOpen(false)} open={aboutOpen} />
 
@@ -543,7 +551,12 @@ function Sheet({
   useEffect(() => {
     const d = ref.current
     if (!d) return
-    if (open && !d.open) d.showModal()
+    if (open && !d.open) {
+      d.showModal()
+      // React handles autoFocus itself on mount, before the dialog opens, and
+      // showModal then moves focus to the first button. Ask again afterwards.
+      d.querySelector<HTMLElement>("[data-autofocus]")?.focus()
+    }
     if (!open && d.open) d.close()
   }, [open])
   return (
@@ -572,7 +585,27 @@ function Sheet({
   )
 }
 
-function IndexSheet({
+/** Everything a search can match an effect on: its words and its techniques. */
+const haystack = (e: HeroEffect) =>
+  [
+    numberOf(e),
+    e.name,
+    e.category,
+    e.tagline,
+    e.published ?? "",
+    ...e.technical.techniques,
+  ]
+    .join(" ")
+    .toLowerCase()
+
+const HAYSTACKS = new Map(FEED.map((e) => [e, haystack(e)]))
+
+/**
+ * Every experiment, newest first, with a search box over names, categories,
+ * taglines and techniques. Every word typed has to match somewhere, so
+ * "fluid pointer" narrows rather than widens. Enter opens the first result.
+ */
+function ArchiveSheet({
   open,
   onClose,
   onGo,
@@ -583,39 +616,96 @@ function IndexSheet({
   onGo: (i: number) => void
   active: number
 }) {
+  const [query, setQuery] = useState("")
+  const words = query.toLowerCase().split(/\s+/).filter(Boolean)
+  const results = FEED.map((e, i) => ({ e, i })).filter(({ e }) => {
+    const hay = HAYSTACKS.get(e) ?? ""
+    return words.every((w) => hay.includes(w))
+  })
+
   return (
-    <Sheet label="Index" onClose={onClose} open={open}>
-      <p className="meta px-4 pt-7 text-dim sm:px-6 sm:pt-9">Index · newest first</p>
-      <ol className="mt-8 min-h-0 flex-1 overflow-y-auto px-4 pb-10 sm:px-6">
-        {FEED.map((e, i) => (
+    <Sheet
+      label="Archive"
+      onClose={() => {
+        setQuery("")
+        onClose()
+      }}
+      open={open}
+    >
+      <div className="px-4 pt-7 sm:px-6 sm:pt-9">
+        <p className="meta text-dim">Archive · newest first</p>
+        <label className="mt-6 flex items-baseline gap-3 border-line border-b pb-3 focus-within:border-fg">
+          <span className="sr-only">Search the archive</span>
+          <svg aria-hidden className="size-4 shrink-0 self-center text-faint" fill="none" stroke="currentColor" viewBox="0 0 16 16">
+            <circle cx="7" cy="7" r="5" />
+            <path d="m11 11 4 4" />
+          </svg>
+          <input
+            autoComplete="off"
+            // Focused when the sheet opens, so typing searches at once.
+            data-autofocus
+            className="w-full bg-transparent font-medium text-2xl tracking-tight outline-none placeholder:text-faint sm:text-3xl [&::-webkit-search-cancel-button]:appearance-none"
+            onChange={(ev) => setQuery(ev.target.value)}
+            onKeyDown={(ev) => {
+              if (ev.key === "Enter" && results.length > 0) {
+                setQuery("")
+                onGo(results[0].i)
+              }
+            }}
+            placeholder="Search by name, mood or technique"
+            spellCheck={false}
+            type="search"
+            value={query}
+          />
+          <span className="meta shrink-0 text-faint tabular-nums">
+            {results.length}/{FEED.length}
+          </span>
+        </label>
+      </div>
+      <ol className="min-h-0 flex-1 overflow-y-auto px-4 pb-10 sm:px-6">
+        {results.map(({ e, i }) => (
           <li key={e.id}>
             <a
               aria-current={i === active ? "true" : undefined}
-              className="group grid grid-cols-[2.5rem_1fr] items-baseline gap-x-4 border-line border-t py-3 sm:grid-cols-[3.5rem_1fr_auto]"
+              className="group grid grid-cols-[2.5rem_1fr] items-baseline gap-x-4 border-line border-b py-3 sm:grid-cols-[3.5rem_1fr_auto]"
               href={pathFor({ index: i, how: false })}
               onClick={(ev) => {
                 if (isModifiedClick(ev)) return
                 ev.preventDefault()
+                setQuery("")
                 onGo(i)
               }}
             >
               <span className="meta tabular-nums" style={{ color: e.accent }}>
                 {numberOf(e)}
               </span>
-              <span
-                className={cn(
-                  "font-medium text-2xl tracking-tight transition-colors sm:text-4xl",
-                  i === active ? "text-fg" : "text-dim group-hover:text-fg"
-                )}
-              >
-                {e.name}
+              <span className="min-w-0">
+                <span
+                  className={cn(
+                    "block font-medium text-2xl tracking-tight transition-colors sm:text-4xl",
+                    i === active ? "text-fg" : "text-dim group-hover:text-fg"
+                  )}
+                >
+                  {e.name}
+                </span>
+                <span className="mt-1 block truncate text-faint text-sm transition-colors group-hover:text-dim">
+                  {e.tagline}
+                </span>
               </span>
-              <span className="meta col-start-2 text-faint sm:col-start-auto">
+              <span className="meta hidden text-faint sm:block">
                 {e.published ? formatDate(e.published) : e.category}
               </span>
             </a>
           </li>
         ))}
+        {results.length === 0 ? (
+          <li className="py-10 text-dim">
+            Nothing matches “{query}”.{" "}
+            <button className="text-fg underline underline-offset-4" onClick={() => setQuery("")} type="button">
+              Clear the search
+            </button>
+          </li>
+        ) : null}
       </ol>
     </Sheet>
   )
@@ -713,7 +803,7 @@ function InlineLink({ href, children }: { href: string; children: React.ReactNod
 const KEYS: ReadonlyArray<readonly [string, string]> = [
   ["Next / previous", "↓ ↑  or  J K"],
   ["Tune", "T"],
-  ["Index", "I"],
+  ["Archive and search", "A  or  /"],
   ["Pause", "Space"],
   ["Hide interface", "H"],
   ["This page", "?"],

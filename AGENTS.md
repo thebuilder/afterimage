@@ -22,13 +22,13 @@ Keep it that way unless there is a reason a native element cannot carry.
 
 The interface is chrome over a picture. Anything added to the always-visible
 layer costs screen the effect could have had, so new controls go behind Tune,
-How it works, Index or About, not next to them.
+How it works, Archive or About, not next to them.
 
 ## WGSL
 
 - Always `npm run check:wgsl`. Never `vgpu check src/**/*.wgsl`: `vgpu check`
   takes one entry file, silently ignores the rest of the glob, validates the
-  first shader and exits 0. `scripts/check-wgsl.sh` loops over all 30.
+  first shader and exits 0. `scripts/check-wgsl.sh` loops over all 27.
 - An imported WGSL module may not declare `@group` or `@binding`. vgpu's
   resolver rejects one that does. `src/shaders/common.wgsl` is helpers only.
 - Single-pass shaders declare `struct Params` opening with `res: vec2f`,
@@ -38,7 +38,7 @@ How it works, Index or About, not next to them.
 
 The registry is in publish order. An effect's number is its position, and `/`
 shows the last entry, so a new effect is always appended at the end, never
-inserted. Every entry from No. 21 on is a daily drop and carries
+inserted. Every entry from No. 18 on is a daily drop and carries
 `published: "YYYY-MM-DD"` on its own line directly under `name`; the parser in
 `scripts/lib/registry.mjs` matches that exact shape, and `check:registry` fails
 a missing, malformed or out-of-order date.
@@ -58,8 +58,9 @@ a missing, malformed or out-of-order date.
 git switch -c effect/<id>
 # single pass: src/shaders/<id>.wgsl   multi-pass: src/effects/<id>/{*.wgsl,pipeline.ts}
 # append the registry entry with published: "<today>"
+npm run render -- <id> --t=1,4,9   # single pass; read the luminance numbers
+npm run og                         # the social card is the newest effect
 npm run check:wgsl && npm run check:registry && npm run typecheck && npm run lint && npm run build
-npm run render -- <id> --t=1,4,9   # single pass, GPU machine; read the luminance numbers
 ```
 
 The effect is a hero, not a demo reel: it has to read at full screen with the
@@ -69,8 +70,8 @@ something worth leaving on with the UI hidden. One to three controls.
 ## Verify in this order
 
 ```bash
-npm run check:wgsl        # 30 shaders checked, 0 failing
-npm run check:registry    # 20 effects checked, 0 problems
+npm run check:wgsl        # 27 shaders checked, 0 failing
+npm run check:registry    # 17 effects checked, 0 problems
 npm run typecheck
 npm run lint
 npm run build
@@ -101,7 +102,6 @@ quietly.
 
 ## Open Graph card
 
-`npm run og` renders the art through Dawn at 1200x630 and writes
-`out/og-card.html`. Screenshotting that file at a 1200x630 viewport and saving
-it as `out/og-draft.png` is manual, no script produces it. The `sips` line in
-the README then converts it to `public/og.jpg`.
+The card is the newest effect. After adding one, run `npm run og` and commit
+`public/og.jpg` and `public/og.json`; `check:registry` fails until you do.
+Without a GPU, run `npx vgpu install-software-renderer` once first.
