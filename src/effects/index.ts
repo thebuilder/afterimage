@@ -13,6 +13,7 @@ import truchetWgsl from "@/shaders/truchet.wgsl"
 import mandalaWgsl from "@/shaders/mandala.wgsl"
 import wormholeWgsl from "@/shaders/wormhole.wgsl"
 import oceanWgsl from "@/shaders/ocean.wgsl"
+import harborWgsl from "@/shaders/harbor.wgsl"
 
 import { createFlux } from "./flux/pipeline"
 import fluxAdvect from "./flux/advect.wgsl"
@@ -676,6 +677,43 @@ const ENTRIES: readonly Entry[] = [
       ctl("density", "Density", 0.4, 2.2, 0.01, 1),
       ctl("speed", "Fall speed", 0.1, 3, 0.01, 1),
       ctl("bleed", "Phosphor", 0, 2.5, 0.01, 1),
+    ],
+  },
+  {
+    id: "harbor",
+    name: "Lowlight Harbor",
+    published: "2026-11-02",
+    wgsl: harborWgsl,
+    category: "Pixel art",
+    tagline: "A dithered harbour at dusk, its lighthouse turning through the night.",
+    summary:
+      "Twin lighthouse beams sweep across a pixel-art harbour and flare as they swing toward you, while the water mirrors it all and ripples wherever you hover. Palette repaints the scene by colour slot, and Resolution sets how big each pixel is.",
+    explanation: [
+      { title: "Build the scene", body: "Sky, moon, three ridgelines, an island and a lighthouse, all drawn from formulas at a coarse pixel grid." },
+      { title: "Mirror it", body: "Below the horizon each pixel looks up at its reflection, nudged sideways row by row by the swell." },
+      { title: "Snap to sixteen colours", body: "A checkerboard dither picks between the two nearest colours, so gradients become pixel art." },
+    ],
+    technical: {
+      insight: "Swapping a palette by slot number recolours the whole scene the way old consoles did, without redrawing anything.",
+      pipeline: [
+        "single pass · procedural scene at art-pixel resolution, mirrored water, Bayer dither, indexed palette",
+      ],
+      techniques: [
+        "pixel quantisation",
+        "Bayer ordered dither",
+        "indexed palette swap",
+        "planar reflection",
+        "rim lighting from slope",
+      ],
+      notes:
+        "Every fragment is snapped to its art-pixel cell first, so the whole scene evaluates once per cell and edges stay hard at any screen size. The water evaluates the scene a second time at the mirrored point, with a per-row offset and squashed ripple rings for perspective. Colour is computed loosely, then a 4x4 Bayer threshold is added and the result matched to the nearest of sixteen Dusk slots; the output is that slot's colour in whichever palette is selected, so Frost and Ember are pure lookups. Ridge rim light comes from the slope of each height function against the moon direction.",
+      source: "src/shaders/harbor.wgsl",
+    },
+    accent: "#ffdf7a",
+    controls: [
+      ctl("palette", "Palette", 0, 2, 0.01, 0),
+      ctl("rows", "Resolution", 90, 320, 1, 180),
+      ctl("beam", "Lamp", 0, 1.6, 0.01, 1),
     ],
   },
 ]
