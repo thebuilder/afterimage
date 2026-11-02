@@ -8,13 +8,13 @@ import { mountStage, releaseCanvas, type StageHandle } from "@/lib/stage"
 
 export interface ShaderViewProps extends React.ComponentProps<"div"> {
   effect: HeroEffect
-  /** Internal render scale. Cards run below 1 so a gridful of them stays interactive. */
+  /** Internal render scale relative to the CSS box. */
   quality?: number
   maxDpr?: number
   /** Frame cap. 0 means uncapped. */
   fps?: number
   controls?: Readonly<Record<string, number>>
-  /** Master switch from the page (a paused hero, a card with previews off). */
+  /** Master switch from the page: paused, or not the effect on screen. */
   enabled?: boolean
   onFps?: (fps: number) => void
 }
@@ -22,7 +22,7 @@ export interface ShaderViewProps extends React.ComponentProps<"div"> {
 /**
  * A canvas bound to one effect.
  *
- * Rendering is gated on intersection: a card scrolled out of view stops
+ * Rendering is gated on intersection: a screen scrolled out of view stops
  * encoding entirely rather than drawing into a canvas nobody is looking at.
  */
 export function ShaderView({
@@ -116,7 +116,7 @@ export function ShaderView({
   }, [onFps])
 
   return (
-    <div className={cn("relative isolate overflow-hidden bg-void", className)} {...props}>
+    <div className={cn("relative isolate overflow-hidden bg-bg", className)} {...props}>
       <canvas
         aria-label={`${effect.name} shader`}
         className="block size-full"
@@ -124,7 +124,7 @@ export function ShaderView({
         role="img"
       />
       {failed ? (
-        <div className="absolute inset-0 grid place-items-center bg-void/90 p-4 text-center font-mono text-[0.625rem] text-signal uppercase tracking-[0.14em]">
+        <div className="meta absolute inset-0 grid place-items-center bg-bg/90 p-4 text-center text-alert">
           WebGPU unavailable
         </div>
       ) : null}

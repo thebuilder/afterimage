@@ -14,13 +14,15 @@ The README explains the architecture. This file is only the traps.
 
 ## Styling
 
-`src/index.css` belongs to the Afterglow registry and is rewritten wholesale on
-`shadcn add`. Anything of ours in there is one update away from disappearing.
-Project tokens go in `src/theme.css`, which `index.css` imports. The rule is
-written at the top of `src/theme.css` too.
+Tailwind v4 with our own small set of tokens in the `@theme` block of
+`src/index.css`, plus a handful of `@utility` classes (`feed`, `scrim`, `meta`,
+`range`, `sheet`). There is no component library: dialogs are native
+`<dialog>`, sliders are native `<input type="range">`, icons are inline SVG.
+Keep it that way unless there is a reason a native element cannot carry.
 
-Same for `src/components/ui/*.tsx`: vendored, replaced by the registry. Project
-components live one level up in `src/components/`.
+The interface is chrome over a picture. Anything added to the always-visible
+layer costs screen the effect could have had, so new controls go behind Tune,
+How it works, Index or About, not next to them.
 
 ## WGSL
 
@@ -86,20 +88,8 @@ what catches an exposure that is ten times over rather than merely hot.
 
 ## Do not tidy
 
-- `.fallowrc.json` lists the vendored components under `entry`, not under
-  ignores. That is deliberate. Ignoring a file drops it out of the module graph
-  and takes its imports with it, which turned five real dependencies into
-  phantom unused ones. Leave it as entry points.
 - `@vgpu/wgsl-std` sits in `ignoreDependencies` because it is imported only from
   `.wgsl` files, which fallow does not parse.
-
-## Vendored components
-
-`command.tsx`, `input-otp.tsx`, `toast.tsx` and `resizable.tsx` were removed
-along with `cmdk`, `input-otp`, `sonner` and `react-resizable-panels`. If a
-`shadcn add` from the Afterglow registry reinstates any of those files, re-add
-its dependency in the same change. `tsconfig` includes all of `src`, so the file
-without its package breaks `typecheck`.
 
 ## Committing
 

@@ -1,13 +1,20 @@
 # Afterimage
 
 Live visual experiments in WGSL, one at a time, running on
-[vgpu](https://vgpu.sh), styled with the
-[Afterglow](https://afterglow.thebuilder.dk) shadcn registry.
+[vgpu](https://vgpu.sh).
 
-Each experiment gets the whole screen. The front page is always the newest one,
-and a new one lands most days: the first twenty were the original collection,
-everything from No. 21 on is a daily drop with a publish date. Older ones are a
-step back with the arrow keys, or one click away in the index.
+The site is a vertical feed of full-screen effects with scroll snapping, newest
+at the top. A new one lands most days: the first twenty were the original
+collection, everything from No. 21 on is a daily drop with a publish date. Scroll,
+swipe or press ↓ for older ones; the tick rail on the right and the Index sheet
+jump straight to any of them.
+
+Only the screen in view and its two neighbours hold a canvas. Everything further
+away is a flat gradient in the effect's accent colour, so the feed can grow to a
+year of daily effects without a year of GPU surfaces. The interface stays at the
+edges: a wordmark, Index and About at the top, and a small pill at the bottom
+right with Tune (the controls, collapsed by default), How it works, pause and
+hide.
 
 The page is deliberately quiet about how any of it works. A visitor gets the
 image, its name, one sentence and three controls. Frame graphs, WGSL terminology
@@ -79,21 +86,19 @@ The effect id is its URL slug, so `/ink` is a link to Ink and the address bar
 follows whatever is on screen. `/ink/how-it-works` opens that effect's
 explanation directly, so an explanation is as linkable as an effect.
 
-`/` is the newest effect, whichever that is today, and `/how-it-works` is its
+`/` is the top of the feed, the newest effect, and `/how-it-works` is its
 explanation. The newest effect also answers at its own `/<id>`, and that is the
-link to share, because `/` moves on tomorrow. Stepping to the newest effect from
-inside the site lands on `/`, so the front page stays the front page.
+link to share, because `/` moves on tomorrow. Opening `/<id>` lands on that
+screen of the feed without animating there.
 
-The previous / next pair, the index entries and the wordmark are anchors carrying
-a real `href`, so right-click, cmd-click and "copy link address" all behave; the
-click handler only takes over the plain left click.
+The address bar follows the scroll with `replaceState`, never `pushState`:
+scrolling through twenty screens should not take twenty presses of Back. The
+screen counted as on view is the one an `IntersectionObserver` sees at 60% or
+more, and the URL and title are written from it.
 
-The route is a single piece of state. Everything on the page derives from it and
-the URL and title are written from it, so nothing reads `window.location` back
-out to decide what to render. Two details that are easy to get wrong: writing the
-URL has to be idempotent, because StrictMode invokes every effect twice and a
-"first run" flag pushes on the second; and an unrecognised path is corrected with
-`replaceState`, so Back does not walk into a URL the app rewrote.
+The index entries and the wordmark are anchors carrying a real `href`, so
+right-click, cmd-click and "copy link address" all behave; the click handler only
+takes over the plain left click.
 
 `vercel.json` rewrites everything to `index.html`. Rewrites run after the
 filesystem check, so real assets are still served as themselves.
@@ -120,9 +125,8 @@ Field turns `trail` into the decay constant of its feedback buffer.
 ```
 src/
   main.tsx          mounts App, imports index.css
-  App.tsx           the whole page: route state, hero, previous / next, index, panels
-  index.css         owned by the Afterglow registry, rewritten on `shadcn add`. Do not edit
-  theme.css         project tokens, imported by index.css. Ours to edit
+  App.tsx           the whole page: the feed, the chrome over it, and the sheets
+  index.css         Tailwind, our tokens and the few utilities the page uses
   shaders/          single-pass effects, one .wgsl each, plus common.wgsl helpers
   effects/
     types.ts        the EffectInstance / HeroEffect contract
@@ -136,11 +140,9 @@ src/
   lib/
     gpu.ts          the one Gpu for the page
     stage.ts        surface lifecycle and the single rAF loop
-    utils.ts        the registry's `cn` helper
+    utils.ts        `cn`, a falsy-dropping class joiner
   components/
-    ui/             vendored Afterglow primitives, replaced wholesale by `shadcn add`
     shader-view.tsx the canvas element every Surface attaches to
-    *.tsx           the rest are project components: screen, terminal-window, led, ...
 scripts/
   lib/              shared by the headless scripts: registry parsing, frame statistics
 ```
@@ -286,11 +288,6 @@ adapter there. It is proven on macOS and Metal, which is where I run it.
 [fallow](https://www.npmjs.com/package/fallow) runs over this repo, and a
 PreToolUse hook in `.claude/settings.json` gates `git commit` and `git push` on
 `fallow audit`.
-
-`.fallowrc.json` lists the vendored Afterglow components as entry points rather
-than ignoring them. Ignoring a file drops it out of the module graph, which took
-its imports with it and turned five real dependencies into phantom unused ones.
-Entry points keep the edges and stop the components themselves being reported.
 
 `@vgpu/wgsl-std` is in `ignoreDependencies` because it is imported only from
 `.wgsl` files, which fallow does not parse.
