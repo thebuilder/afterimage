@@ -113,19 +113,12 @@ for (const [index, e] of effects.entries()) {
   }
 }
 
-// 6. The social card shows the newest effect. `npm run og` writes the card and
-// records its effect in public/og.json; a new drop without a new card fails here.
-const latest = effects.at(-1)
-const ogPath = path.join(root, "public/og.json")
-if (!arg && latest) {
-  if (!existsSync(ogPath) || !existsSync(path.join(root, "public/og.jpg"))) {
-    problems.push(`public/og.jpg or public/og.json is missing — run \`npm run og\``)
-  } else {
-    const og = JSON.parse(readFileSync(ogPath, "utf8"))
-    if (og.id !== latest.id) {
-      problems.push(
-        `public/og.json shows "${og.id}" but the newest effect is "${latest.id}" — run \`npm run og\``
-      )
+// 6. Every effect page links its own social card, and `/` links the newest.
+// `npm run og` renders the newest; a drop without its card fails here.
+if (!arg) {
+  for (const e of effects) {
+    if (!existsSync(path.join(root, "public/og", `${e.id}.jpg`))) {
+      problems.push(`public/og/${e.id}.jpg is missing, run \`npm run og -- ${e.id}\``)
     }
   }
 }

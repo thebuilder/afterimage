@@ -256,30 +256,32 @@ that does.
 
 ## Open Graph card
 
-The social card is always the newest effect. `npm run og` renders it headless
+Every effect has its own social card. `npm run og` renders an effect headless
 through Dawn at exactly 1200x630 and at its declared control defaults, lays the
 wordmark, number, name and tagline over it, and screenshots that to
-`public/og.jpg` with Playwright. It also writes `public/og.json`, recording which
-effect the card shows:
+`public/og/<id>.jpg` with Playwright:
 
 ```bash
 npm run og            # the newest registry entry
-npm run og -- ink     # any other effect, for a one-off
+npm run og -- ink     # specific effects
+npm run og -- --all   # every effect
 ```
 
 Playwright is not a dependency; the script uses it when it can resolve it and
-otherwise leaves `out/og-card.html` to screenshot by hand. On a machine without a
-GPU, `npx vgpu install-software-renderer` once lets Dawn render on the CPU.
+otherwise leaves `out/og-card-<id>.html` to screenshot by hand. On a machine
+without a GPU, `npx vgpu install-software-renderer` once lets Dawn render on the
+CPU.
 
-`check:registry` fails when `public/og.json` does not name the newest effect, so
-a daily drop cannot ship with yesterday's card. At build time the `og` plugin in
-`vite.config.ts` reads the same file into the `og:` and `twitter:` tags, and
-versions the image URL with the effect id so link previews fetch the new card
-instead of a cached one.
+The site is a single page app, but crawlers do not run it. So the `og` plugin in
+`vite.config.ts` writes one HTML file per URL at build time: `/<id>` and
+`/<id>/how-it-works` each get that effect's title, description, canonical URL,
+`og:url` and card, and Vercel serves them extensionless (`cleanUrls` in
+`vercel.json`). `/` describes the site and carries the newest card. Card URLs
+carry a content hash, so a re-rendered card is fetched fresh by link previews.
+`check:registry` fails when any effect is missing its card.
 
-The absolute URL in the tags is filled in at build time by the `site-url` plugin
-in `vite.config.ts`, from `VERCEL_PROJECT_PRODUCTION_URL` on Vercel or `SITE_URL`
-anywhere else. With neither it collapses to a relative path.
+The absolute URLs are built from `VERCEL_PROJECT_PRODUCTION_URL` on Vercel or
+`SITE_URL` anywhere else. With neither they stay relative.
 
 ## Housekeeping
 

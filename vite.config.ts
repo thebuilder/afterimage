@@ -1,9 +1,11 @@
-import { readFileSync } from "node:fs"
+import { createHash } from "node:crypto"
+import { existsSync, readFileSync } from "node:fs"
 import { fileURLToPath } from "node:url"
-import { defineConfig } from "vite"
+import { defineConfig, type Plugin } from "vite"
 import react from "@vitejs/plugin-react"
 import tailwindcss from "@tailwindcss/vite"
 import { wgslVitePlugin } from "@vgpu/wgsl/loader-vite"
+import { parseEffects } from "./scripts/lib/registry.mjs"
 
 /**
  * Absolute origin for the Open Graph tags.
@@ -32,46 +34,112 @@ function siteUrl(): string {
   }
 }
 
-const siteUrlPlugin = {
-  name: "afterimage:site-url",
-  transformIndexHtml: (html: string) => html.replaceAll("__SITE_URL__", siteUrl()),
-}
-
 /**
- * Social tags for the newest effect.
+ * Social tags, one set per URL.
  *
- * `npm run og` renders the newest effect into `public/og.jpg` and records which
- * one in `public/og.json`; `check:registry` fails when that record is not the
- * newest registry entry. The image URL carries the effect id as a version, so a
- * new card is a new URL and link previews do not keep yesterday's cached one.
+ * The site is a single page app, but crawlers do not run it, so every effect
+ * gets its own HTML file with its own title, description, canonical URL and
+ * card: `/<id>` is `<id>.html` and `/<id>/how-it-works` is
+ * `<id>/how-it-works.html`, which Vercel serves extensionless (`cleanUrls`).
+ * `/` and `/how-it-works` describe the site and carry the newest card. Cards
+ * live at `public/og/<id>.jpg` (`npm run og`), and their URL carries a content
+ * hash so a re-rendered card is a new URL that link previews fetch afresh.
  */
-interface OgRecord {
-  id: string
-  number: string
-  name: string
-  tagline: string
-}
-
 const escapeAttr = (s: string) =>
   s.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
 
-const ogPlugin = {
+const SITE_TITLE = "Afterimage | One live experiment at a time"
+const SITE_DESCRIPTION =
+  "Interactive visual experiments rendered live in your browser, one at a time, with a new one most days. Shape it with the controls, or hide the interface and let it fill the screen."
+
+interface PageMeta {
+  title: string
+  description: string
+  ogTitle: string
+  ogDescription: string
+  path: string
+  image: string
+  imageAlt: string
+}
+
+function cardUrl(id: string): string {
+  const file = new URL(`./public/og/${id}.jpg`, import.meta.url)
+  const hash = existsSync(file)
+    ? createHash("sha1").update(readFileSync(file)).digest("hex").slice(0, 10)
+    : "missing"
+  return `/og/${id}.jpg?v=${hash}`
+}
+
+function pages(): { file: string; meta: PageMeta }[] {
+  const effects = parseEffects()
+  const out: { file: string; meta: PageMeta }[] = []
+  effects.forEach((e, i) => {
+    const number = String(i + 1).padStart(2, "0")
+    const title = `${e.name} | Afterimage`
+    const description = `No. ${number}. ${e.tagline}`
+    const meta = {
+      title,
+      description,
+      ogTitle: title,
+      ogDescription: description,
+      path: `/${e.id}`,
+      image: cardUrl(e.id),
+      imageAlt: `${e.name}, a live experiment on Afterimage.`,
+    }
+    out.push({ file: `${e.id}.html`, meta })
+    out.push({
+      file: `${e.id}/how-it-works.html`,
+      meta: { ...meta, title: `How ${e.name} works | Afterimage` },
+    })
+  })
+  const newest = effects.at(-1)
+  if (newest) {
+    const card = out.find((p) => p.file === `${newest.id}.html`)!.meta
+    const home = { ...card, title: SITE_TITLE, description: SITE_DESCRIPTION, path: "/" }
+    out.push({ file: "index.html", meta: home })
+    out.push({ file: "how-it-works.html", meta: home })
+  }
+  return out
+}
+
+function fill(html: string, m: PageMeta): string {
+  const url = `${siteUrl()}${m.path}`
+  return html
+    .replaceAll("__TITLE__", escapeAttr(m.title))
+    .replaceAll("__DESCRIPTION__", escapeAttr(m.description))
+    .replaceAll("__OG_TITLE__", escapeAttr(m.ogTitle))
+    .replaceAll("__OG_DESCRIPTION__", escapeAttr(m.ogDescription))
+    .replaceAll("__OG_ALT__", escapeAttr(m.imageAlt))
+    .replaceAll("__PAGE_URL__", escapeAttr(url))
+    .replaceAll("__OG_IMAGE__", escapeAttr(`${siteUrl()}${m.image}`))
+}
+
+const ogPlugin: Plugin = {
   name: "afterimage:og",
-  transformIndexHtml(html: string) {
-    const og = JSON.parse(
-      readFileSync(new URL("./public/og.json", import.meta.url), "utf8")
-    ) as OgRecord
-    return html
-      .replaceAll("__OG_TITLE__", escapeAttr(`${og.name} | Afterimage`))
-      .replaceAll("__OG_DESCRIPTION__", escapeAttr(`No. ${og.number}. ${og.tagline}`))
-      .replaceAll("__OG_ALT__", escapeAttr(`${og.name}, the newest live experiment on Afterimage.`))
-      .replaceAll("__OG_VERSION__", encodeURIComponent(og.id))
+  enforce: "post",
+  // In dev every URL gets the home page's tags; nothing crawls a dev server.
+  transformIndexHtml: {
+    order: "post",
+    handler(html, ctx) {
+      if (ctx.bundle) return html
+      const home = pages().find((p) => p.file === "index.html")
+      return home ? fill(html, home.meta) : html
+    },
+  },
+  generateBundle(_, bundle) {
+    const index = bundle["index.html"]
+    if (!index || index.type !== "asset") return
+    const template = String(index.source)
+    for (const { file, meta } of pages()) {
+      if (file === "index.html") index.source = fill(template, meta)
+      else this.emitFile({ type: "asset", fileName: file, source: fill(template, meta) })
+    }
   },
 }
 
 export default defineConfig({
   // Shader comments are ~17% of the shipped bundle, so minify the WGSL.
-  plugins: [siteUrlPlugin, ogPlugin, wgslVitePlugin({ minify: true }), react(), tailwindcss()],
+  plugins: [ogPlugin, wgslVitePlugin({ minify: true }), react(), tailwindcss()],
   // One port everywhere: launch.json, shots.sh and the README all assume it.
   server: { port: 5177, strictPort: true },
   resolve: {

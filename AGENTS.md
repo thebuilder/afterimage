@@ -96,7 +96,7 @@ git switch -c effect/<id> origin/main
 # single pass: src/shaders/<id>.wgsl   multi-pass: src/effects/<id>/{*.wgsl,pipeline.ts}
 # append the registry entry with published: "<today>"
 npm run render -- <id> --t=1,4,9   # single pass; read the luminance numbers
-npm run og                         # the social card is the newest effect
+npm run og                         # the newest effect's social card
 npm run check:wgsl && npm run check:registry && npm run typecheck && npm run lint && npm run build
 git push origin HEAD:main
 ```
@@ -140,6 +140,9 @@ quietly.
 
 ## Open Graph card
 
-The card is the newest effect. After adding one, run `npm run og` and commit
-`public/og.jpg` and `public/og.json`; `check:registry` fails until you do.
+Every effect has its own card at `public/og/<id>.jpg`, and every effect URL
+gets its own HTML at build time (title, description, canonical, og:url, card),
+so a shared link previews that effect. `/` carries the newest card. After adding
+an effect, run `npm run og` (renders the newest) and commit
+`public/og/<id>.jpg`; `check:registry` fails until you do.
 Without a GPU, run `npx vgpu install-software-renderer` once first.

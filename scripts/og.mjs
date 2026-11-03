@@ -1,18 +1,17 @@
-// Builds the Open Graph card from the newest effect, or the one named.
+// Builds the Open Graph cards: one per effect, at public/og/<id>.jpg.
 //
-//   npm run og            # the newest registry entry
-//   npm run og -- ink     # a specific effect
+//   npm run og            # the newest registry entry (the daily drop)
+//   npm run og -- ink     # specific effects
+//   npm run og -- --all   # every effect
 //
 // The art is the real shader rendered headless through Dawn at 1200x630, at the
 // effect's declared control defaults. The type is laid over it in a small HTML
-// page, and that page is screenshotted to `public/og.jpg` with Playwright when
-// it is installed. Without Playwright the HTML is written to `out/og-card.html`
-// for a manual 1200x630 screenshot; save it as `public/og.jpg` and update
-// `public/og.json` by hand.
+// page, and that page is screenshotted with Playwright when it is installed.
+// Without Playwright the HTML is written to `out/og-card-<id>.html` for a manual
+// 1200x630 screenshot.
 //
-// `public/og.json` records which effect the card shows. `check:registry` fails
-// when that is not the newest effect, so a new daily drop cannot ship with
-// yesterday's card.
+// Every effect page links its own card, and `/` links the newest one, so
+// `check:registry` fails when any effect is missing its card.
 import { mkdirSync, writeFileSync } from "node:fs"
 import { createRequire } from "node:module"
 import path from "node:path"
@@ -31,19 +30,37 @@ const FRAMES = 300
 const SINGLE_PASS_TIME = 4.2
 
 const effects = parseEffects()
-const wanted = process.argv.slice(2).find((a) => !a.startsWith("--"))
-const fx = wanted ? effects.find((e) => e.id === wanted) : effects.at(-1)
-if (!fx) {
-  console.error(`og: no effect "${wanted}"`)
-  process.exit(1)
+const args = process.argv.slice(2)
+const all = args.includes("--all")
+const named = args.filter((a) => !a.startsWith("--"))
+const targets = all
+  ? effects
+  : named.length > 0
+    ? named.map((id) => effects.find((e) => e.id === id) ?? id)
+    : [effects.at(-1)]
+for (const t of targets) {
+  if (typeof t === "string") {
+    console.error(`og: no effect "${t}"`)
+    process.exit(1)
+  }
 }
+
+mkdirSync(path.join(root, "out"), { recursive: true })
+mkdirSync(path.join(root, "public", "og"), { recursive: true })
+
+const chromium = await loadChromium()
+const browser = chromium ? await chromium.launch() : null
+for (const fx of targets) await card(fx)
+await browser?.close()
+
+async function card(fx) {
 const number = String(effects.indexOf(fx) + 1).padStart(2, "0")
 const defaults = Object.fromEntries(fx.controls.map((c) => [c.key, c.value]))
 
-mkdirSync(path.join(root, "out"), { recursive: true })
-
 // ── Art ─────────────────────────────────────────────────────────────────
-const gpu = await init()
+// Some multi-pass effects read storage buffers in the vertex stage, which the
+// software renderer allows but does not grant by default.
+const gpu = await init({ requiredLimits: { maxStorageBuffersInVertexStage: 1 } })
 let gpuErrors = 0
 gpu.onError((err) => {
   gpuErrors++
@@ -137,36 +154,31 @@ const html = `<!doctype html>
   </div>
 </div>
 `
-const cardPath = path.join(root, "out", "og-card.html")
+const cardPath = path.join(root, "out", `og-card-${fx.id}.html`)
 writeFileSync(cardPath, html)
 
-let chromium = null
-try {
-  // Resolved from the project, or from a global install; it is not a dependency.
-  ;({ chromium } = createRequire(path.join(root, "package.json"))("playwright"))
-} catch {
-  try {
-    ;({ chromium } = await import("playwright"))
-  } catch {
-    chromium = null
-  }
+if (!browser) {
+  console.log(`card: file://${cardPath}`)
+  console.log(`Playwright not found: screenshot that file at 1200x630 and save it as public/og/${fx.id}.jpg.`)
+  return
+}
+const page = await browser.newPage({ viewport: { width: W, height: H } })
+await page.setContent(html, { waitUntil: "networkidle" })
+await page.evaluate(() => document.fonts.ready)
+await page.screenshot({ path: path.join(root, "public", "og", `${fx.id}.jpg`), type: "jpeg", quality: 84 })
+await page.close()
+console.log(`wrote public/og/${fx.id}.jpg (${fx.name})`)
 }
 
-if (!chromium) {
-  console.log(`card: file://${cardPath}`)
-  console.log("Playwright not found: screenshot that file at 1200x630 and save it as public/og.jpg.")
-} else {
-  const browser = await chromium.launch()
-  const page = await browser.newPage({ viewport: { width: W, height: H } })
-  await page.setContent(html, { waitUntil: "networkidle" })
-  await page.evaluate(() => document.fonts.ready)
-  await page.screenshot({ path: path.join(root, "public", "og.jpg"), type: "jpeg", quality: 88 })
-  await browser.close()
-  // Only recorded once the card itself is written, so og.json never claims a
-  // card that is not there.
-  writeFileSync(
-    path.join(root, "public", "og.json"),
-    `${JSON.stringify({ id: fx.id, number, name: fx.name, tagline: fx.tagline }, null, 2)}\n`
-  )
-  console.log(`wrote public/og.jpg (${fx.name})`)
+async function loadChromium() {
+  try {
+    // Resolved from the project, or from a global install; it is not a dependency.
+    return createRequire(path.join(root, "package.json"))("playwright").chromium
+  } catch {
+    try {
+      return (await import("playwright")).chromium
+    } catch {
+      return null
+    }
+  }
 }
