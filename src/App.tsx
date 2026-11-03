@@ -745,9 +745,12 @@ function HowItWorks({
             <dl className="mt-4 grid gap-px border border-line bg-line sm:grid-cols-3">
               {(
                 [
-                  ["Why this effect", effect.rationale.why],
-                  ["As a hero", effect.rationale.hero],
-                  ["What stands out", effect.rationale.standout],
+                  ["The idea", effect.rationale.idea],
+                  ["First three seconds", effect.rationale.firstSeconds],
+                  ["Why the pointer matters", effect.rationale.interaction],
+                  ["Where the headline lives", effect.rationale.headline],
+                  ["Closest in the archive", effect.rationale.nearest],
+                  ["What could ruin it", effect.rationale.risks],
                 ] as const
               ).map(([title, body]) => (
                 <div className="bg-bg p-5" key={title}>

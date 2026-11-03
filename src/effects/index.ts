@@ -695,9 +695,12 @@ const ENTRIES: readonly Entry[] = [
       { title: "Snap to sixteen colours", body: "A checkerboard dither picks between the two nearest colours, so gradients become pixel art." },
     ],
     rationale: {
-      why: "Shader heroes mostly chase glossy realism or abstract gradients. A pixel-art harbour at dusk is a place with a story instead, and the nostalgia of a sixteen-colour palette lands with almost anyone. It is also one cheap pass, so it stays smooth on modest hardware.",
-      hero: "A game studio, an indie developer, or a travel or maritime brand with a playful voice. The calm sky holds a headline, the sweeping beams pull the eye across it, and Palette can follow a brand theme or a day and night toggle.",
-      standout: "It is real indexed-palette pixel art computed live, so it stays crisp at any screen size, and a palette swap repaints the whole scene the way old consoles did. The turning lighthouse gives it a heartbeat even when nobody touches it.",
+      idea: "A pixel-art harbour at dusk, where a lighthouse sweeps the night and the sea mirrors every pixel of it.",
+      firstSeconds: "Still and nostalgic: a quiet dithered sky, a slow swell and two beams turning on their own, so it is alive before anyone touches it.",
+      interaction: "The pointer stirs the water it hovers over and shifts the ridges in parallax, so the reflection breaks up and the scene gains depth.",
+      headline: "The open sky above the ridges, and the dark water in the lower left where the title already sits.",
+      nearest: "Deep Water, also a dusk sea. That one is a photoreal ocean; this is a small illustrated place with a story, drawn in sixteen colours.",
+      risks: "Pixel art can read as a retro gimmick on a serious brand, and too fine a Resolution loses the chunky charm. It is one cheap pass, so speed is not the worry.",
     },
     technical: {
       insight: "Swapping a palette by slot number recolours the whole scene the way old consoles did, without redrawing anything.",
@@ -737,9 +740,12 @@ const ENTRIES: readonly Entry[] = [
       { title: "Press", body: "The inks are laid over warm paper one at a time and multiply where they overlap, slightly out of line with each other." },
     ],
     rationale: {
-      why: "Agency heroes lean dark and glowing. A light, tactile risograph print is rare in shaders, and it speaks the language designers already love: screen angles, fluorescent inks and plates that never quite line up.",
-      hero: "A design studio, print shop, publisher, or festival poster. Dark type sits naturally on the paper ground, the loupe invites the visitor to explore, and Register could be tied to scroll so the poster pulls into register as the page loads.",
-      standout: "It is not a filter over a photo. The print is made from scratch with physically shaped dots and subtractive ink, so the loupe magnifies crisp dots instead of blurred pixels, and the plates slip apart under the hand like loose sheets.",
+      idea: "A risograph poster of a sunset, printed in three fluorescent inks that slip out of register under your hand.",
+      firstSeconds: "Warm and tactile: a light paper ground and bright dots, the opposite of the dark glowing heroes around it, with ripples moving on the sea.",
+      interaction: "The plates part as the pointer moves, showing how the colours are built, and a loupe magnifies the dots so the print becomes the picture.",
+      headline: "The bare paper in the sky and margins. Dark type reads on it like ink on a real poster.",
+      nearest: "Datastream, which also imitates an old medium. That one is a dark glowing screen; this is ink on paper, and the only light-ground effect so far.",
+      risks: "The loupe could feel like a demo trick, and a large Register makes it look broken rather than printed. Dense dots can shimmer when scaled down on a phone.",
     },
     technical: {
       insight: "Real misregistration is the whole plate moving, so each ink samples both the artwork and its dot grid through the same offset.",

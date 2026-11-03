@@ -21,6 +21,7 @@ const PUBLISHED = /^ {4}published: "(.*)",$/
 const NAME = /^ {4}name: "(.+)",$/
 const TAGLINE = /^ {4}tagline: "(.+)",$/
 const RATIONALE = /^ {4}rationale: \{$/
+const RATIONALE_KEY = /^ {6}(\w+):( "|$)/
 const ACCENT = /^ {4}accent: "(.+)",$/
 const CTL =
   /^ {6}ctl\("([^"]+)", "([^"]+)", (-?[\d.]+), (-?[\d.]+), ([\d.]+), (-?[\d.]+)\),$/
@@ -51,6 +52,7 @@ export function parseEffects(sourcePath) {
   const src = lines(sourcePath)
   const effects = []
   let current = null
+  let inRationale = false
 
   const close = () => {
     if (current) effects.push(current)
@@ -68,7 +70,7 @@ export function parseEffects(sourcePath) {
         wgslIdent: null,
         source: "",
         published: null,
-        rationale: false,
+        rationale: null,
         name: "",
         tagline: "",
         accent: "",
@@ -98,8 +100,18 @@ export function parseEffects(sourcePath) {
     }
     if (text) continue
     if (RATIONALE.test(line)) {
-      current.rationale = true
+      current.rationale = []
+      inRationale = true
       continue
+    }
+    if (inRationale) {
+      const key = RATIONALE_KEY.exec(line)
+      if (key) {
+        current.rationale.push(key[1])
+        continue
+      }
+      if (/^ {8}/.test(line)) continue
+      inRationale = false
     }
     const published = PUBLISHED.exec(line)
     if (published) {

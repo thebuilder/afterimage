@@ -15,6 +15,7 @@ const REQUIRED_PARAMS = ["res", "mouse", "time"]
 // The original seventeen effects predate the one-a-day run and carry no date.
 // Everything after them is a daily drop and must say which day it went live.
 const UNDATED = 17
+const RATIONALE_KEYS = ["idea", "firstSeconds", "interaction", "headline", "nearest", "risks"]
 
 const arg = process.argv[2]
 const sourcePath = arg ? path.resolve(arg) : undefined
@@ -56,10 +57,10 @@ for (const [index, e] of effects.entries()) {
     }
   }
 
-  // 3b. Daily drops ship with their case: why this effect, how it carries a
-  // hero, and what makes it stand out.
-  if (index >= UNDATED && !e.rationale) {
-    problems.push(`${at}: daily drop has no rationale { why, hero, standout }`)
+  // 3b. Daily drops ship with their case, all six answers.
+  if (index >= UNDATED) {
+    const missing = RATIONALE_KEYS.filter((k) => !e.rationale?.includes(k))
+    if (missing.length) problems.push(`${at}: rationale is missing ${missing.join(", ")}`)
   }
 
   // 3. Shape of the entry and of every control.

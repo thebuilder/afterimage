@@ -61,16 +61,23 @@ export interface Stage {
 }
 
 /**
- * Why this effect earned a place in the collection. Every daily drop works this
- * out before it is built, and `check:registry` holds new entries to it.
+ * The case for an effect, worked out before it is built. Every daily drop
+ * answers all six, and `check:registry` holds new entries to it. Keep each
+ * answer to a sentence or two.
  */
 export interface Rationale {
-  /** Why this effect: the idea, and the gap it fills next to the others. */
-  readonly why: string
-  /** How it would carry a real hero: who would use it, and how the page sits over it. */
-  readonly hero: string
-  /** What makes it stand out from the shader heroes people have already seen. */
-  readonly standout: string
+  /** The idea in one sentence. If it cannot be said simply, it is not clear yet. */
+  readonly idea: string
+  /** What it feels like in the first three seconds, before any interaction. Most visitors never move the mouse. */
+  readonly firstSeconds: string
+  /** What the pointer reveals or changes. Following the cursor is not enough. */
+  readonly interaction: string
+  /** The calm area that keeps a headline readable. */
+  readonly headline: string
+  /** The closest effect already in the archive, and how this one differs. */
+  readonly nearest: string
+  /** What could ruin it: too slow on a laptop, too busy, or a gimmick that wears off. */
+  readonly risks: string
 }
 
 /**

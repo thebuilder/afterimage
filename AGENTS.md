@@ -54,24 +54,32 @@ a missing, malformed or out-of-order date.
 2. For a single-pass effect, one `f32` in that shader's `Params` per control
    key. A control key with no matching member is a dead knob: the adapter falls
    back to the declared default and the slider does nothing.
-3. A `rationale` block directly above `technical`, with `why`, `hero` and
-   `standout` (see "Think first" below). The How it works sheet shows it.
+3. A `rationale` block directly above `technical`, one line per answer:
+   `idea`, `firstSeconds`, `interaction`, `headline`, `nearest`, `risks` (see
+   "Think first" below). The How it works sheet shows it under "Why this one".
 4. `npm run check:registry` enforces all of the above.
 5. Add a row to the effects table in the README.
 
 ### Think first
 
-Before writing any shader, write the case for the effect in three short
-answers. If they come out generic, pick a different idea; a clever technique
-with no answer to "who would put this on their homepage" is a demo, not a hero.
+Before writing any shader, answer six questions, a sentence or two each. If an
+answer comes out vague, the idea is not ready; if they come out generic, pick a
+different idea. A clever technique nobody would put on their homepage is a
+demo, not a hero.
 
-- **Why this effect.** The idea, and the gap it fills next to the effects
-  already in the registry. Read their categories and taglines first so the new
-  one is not a near repeat.
-- **How it carries a hero.** Who would use it (studio, brand, product), where
-  the headline sits over it, and what the pointer does for a first-time visitor.
-- **What stands out.** The one thing someone remembers after closing the tab,
-  compared with the shader heroes people have already seen.
+1. **What's the one-sentence idea?** (`idea`) If it can't be said simply, it
+   isn't clear yet.
+2. **What does it feel like in the first 3 seconds, before any interaction?**
+   (`firstSeconds`) Most visitors never move the mouse, so the idle state is
+   the effect.
+3. **Why does the interaction matter?** (`interaction`) The pointer should
+   reveal or change something, not just follow the cursor.
+4. **Where does the headline live?** (`headline`) Name the calm area that keeps
+   text readable. The title and controls already sit in the lower left.
+5. **What's it closest to in the archive, and how is it different?**
+   (`nearest`) Read every category and tagline in the registry first.
+6. **What could ruin it?** (`risks`) Too slow on a laptop, too busy, or a
+   gimmick that wears off after one visit. Then design against it.
 
 These answers ship as the entry's `rationale` and go in the report on the drop.
 The effect also has to stay fast: Ridgeline, Cumulus and Fractal Monolith were
