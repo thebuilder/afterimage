@@ -560,11 +560,11 @@ function Sheet({
       {open ? (
         <div className="relative mx-auto flex h-full max-w-5xl flex-col">
           <button
-            className="meta absolute top-4 right-4 z-10 rounded-full border border-line bg-bg px-3 py-2 text-dim transition-colors hover:text-fg sm:top-6 sm:right-6"
+            className="absolute top-4 right-4 z-10 rounded-full border border-line bg-bg px-3.5 py-1.5 text-dim text-sm transition-colors hover:border-fg/40 hover:text-fg sm:top-6 sm:right-6"
             onClick={onClose}
             type="button"
           >
-            Close · Esc
+            Close
           </button>
           {children}
         </div>
@@ -621,7 +621,7 @@ function ArchiveSheet({
       open={open}
     >
       <div className="px-4 pt-7 sm:px-6 sm:pt-9">
-        <p className="meta text-dim">Archive · newest first</p>
+        <p className="text-dim text-sm">The archive, newest first</p>
         <label className="mt-6 flex items-baseline gap-3 border-line border-b pb-3 focus-within:border-fg">
           <span className="sr-only">Search the archive</span>
           <svg aria-hidden className="size-4 shrink-0 self-center text-faint" fill="none" stroke="currentColor" viewBox="0 0 16 16">
@@ -699,7 +699,31 @@ function ArchiveSheet({
   )
 }
 
-/** What you are looking at, how it is made, and the implementation notes under that. */
+/** A section of the How it works page: a quiet heading in the margin, prose beside it. */
+function Passage({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section className="grid gap-x-10 gap-y-3 border-line border-t pt-6 md:grid-cols-[minmax(0,13rem)_minmax(0,1fr)]">
+      <h3 className="font-medium text-fg text-base">{title}</h3>
+      <div className="max-w-[62ch]">{children}</div>
+    </section>
+  )
+}
+
+/** The six answers of the rationale, phrased as the questions they answer. */
+const RATIONALE: ReadonlyArray<readonly [keyof NonNullable<HeroEffect["rationale"]>, string]> = [
+  ["idea", "The idea"],
+  ["firstSeconds", "In the first three seconds"],
+  ["interaction", "What the pointer does"],
+  ["headline", "Where a headline would sit"],
+  ["nearest", "Its nearest neighbour"],
+  ["risks", "What could ruin it"],
+]
+
+/**
+ * What you are looking at, how it is made, and the implementation notes under
+ * that. Set as a short article rather than a dashboard: prose with run-in
+ * labels, headings in the margin, and one large pull quote.
+ */
 function HowItWorks({
   effect,
   open,
@@ -710,91 +734,82 @@ function HowItWorks({
   onClose: () => void
 }) {
   const t = effect.technical
+  const r = effect.rationale
   return (
     <Sheet label={`How ${effect.name} works`} onClose={onClose} open={open}>
-      <div className="min-h-0 flex-1 overflow-y-auto px-4 pt-7 pb-16 sm:px-6 sm:pt-9">
-        <p className="meta text-dim">
-          <span style={{ color: effect.accent }}>No. {numberOf(effect)}</span>
-          {effect.published ? ` · ${formatDate(effect.published)}` : ""} · {effect.category}
+      <article className="min-h-0 flex-1 overflow-y-auto px-4 pt-8 pb-24 sm:px-6 sm:pt-10">
+        <p className="text-dim text-sm">
+          <span className="tabular-nums" style={{ color: effect.accent }}>
+            No. {numberOf(effect)}
+          </span>
+          {effect.published ? `, ${formatDate(effect.published)}` : ""}
+          <span className="text-faint"> / </span>
+          {effect.category}
         </p>
-        <h2 className="mt-4 font-medium text-5xl tracking-tighter sm:text-7xl">{effect.name}</h2>
-        <p className="mt-6 max-w-2xl text-dim text-lg leading-relaxed">{effect.summary}</p>
+        <h2 className="mt-3 font-medium text-6xl leading-[0.9] tracking-tighter sm:text-8xl">
+          {effect.name}
+        </h2>
+        <p className="mt-8 max-w-[38ch] text-fg/85 text-xl leading-snug tracking-tight sm:text-2xl">
+          {effect.summary}
+        </p>
 
-        <ol className="mt-12 grid gap-px border border-line bg-line sm:grid-cols-3">
-          {effect.explanation.map((stage, i) => (
-            <li className="bg-bg p-5" key={stage.title}>
-              <span className="meta text-faint tabular-nums">
-                {String(i + 1).padStart(2, "0")}
+        <div className="mt-16 grid gap-14">
+          <Passage title="How it is made">
+            <p className="text-dim leading-relaxed">
+              {effect.explanation.map((stage) => (
+                <span key={stage.title}>
+                  <span className="font-medium text-fg">{stage.title}.</span> {stage.body}{" "}
+                </span>
+              ))}
+            </p>
+          </Passage>
+
+          <figure className="md:pl-[calc(13rem+2.5rem)]">
+            <blockquote className="max-w-[28ch] text-3xl leading-tight tracking-tight sm:text-4xl">
+              <span aria-hidden className="-ml-[0.45em]" style={{ color: effect.accent }}>
+                “
               </span>
-              <h3 className="mt-3 font-medium text-lg">{stage.title}</h3>
-              <p className="mt-2 text-dim text-sm leading-relaxed">{stage.body}</p>
-            </li>
-          ))}
-        </ol>
+              {t.insight}
+              <span aria-hidden style={{ color: effect.accent }}>
+                ”
+              </span>
+            </blockquote>
+          </figure>
 
-        <p
-          className="mt-10 max-w-2xl border-l pl-4 text-sm leading-relaxed"
-          style={{ borderColor: effect.accent }}
-        >
-          {t.insight}
-        </p>
+          {r ? (
+            <Passage title="Why this one">
+              <div className="grid gap-4 text-dim leading-relaxed">
+                {RATIONALE.map(([key, label]) => (
+                  <p key={key}>
+                    <span className="font-medium text-fg">{label}.</span> {r[key]}
+                  </p>
+                ))}
+              </div>
+            </Passage>
+          ) : null}
 
-        {effect.rationale ? (
-          <section className="mt-12">
-            <h3 className="meta text-dim">Why this one</h3>
-            <dl className="mt-4 grid gap-px border border-line bg-line sm:grid-cols-3">
-              {(
-                [
-                  ["The idea", effect.rationale.idea],
-                  ["First three seconds", effect.rationale.firstSeconds],
-                  ["Why the pointer matters", effect.rationale.interaction],
-                  ["Where the headline lives", effect.rationale.headline],
-                  ["Closest in the archive", effect.rationale.nearest],
-                  ["What could ruin it", effect.rationale.risks],
-                ] as const
-              ).map(([title, body]) => (
-                <div className="bg-bg p-5" key={title}>
-                  <dt className="font-medium text-lg">{title}</dt>
-                  <dd className="mt-2 text-dim text-sm leading-relaxed">{body}</dd>
-                </div>
-              ))}
-            </dl>
-          </section>
-        ) : null}
-
-        <details className="group mt-12 border-line border-t pt-4">
-          <summary className="meta flex cursor-pointer list-none items-center justify-between text-dim hover:text-fg">
-            Under the hood
-            <span className="transition-transform group-open:rotate-45">+</span>
-          </summary>
-          <div className="grid gap-6 pt-6">
-            <ol className="grid gap-2">
-              {t.pipeline.map((stage, i) => (
-                <li className="flex gap-3 font-mono text-dim text-xs leading-relaxed" key={stage}>
-                  <span className="text-faint tabular-nums">{String(i + 1).padStart(2, "0")}</span>
-                  {stage}
-                </li>
-              ))}
-            </ol>
-            <ul className="flex flex-wrap gap-2">
-              {t.techniques.map((tag) => (
-                <li className="meta rounded-full border border-line px-2.5 py-1 text-dim" key={tag}>
-                  {tag}
-                </li>
-              ))}
-            </ul>
-            <p className="max-w-2xl text-dim text-sm leading-relaxed">{t.notes}</p>
-            <a
-              className="meta justify-self-start rounded-full border border-line px-3 py-2 text-dim transition-colors hover:text-fg"
-              href={`${REPO}/blob/main/${t.source}`}
-              rel="noreferrer"
-              target="_blank"
-            >
-              View source ↗
-            </a>
-          </div>
-        </details>
-      </div>
+          <Passage title="Under the hood">
+            <details className="group">
+              <summary className="cursor-pointer list-none text-dim underline decoration-line underline-offset-4 transition-colors hover:text-fg hover:decoration-fg">
+                <span className="group-open:hidden">Show the implementation notes</span>
+                <span className="hidden group-open:inline">Hide the implementation notes</span>
+              </summary>
+              <div className="mt-5 grid gap-5 text-dim leading-relaxed">
+                <p>{t.notes}</p>
+                <ul className="grid gap-1.5 border-line border-l pl-4 font-mono text-sm">
+                  {t.pipeline.map((stage) => (
+                    <li key={stage}>{stage}</li>
+                  ))}
+                </ul>
+                <p className="text-sm">
+                  Built with {t.techniques.join(", ")}.{" "}
+                  <InlineLink href={`${REPO}/blob/main/${t.source}`}>Read the source</InlineLink>.
+                </p>
+              </div>
+            </details>
+          </Passage>
+        </div>
+      </article>
     </Sheet>
   )
 }
@@ -825,7 +840,7 @@ function About({ open, onClose }: { open: boolean; onClose: () => void }) {
   return (
     <Sheet label="About Afterimage" onClose={onClose} open={open}>
       <div className="min-h-0 flex-1 overflow-y-auto px-4 pt-7 pb-16 sm:px-6 sm:pt-9">
-        <p className="meta text-dim">About</p>
+        <p className="text-dim text-sm">About</p>
         <h2 className="mt-4 max-w-3xl font-medium text-4xl tracking-tighter sm:text-6xl">
           One live experiment at a time.
         </h2>
@@ -840,10 +855,10 @@ function About({ open, onClose }: { open: boolean; onClose: () => void }) {
           notes are <InlineLink href={REPO}>on GitHub</InlineLink>.
         </p>
 
-        <p className="meta mt-12 text-dim">Keyboard</p>
+        <h3 className="mt-14 font-medium text-base">Keyboard</h3>
         <dl className="mt-3 grid max-w-md">
           {KEYS.map(([label, keys]) => (
-            <div className="meta flex justify-between border-line border-t py-2.5" key={label}>
+            <div className="flex justify-between border-line border-t py-2.5 text-sm" key={label}>
               <dt className="text-dim">{label}</dt>
               <dd className="text-fg">{keys}</dd>
             </div>
