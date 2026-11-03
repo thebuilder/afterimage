@@ -15,6 +15,7 @@ import wormholeWgsl from "@/shaders/wormhole.wgsl"
 import oceanWgsl from "@/shaders/ocean.wgsl"
 import harborWgsl from "@/shaders/harbor.wgsl"
 import overprintWgsl from "@/shaders/overprint.wgsl"
+import letterlightWgsl from "@/shaders/letterlight.wgsl"
 
 import { createFlux } from "./flux/pipeline"
 import fluxAdvect from "./flux/advect.wgsl"
@@ -768,6 +769,52 @@ const ENTRIES: readonly Entry[] = [
       ctl("screen", "Screen", 0.4, 2.2, 0.01, 1),
       ctl("slip", "Register", 0, 4, 0.01, 1),
       ctl("gain", "Ink", 0.5, 1.8, 0.01, 1),
+    ],
+  },
+  {
+    id: "letterlight",
+    name: "Letterlight",
+    published: "2026-11-03",
+    wgsl: letterlightWgsl,
+    category: "Type",
+    tagline: "A turning sculpture set entirely in letters, relit by the lamp in your hand.",
+    summary:
+      "A twisted column turns in a dark room, drawn only in letters: heavy capitals where the light lands, thin ones and dots where it falls away, strokes along the edges and a typed shadow on the wall. Move the pointer to carry the lamp. Type size sets how many lines of letters fill the screen, Lamp how bright it burns, and Spin how fast the sculpture turns.",
+    explanation: [
+      { title: "Light the form", body: "The screen is divided into letter-sized cells, and each one works out how much lamp light lands on the sculpture behind it." },
+      { title: "Choose a letter", body: "Fourteen letters are lined up by how much ink they use, from a full stop to an @, and each cell takes the one that matches its brightness. Edges get a stroke that follows the outline." },
+      { title: "Cast the shadow", body: "Cells that miss the sculpture look at the wall instead, where the lamp leaves a pool of dots and the sculpture blocks out its shadow." },
+    ],
+    rationale: {
+      idea: "A slowly turning sculpture typeset entirely in letters, lit by a lamp you hold, so the light itself is written.",
+      firstSeconds: "Quiet and sculptural: a twisted column turns in a dark room while a lamp drifts around it on its own, and the letters reset themselves as the light slides across each face.",
+      interaction: "The pointer is the lamp. Moving it rewrites every face of the sculpture, swings its typed shadow across the wall and turns the brightest glints ember.",
+      headline: "The dark left half and lower left, where the wall stays unlit until the lamp is carried there. On a phone the sculpture rises and leaves the lower half empty.",
+      nearest: "Datastream, the other text effect. There the glyphs fall as decoration on a glowing CRT; here every letter is chosen for its ink to describe light on a solid form, and the page holds still.",
+      risks: "ASCII art can read as a terminal novelty, so the type is soft inked letterforms on a warm dark ground, not green phosphor. Raymarching every pixel could be slow, so rays that miss a bounding sphere never march, and too much churn would read as noise, so cells only re-roll near the edge of a brightness step.",
+    },
+    technical: {
+      insight: "Letters make a usable grey scale once they are sorted by how much ink they lay down.",
+      pipeline: [
+        "single pass · per-cell sphere trace of a twisted rounded box, Lambert and Phong from a moving lamp, soft wall shadow, glyph lookup from a packed 5x7 font",
+      ],
+      techniques: [
+        "ASCII shading",
+        "coverage-sorted glyph ramp",
+        "bit-packed bitmap font",
+        "sphere tracing",
+        "soft shadows",
+        "bounding-sphere culling",
+      ],
+      notes:
+        "Every fragment snaps to the centre of its letter cell before anything is computed, so all pixels in a cell agree on one ray, one brightness and one letter. The ray is sphere-traced against a rounded box twisted along its height, but only between the entry and exit of a bounding sphere, so most of the screen never marches. The lit value picks one of fourteen glyphs sorted by pixel count, with a per-cell offset that re-rolls about once a second so cells near a step flicker between neighbours like type being reset. Where the normal turns edge-on the cell takes |, /, - or a backslash from the screen-space normal angle instead. The font is 5x7 bits packed into two u32s per glyph and read bilinearly, then thresholded, which rounds the pixel letters into soft inked forms. Missed rays hit a wall plane lit by the lamp, darkened by a short soft-shadow march toward it, and typed with only the four lightest glyphs. The lamp is placed so its pool lands under the pointer.",
+      source: "src/shaders/letterlight.wgsl",
+    },
+    accent: "#ff7338",
+    controls: [
+      ctl("size", "Type size", 30, 96, 1, 52),
+      ctl("lamp", "Lamp", 0.4, 1.8, 0.01, 1),
+      ctl("spin", "Spin", 0, 3, 0.01, 1),
     ],
   },
 ]

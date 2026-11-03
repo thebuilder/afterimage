@@ -62,6 +62,7 @@ with `strictPort`, so a busy port fails loudly instead of moving; `shots.sh` and
 | 17 | **Datastream** | procedural 5×7 dot-matrix font from hash bits, CRT mask | density, fall speed, phosphor |
 | 18 | **Lowlight Harbor** | art-pixel quantisation, Bayer dither onto an indexed 16-colour palette, mirrored water | palette, resolution, lamp |
 | 19 | **Overprint** | three rotated cosine halftone screens, subtractive ink overprint, plate misregistration, magnifier remap | screen, register, ink |
+| 20 | **Letterlight** | per-cell sphere trace lit by a moving lamp, coverage-sorted glyph ramp from a bit-packed 5×7 font, typed soft shadow | type size, lamp, spin |
 
 ## Copy
 
