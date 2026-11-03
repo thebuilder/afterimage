@@ -14,6 +14,7 @@ import mandalaWgsl from "@/shaders/mandala.wgsl"
 import wormholeWgsl from "@/shaders/wormhole.wgsl"
 import oceanWgsl from "@/shaders/ocean.wgsl"
 import harborWgsl from "@/shaders/harbor.wgsl"
+import overprintWgsl from "@/shaders/overprint.wgsl"
 
 import { createFlux } from "./flux/pipeline"
 import fluxAdvect from "./flux/advect.wgsl"
@@ -714,6 +715,43 @@ const ENTRIES: readonly Entry[] = [
       ctl("palette", "Palette", 0, 2, 0.01, 0),
       ctl("rows", "Resolution", 90, 320, 1, 180),
       ctl("beam", "Lamp", 0, 1.6, 0.01, 1),
+    ],
+  },
+  {
+    id: "overprint",
+    name: "Overprint",
+    published: "2026-11-03",
+    wgsl: overprintWgsl,
+    category: "Print",
+    tagline: "A three-ink risograph sunset, slipping out of register under your hand.",
+    summary:
+      "A poster printed in fluorescent pink, blue and yellow, where every tone is made of dots. Move the pointer and the three plates slide apart like loose sheets while a loupe shows the dots up close. Screen sets the dot size, Register how far the plates drift, and Ink how heavily each one prints.",
+    explanation: [
+      { title: "Separate", body: "The picture is drawn as three tones, one for each ink, the way a printer splits artwork into plates." },
+      { title: "Screen", body: "Each tone becomes a field of dots on its own tilted grid, bigger where the ink is darker." },
+      { title: "Press", body: "The inks are laid over warm paper one at a time and multiply where they overlap, slightly out of line with each other." },
+    ],
+    technical: {
+      insight: "Real misregistration is the whole plate moving, so each ink samples both the artwork and its dot grid through the same offset.",
+      pipeline: [
+        "single pass · procedural art separated into three tones, three rotated cosine halftone screens, subtractive overprint, magnifier",
+      ],
+      techniques: [
+        "AM halftone screening",
+        "cosine spot function",
+        "subtractive ink mixing",
+        "plate misregistration",
+        "magnifier remap",
+      ],
+      notes:
+        "Each plate uses a cosine spot function, 0.5 + 0.25(cos 2πx + cos 2πy), thresholded against the tone. It gives round dots in the highlights, a checkerboard at 50% and round holes near solid, and because it is continuous across cells there are no seams even though the tone is read per pixel. The screens sit at 75°, 15° and 45°, so overlapping inks form rosettes instead of a beat pattern. Coverage is anti-aliased with fwidth of the spot value, roughened with high-frequency noise gated by tone so blank paper stays clean, and modulated by low-frequency starvation and fine grain. Inks are transmittances multiplied over the paper in press order. The loupe remaps the print coordinate toward the pointer before anything is sampled, so it magnifies dots, grain and misregistration together.",
+      source: "src/shaders/overprint.wgsl",
+    },
+    accent: "#fc5490",
+    controls: [
+      ctl("screen", "Screen", 0.4, 2.2, 0.01, 1),
+      ctl("slip", "Register", 0, 4, 0.01, 1),
+      ctl("gain", "Ink", 0.5, 1.8, 0.01, 1),
     ],
   },
 ]

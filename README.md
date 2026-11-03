@@ -61,6 +61,7 @@ with `strictPort`, so a busy port fails loudly instead of moving; `shots.sh` and
 | 16 | **Hex Reactor** | dual-lattice hex tiling, screen-space derivative rims | charge, cell density, sweep |
 | 17 | **Datastream** | procedural 5×7 dot-matrix font from hash bits, CRT mask | density, fall speed, phosphor |
 | 18 | **Lowlight Harbor** | art-pixel quantisation, Bayer dither onto an indexed 16-colour palette, mirrored water | palette, resolution, lamp |
+| 19 | **Overprint** | three rotated cosine halftone screens, subtractive ink overprint, plate misregistration, magnifier remap | screen, register, ink |
 
 ## Copy
 
