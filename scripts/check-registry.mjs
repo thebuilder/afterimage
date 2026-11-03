@@ -56,6 +56,12 @@ for (const [index, e] of effects.entries()) {
     }
   }
 
+  // 3b. Daily drops ship with their case: why this effect, how it carries a
+  // hero, and what makes it stand out.
+  if (index >= UNDATED && !e.rationale) {
+    problems.push(`${at}: daily drop has no rationale { why, hero, standout }`)
+  }
+
   // 3. Shape of the entry and of every control.
   if (!e.category) problems.push(`${at}: empty or missing category`)
   if (e.controls.length < 1 || e.controls.length > 3) {

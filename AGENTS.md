@@ -54,18 +54,43 @@ a missing, malformed or out-of-order date.
 2. For a single-pass effect, one `f32` in that shader's `Params` per control
    key. A control key with no matching member is a dead knob: the adapter falls
    back to the declared default and the slider does nothing.
-3. `npm run check:registry` enforces all of the above.
-4. Add a row to the effects table in the README.
+3. A `rationale` block directly above `technical`, with `why`, `hero` and
+   `standout` (see "Think first" below). The How it works sheet shows it.
+4. `npm run check:registry` enforces all of the above.
+5. Add a row to the effects table in the README.
+
+### Think first
+
+Before writing any shader, write the case for the effect in three short
+answers. If they come out generic, pick a different idea; a clever technique
+with no answer to "who would put this on their homepage" is a demo, not a hero.
+
+- **Why this effect.** The idea, and the gap it fills next to the effects
+  already in the registry. Read their categories and taglines first so the new
+  one is not a near repeat.
+- **How it carries a hero.** Who would use it (studio, brand, product), where
+  the headline sits over it, and what the pointer does for a first-time visitor.
+- **What stands out.** The one thing someone remembers after closing the tab,
+  compared with the shader heroes people have already seen.
+
+These answers ship as the entry's `rationale` and go in the report on the drop.
+The effect also has to stay fast: Ridgeline, Cumulus and Fractal Monolith were
+removed for being too heavy, so prefer one cheap pass over an expensive look.
 
 ### Today's effect, start to finish
 
+Daily drops go straight to `main`, no pull request, once every check below
+passes.
+
 ```bash
-git switch -c effect/<id>
+git switch -c effect/<id> origin/main
+# write the rationale first (above)
 # single pass: src/shaders/<id>.wgsl   multi-pass: src/effects/<id>/{*.wgsl,pipeline.ts}
 # append the registry entry with published: "<today>"
 npm run render -- <id> --t=1,4,9   # single pass; read the luminance numbers
 npm run og                         # the social card is the newest effect
 npm run check:wgsl && npm run check:registry && npm run typecheck && npm run lint && npm run build
+git push origin HEAD:main
 ```
 
 The effect is a hero, not a demo reel: it has to read at full screen with the

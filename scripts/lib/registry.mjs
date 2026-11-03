@@ -20,6 +20,7 @@ const SOURCE = /^ {6}source: "(.+)",$/
 const PUBLISHED = /^ {4}published: "(.*)",$/
 const NAME = /^ {4}name: "(.+)",$/
 const TAGLINE = /^ {4}tagline: "(.+)",$/
+const RATIONALE = /^ {4}rationale: \{$/
 const ACCENT = /^ {4}accent: "(.+)",$/
 const CTL =
   /^ {6}ctl\("([^"]+)", "([^"]+)", (-?[\d.]+), (-?[\d.]+), ([\d.]+), (-?[\d.]+)\),$/
@@ -67,6 +68,7 @@ export function parseEffects(sourcePath) {
         wgslIdent: null,
         source: "",
         published: null,
+        rationale: false,
         name: "",
         tagline: "",
         accent: "",
@@ -95,6 +97,10 @@ export function parseEffects(sourcePath) {
       }
     }
     if (text) continue
+    if (RATIONALE.test(line)) {
+      current.rationale = true
+      continue
+    }
     const published = PUBLISHED.exec(line)
     if (published) {
       current.published = published[1]

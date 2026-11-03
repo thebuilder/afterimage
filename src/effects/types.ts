@@ -61,6 +61,19 @@ export interface Stage {
 }
 
 /**
+ * Why this effect earned a place in the collection. Every daily drop works this
+ * out before it is built, and `check:registry` holds new entries to it.
+ */
+export interface Rationale {
+  /** Why this effect: the idea, and the gap it fills next to the others. */
+  readonly why: string
+  /** How it would carry a real hero: who would use it, and how the page sits over it. */
+  readonly hero: string
+  /** What makes it stand out from the shader heroes people have already seen. */
+  readonly standout: string
+}
+
+/**
  * The technical layer.
  *
  * All of it is true and none of it belongs in front of someone who came to look
@@ -88,6 +101,8 @@ export interface HeroEffect {
   /** Two sentences on what makes the image, and what the controls do to it. */
   readonly summary: string
   readonly explanation: readonly Stage[]
+  /** The case for the effect. Required from No. 18 on; the original seventeen leave it out. */
+  readonly rationale?: Rationale
   readonly technical: Technical
   readonly accent: string
   /**

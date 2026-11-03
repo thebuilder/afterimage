@@ -739,6 +739,26 @@ function HowItWorks({
           {t.insight}
         </p>
 
+        {effect.rationale ? (
+          <section className="mt-12">
+            <h3 className="meta text-dim">Why this one</h3>
+            <dl className="mt-4 grid gap-px border border-line bg-line sm:grid-cols-3">
+              {(
+                [
+                  ["Why this effect", effect.rationale.why],
+                  ["As a hero", effect.rationale.hero],
+                  ["What stands out", effect.rationale.standout],
+                ] as const
+              ).map(([title, body]) => (
+                <div className="bg-bg p-5" key={title}>
+                  <dt className="font-medium text-lg">{title}</dt>
+                  <dd className="mt-2 text-dim text-sm leading-relaxed">{body}</dd>
+                </div>
+              ))}
+            </dl>
+          </section>
+        ) : null}
+
         <details className="group mt-12 border-line border-t pt-4">
           <summary className="meta flex cursor-pointer list-none items-center justify-between text-dim hover:text-fg">
             Under the hood

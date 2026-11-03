@@ -694,6 +694,11 @@ const ENTRIES: readonly Entry[] = [
       { title: "Mirror it", body: "Below the horizon each pixel looks up at its reflection, nudged sideways row by row by the swell." },
       { title: "Snap to sixteen colours", body: "A checkerboard dither picks between the two nearest colours, so gradients become pixel art." },
     ],
+    rationale: {
+      why: "Shader heroes mostly chase glossy realism or abstract gradients. A pixel-art harbour at dusk is a place with a story instead, and the nostalgia of a sixteen-colour palette lands with almost anyone. It is also one cheap pass, so it stays smooth on modest hardware.",
+      hero: "A game studio, an indie developer, or a travel or maritime brand with a playful voice. The calm sky holds a headline, the sweeping beams pull the eye across it, and Palette can follow a brand theme or a day and night toggle.",
+      standout: "It is real indexed-palette pixel art computed live, so it stays crisp at any screen size, and a palette swap repaints the whole scene the way old consoles did. The turning lighthouse gives it a heartbeat even when nobody touches it.",
+    },
     technical: {
       insight: "Swapping a palette by slot number recolours the whole scene the way old consoles did, without redrawing anything.",
       pipeline: [
@@ -731,6 +736,11 @@ const ENTRIES: readonly Entry[] = [
       { title: "Screen", body: "Each tone becomes a field of dots on its own tilted grid, bigger where the ink is darker." },
       { title: "Press", body: "The inks are laid over warm paper one at a time and multiply where they overlap, slightly out of line with each other." },
     ],
+    rationale: {
+      why: "Agency heroes lean dark and glowing. A light, tactile risograph print is rare in shaders, and it speaks the language designers already love: screen angles, fluorescent inks and plates that never quite line up.",
+      hero: "A design studio, print shop, publisher, or festival poster. Dark type sits naturally on the paper ground, the loupe invites the visitor to explore, and Register could be tied to scroll so the poster pulls into register as the page loads.",
+      standout: "It is not a filter over a photo. The print is made from scratch with physically shaped dots and subtractive ink, so the loupe magnifies crisp dots instead of blurred pixels, and the plates slip apart under the hand like loose sheets.",
+    },
     technical: {
       insight: "Real misregistration is the whole plate moving, so each ink samples both the artwork and its dot grid through the same offset.",
       pipeline: [
