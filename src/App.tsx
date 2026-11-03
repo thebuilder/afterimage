@@ -222,7 +222,7 @@ export default function App() {
       >
         <header className="flex items-start justify-between gap-4 p-4 sm:p-6">
           <a
-            className="pointer-events-auto flex items-center gap-2.5 py-2"
+            className="pointer-events-auto flex h-10 items-center gap-2.5 rounded-full border border-line bg-glass pr-4 pl-3.5 backdrop-blur-md"
             href="/"
             onClick={(ev) => {
               if (isModifiedClick(ev)) return
@@ -231,7 +231,7 @@ export default function App() {
             }}
           >
             <Mark />
-            <span className="legible font-medium text-sm tracking-tight">Afterimage</span>
+            <span className="font-medium text-sm tracking-tight">Afterimage</span>
           </a>
           <nav className="pointer-events-auto flex items-center gap-1 rounded-full border border-line bg-glass p-1 backdrop-blur-md">
             <TextButton onClick={() => setArchiveOpen(true)}>
@@ -364,31 +364,18 @@ function Screen({
         />
       )}
 
-      <div
-        aria-hidden
-        className={cn(
-          "scrim pointer-events-none absolute inset-0 transition-opacity duration-500",
-          showCopy ? "opacity-100" : "opacity-0"
-        )}
-      />
-
+      {/* Only the name sits on the picture. The number, date, category and
+          tagline live in the Archive and in How it works, so no gradient has to
+          darken the frame to carry small type over it. */}
       <div
         className={cn(
           "pointer-events-none absolute inset-x-0 bottom-0 p-4 pb-20 transition-[opacity,translate] duration-700 ease-out-quint sm:p-6 sm:pb-24 lg:pb-6",
           showCopy && active ? "translate-y-0 opacity-100" : "translate-y-3 opacity-0"
         )}
       >
-        <p className="legible meta flex flex-wrap gap-x-3 text-fg/80">
-          <span style={{ color: effect.accent }}>No. {numberOf(effect)}</span>
-          {effect.published ? <span>{formatDate(effect.published)}</span> : null}
-          <span>{effect.category}</span>
-        </p>
-        <h1 className="legible mt-3 max-w-[14ch] font-medium text-display leading-display tracking-display [text-wrap:balance]">
+        <h1 className="legible max-w-[14ch] font-medium text-display leading-display tracking-display [text-wrap:balance]">
           {effect.name}
         </h1>
-        <p className="legible mt-4 max-w-md text-fg/85 text-sm leading-relaxed sm:text-base">
-          {effect.tagline}
-        </p>
       </div>
     </section>
   )
@@ -440,7 +427,7 @@ function ScrollHint({ visible, onClick }: { visible: boolean; onClick: () => voi
   return (
     <button
       className={cn(
-        "legible meta pointer-events-auto absolute bottom-6 left-1/2 hidden -translate-x-1/2 items-center gap-2 text-fg/80 transition-opacity duration-500 hover:text-fg lg:flex",
+        "meta pointer-events-auto absolute bottom-6 left-1/2 hidden h-10 -translate-x-1/2 items-center gap-2 rounded-full border border-line bg-glass px-4 text-fg/80 backdrop-blur-md transition-opacity duration-500 hover:text-fg lg:flex",
         visible ? "opacity-100" : "pointer-events-none opacity-0"
       )}
       onClick={onClick}
@@ -727,7 +714,8 @@ function HowItWorks({
     <Sheet label={`How ${effect.name} works`} onClose={onClose} open={open}>
       <div className="min-h-0 flex-1 overflow-y-auto px-4 pt-7 pb-16 sm:px-6 sm:pt-9">
         <p className="meta text-dim">
-          <span style={{ color: effect.accent }}>No. {numberOf(effect)}</span> · How it works
+          <span style={{ color: effect.accent }}>No. {numberOf(effect)}</span>
+          {effect.published ? ` · ${formatDate(effect.published)}` : ""} · {effect.category}
         </p>
         <h2 className="mt-4 font-medium text-5xl tracking-tighter sm:text-7xl">{effect.name}</h2>
         <p className="mt-6 max-w-2xl text-dim text-lg leading-relaxed">{effect.summary}</p>

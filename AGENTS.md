@@ -15,10 +15,15 @@ The README explains the architecture. This file is only the traps.
 ## Styling
 
 Tailwind v4 with our own small set of tokens in the `@theme` block of
-`src/index.css`, plus a handful of `@utility` classes (`feed`, `scrim`, `meta`,
+`src/index.css`, plus a handful of `@utility` classes (`feed`, `legible`, `meta`,
 `range`, `sheet`). There is no component library: dialogs are native
 `<dialog>`, sliders are native `<input type="range">`, icons are inline SVG.
 Keep it that way unless there is a reason a native element cannot carry.
+
+On a feed screen only the effect's name sits on the picture, with the
+`legible` text shadow and no gradient. Number, date, category and tagline live
+in the Archive and How it works; do not bring small type back over the frame,
+it cannot be made readable on every effect without darkening the picture.
 
 The interface is chrome over a picture. Anything added to the always-visible
 layer costs screen the effect could have had, so new controls go behind Tune,

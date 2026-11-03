@@ -67,28 +67,9 @@
 }
 
 /*
- * Keeps the type legible over bright, busy frames without dimming the whole
- * picture: a deep, eased ground under the copy at the bottom and a lighter one
- * under the bar at the top. Effects like Overprint are pale and high-frequency
- * right where the text sits, so the bottom stop has to be properly dark.
- */
-@utility scrim {
-  background:
-    linear-gradient(
-      to top,
-      rgb(0 0 0 / 0.84) 0%,
-      rgb(0 0 0 / 0.66) 18%,
-      rgb(0 0 0 / 0.36) 38%,
-      rgb(0 0 0 / 0.12) 54%,
-      transparent 68%
-    ),
-    linear-gradient(to bottom, rgb(0 0 0 / 0.6), rgb(0 0 0 / 0.22) 12%, transparent 24%);
-}
-
-/*
  * A soft shadow under overlay text: a tight one for the letter edges and a wide
- * one that darkens the ground just around the words. Carries the small mono
- * labels where a scrim alone is not enough.
+ * one that darkens the ground just around the words. There is no scrim, so
+ * this is all the overlay type has to stand on.
  */
 @utility legible {
   text-shadow:
