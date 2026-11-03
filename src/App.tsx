@@ -231,11 +231,11 @@ export default function App() {
             }}
           >
             <Mark />
-            <span className="font-medium text-sm tracking-tight">Afterimage</span>
+            <span className="legible font-medium text-sm tracking-tight">Afterimage</span>
           </a>
-          <nav className="pointer-events-auto flex items-center gap-1">
+          <nav className="pointer-events-auto flex items-center gap-1 rounded-full border border-line bg-glass p-1 backdrop-blur-md">
             <TextButton onClick={() => setArchiveOpen(true)}>
-              Archive <span className="text-faint">{FEED.length}</span>
+              Archive <span className="text-fg/45">{FEED.length}</span>
             </TextButton>
             <TextButton onClick={() => setAboutOpen(true)}>About</TextButton>
           </nav>
@@ -278,7 +278,7 @@ export default function App() {
 
       {!chrome ? (
         <button
-          className="meta fixed right-4 bottom-4 z-20 rounded-full border border-line bg-glass px-3 py-2 text-dim backdrop-blur-md transition-colors hover:text-fg"
+          className="meta fixed right-4 bottom-4 z-20 rounded-full border border-line bg-glass px-3 py-2 text-fg/80 backdrop-blur-md transition-colors hover:text-fg"
           onClick={() => setChrome(true)}
           type="button"
         >
@@ -378,15 +378,15 @@ function Screen({
           showCopy && active ? "translate-y-0 opacity-100" : "translate-y-3 opacity-0"
         )}
       >
-        <p className="meta flex flex-wrap gap-x-3 text-dim">
+        <p className="legible meta flex flex-wrap gap-x-3 text-fg/80">
           <span style={{ color: effect.accent }}>No. {numberOf(effect)}</span>
           {effect.published ? <span>{formatDate(effect.published)}</span> : null}
           <span>{effect.category}</span>
         </p>
-        <h1 className="mt-3 max-w-[14ch] font-medium text-display leading-display tracking-display [text-wrap:balance]">
+        <h1 className="legible mt-3 max-w-[14ch] font-medium text-display leading-display tracking-display [text-wrap:balance]">
           {effect.name}
         </h1>
-        <p className="mt-4 max-w-md text-dim text-sm leading-relaxed sm:text-base">
+        <p className="legible mt-4 max-w-md text-fg/85 text-sm leading-relaxed sm:text-base">
           {effect.tagline}
         </p>
       </div>
@@ -418,13 +418,14 @@ function Rail({ active, onGo }: { active: number; onGo: (i: number) => void }) {
             onClick={() => onGo(i)}
             type="button"
           >
-            <span className="meta pointer-events-none absolute right-full mr-1 whitespace-nowrap text-fg opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
+            <span className="legible meta pointer-events-none absolute right-full mr-1 whitespace-nowrap text-fg opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
               {numberOf(e)} {e.name}
             </span>
             <span
               className={cn(
-                "block h-px transition-all duration-300",
-                current ? "w-6" : "w-2.5 bg-faint group-hover:w-4 group-hover:bg-fg"
+                // The halo keeps a one-pixel tick visible on a pale frame.
+                "block h-px shadow-[0_0_3px_1px_rgb(0_0_0/0.55)] transition-all duration-300",
+                current ? "w-6" : "w-2.5 bg-fg/55 group-hover:w-4 group-hover:bg-fg"
               )}
               style={current ? { background: e.accent } : undefined}
             />
@@ -439,7 +440,7 @@ function ScrollHint({ visible, onClick }: { visible: boolean; onClick: () => voi
   return (
     <button
       className={cn(
-        "meta pointer-events-auto absolute bottom-6 left-1/2 hidden -translate-x-1/2 items-center gap-2 text-dim transition-opacity duration-500 hover:text-fg lg:flex",
+        "legible meta pointer-events-auto absolute bottom-6 left-1/2 hidden -translate-x-1/2 items-center gap-2 text-fg/80 transition-opacity duration-500 hover:text-fg lg:flex",
         visible ? "opacity-100" : "pointer-events-none opacity-0"
       )}
       onClick={onClick}
@@ -511,7 +512,7 @@ function PillButton({
     <button
       className={cn(
         "meta flex h-8 min-w-8 items-center justify-center rounded-full px-3 transition-colors",
-        pressed ? "bg-fg text-bg" : "text-dim hover:bg-fg/10 hover:text-fg",
+        pressed ? "bg-fg text-bg" : "text-fg/80 hover:bg-fg/10 hover:text-fg",
         className
       )}
       type="button"
@@ -523,7 +524,7 @@ function PillButton({
 function TextButton(props: React.ComponentProps<"button">) {
   return (
     <button
-      className="meta rounded-full px-3 py-2 text-dim transition-colors hover:text-fg"
+      className="meta flex h-8 items-center gap-1.5 rounded-full px-3 text-fg/80 transition-colors hover:bg-fg/10 hover:text-fg"
       type="button"
       {...props}
     />

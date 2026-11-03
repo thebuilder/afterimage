@@ -10,7 +10,7 @@
   --color-dim: rgb(243 241 236 / 0.62);
   --color-faint: rgb(243 241 236 / 0.38);
   --color-line: rgb(243 241 236 / 0.16);
-  --color-glass: rgb(8 8 8 / 0.62);
+  --color-glass: rgb(8 8 8 / 0.7);
   --color-alert: #ff5c48;
 
   --font-sans: "Inter Tight", "Inter", ui-sans-serif, system-ui, -apple-system, "Helvetica Neue", sans-serif;
@@ -66,11 +66,35 @@
   }
 }
 
-/* Keeps the type legible over bright frames without dimming the whole picture. */
+/*
+ * Keeps the type legible over bright, busy frames without dimming the whole
+ * picture: a deep, eased ground under the copy at the bottom and a lighter one
+ * under the bar at the top. Effects like Overprint are pale and high-frequency
+ * right where the text sits, so the bottom stop has to be properly dark.
+ */
 @utility scrim {
   background:
-    linear-gradient(to top, rgb(0 0 0 / 0.72), rgb(0 0 0 / 0.28) 32%, transparent 58%),
-    linear-gradient(to bottom, rgb(0 0 0 / 0.45), transparent 18%);
+    linear-gradient(
+      to top,
+      rgb(0 0 0 / 0.84) 0%,
+      rgb(0 0 0 / 0.66) 18%,
+      rgb(0 0 0 / 0.36) 38%,
+      rgb(0 0 0 / 0.12) 54%,
+      transparent 68%
+    ),
+    linear-gradient(to bottom, rgb(0 0 0 / 0.6), rgb(0 0 0 / 0.22) 12%, transparent 24%);
+}
+
+/*
+ * A soft shadow under overlay text: a tight one for the letter edges and a wide
+ * one that darkens the ground just around the words. Carries the small mono
+ * labels where a scrim alone is not enough.
+ */
+@utility legible {
+  text-shadow:
+    0 1px 2px rgb(0 0 0 / 0.7),
+    0 0 12px rgb(0 0 0 / 0.55),
+    0 0 32px rgb(0 0 0 / 0.4);
 }
 
 @utility meta {
