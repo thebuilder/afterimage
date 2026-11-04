@@ -76,6 +76,14 @@ const ENTRIES: readonly Entry[] = [
       { title: "Leave a trace", body: "Each new frame blends into the fading one before it." },
       { title: "Add light", body: "Bloom tints the stacked trails and softens them into filaments." },
     ],
+    rationale: {
+      idea: "A river of light made from 140,000 particles, each following a current that never repeats.",
+      firstSeconds: "Slow and luminous: pink and blue filaments braid across a black field, thickening where the currents meet.",
+      interaction: "The pointer is a stone in the stream. It parts the current around it, so the filaments bend away and close up again behind your hand.",
+      headline: "The darker eddies between the strands, the lower left most of all, where the trails thin out over black.",
+      nearest: "Murmuration, the other effect made of thousands of moving points. There each point is a bird that answers its neighbours; here the points have no will and only show the shape of the current.",
+      risks: "Too much Trail turns the strands into an even haze, and pink glow on black can look generic. It is one compute step and one draw, and the particle count follows quality, so it stays fast.",
+    },
     technical: {
       insight: "All 140,000 particles move in a single step on the GPU.",
       pipeline: [
@@ -125,6 +133,14 @@ const ENTRIES: readonly Entry[] = [
       { title: "Cross the disk", body: "Where a ray meets the disk, it picks up its colour." },
       { title: "Brighten", body: "The side of the disk spinning toward you comes out brighter." },
     ],
+    rationale: {
+      idea: "A black hole seen from just above its disk, close enough that gravity bends the far side of the disk up and over the shadow.",
+      firstSeconds: "Still and monumental: a dark sphere ringed by a burning disk, the camera drifting slowly around it so the lensing shifts as you watch.",
+      interaction: "The pointer swings the camera around the hole and the bent disk reshapes with it, which is what shows the image is light being pulled off course.",
+      headline: "The black sky either side of the disk and the lower left, where only faint stars sit.",
+      nearest: "Liquid Chrome, the other single object in a dark room. Chrome bounces light off a surface; here there is no surface, only light bent by mass.",
+      risks: "It is the heaviest single pass in the archive, 180 steps per pixel, and can stutter on a laptop at full resolution. The image is also familiar from film, so it has to be exact to earn its place.",
+    },
     technical: {
       insight: "Every pixel traces its own path around the hole.",
       pipeline: [
@@ -160,6 +176,14 @@ const ENTRIES: readonly Entry[] = [
       { title: "Meet the surface", body: "A few steps close in on the exact point where your view hits the water." },
       { title: "Catch the sun", body: "The angle of each crest decides its reflection and its foam." },
     ],
+    rationale: {
+      idea: "An open sea at the end of the day, with nothing in frame but water, sky and a low sun.",
+      firstSeconds: "Calm and cinematic: a grey-green swell rolls toward you under a hazy sky, and the low sun glitters on every crest.",
+      interaction: "The pointer turns your head, panning along the horizon and tipping the view, so the sun's glitter path swings across the water.",
+      headline: "The pale sky above the horizon, which is even and quiet across the whole width.",
+      nearest: "Lowlight Harbor, also a sea at dusk. That one is a small illustrated place in sixteen colours; this is a photographic sea with no subject but the water.",
+      risks: "A sea with no subject can feel like stock footage, and too much Chop turns the sun's reflection into static. Five Newton steps instead of a full march keep it cheap.",
+    },
     technical: {
       insight: "The shader solves where your view meets the waves.",
       pipeline: [
@@ -194,6 +218,14 @@ const ENTRIES: readonly Entry[] = [
       { title: "React", body: "Where they meet, one turns into the other." },
       { title: "Light it", body: "The shader reads how much is left as height, and lights it from the side." },
     ],
+    rationale: {
+      idea: "A living pattern grown by two chemicals reacting, lit from the side so it reads as relief, like coral or skin.",
+      firstSeconds: "Dense and organic: maze-like ridges cover the frame and creep outward, with spots dividing where the balance shifts.",
+      interaction: "Moving the pointer paints fresh chemical into the medium, so new growth starts under your hand and spreads into the pattern.",
+      headline: "Hard to place. The pattern covers the frame, and the only quiet areas are the dark holes the reaction leaves, which move.",
+      nearest: "Iridescent Silk, the other surface lit as relief. Silk is a folded sheet in motion; this surface is grown, and it keeps rebuilding its own structure.",
+      risks: "It fills every pixel with fine detail, which fights any headline over it. Twelve simulation steps per frame are cheap one by one but add up on a large screen.",
+    },
     technical: {
       insight: "Two invented chemicals react and spread across the image.",
       pipeline: [
@@ -235,6 +267,14 @@ const ENTRIES: readonly Entry[] = [
       { title: "Add spin", body: "A small force puts back the eddies that would otherwise smear away." },
       { title: "Light the dye", body: "The shader reads the dye as a surface and shades its edges." },
     ],
+    rationale: {
+      idea: "A dark fluid you can stir, where dye curls into eddies behind your hand.",
+      firstSeconds: "Slow and smoky: pale plumes of dye rise through black fluid and fold into each other.",
+      interaction: "Dragging pushes the fluid itself, so the dye follows your gesture and curls into vortices that keep turning after you stop. It is the most direct interaction in the archive.",
+      headline: "The black fluid above and between the plumes, the lower left included, which stays empty until you stir it.",
+      nearest: "Flux Field, the other current you can disturb. Flux shows a current through particle trails; here you push the fluid itself and watch it answer.",
+      risks: "Left alone it relies on a gentle convection field, and if that reads as still the page looks unfinished. Skipping the pressure solve keeps it to a few cheap passes per frame.",
+    },
     technical: {
       insight: "Each frame traces the fluid backwards to find where its colour came from.",
       pipeline: [
@@ -271,6 +311,14 @@ const ENTRIES: readonly Entry[] = [
       { title: "Break into plates", body: "Sampling in steps makes whole triangles move together." },
       { title: "Light the faces", body: "Each plate takes its shading from the direction it now faces." },
     ],
+    rationale: {
+      idea: "A sphere of plates that breaks apart and rebuilds itself, like a small planet made of tiles.",
+      firstSeconds: "Sculptural: a faceted ball turns in the centre while its plates lift and settle, catching blue and sand-coloured light.",
+      interaction: "The pointer orbits the camera around the sphere, so you can look into the gaps as the plates open.",
+      headline: "The empty dark around the sphere, the left side and lower left above all.",
+      nearest: "Liquid Chrome, the other single form at centre. Chrome melts into smooth shapes; this one cracks into hard facets.",
+      risks: "The orbit is a weak interaction, since it only moves the camera. Bloom can blur the plates into haze, and a ball in the middle of the screen is a familiar composition.",
+    },
     technical: {
       insight: "The only effect here built from real geometry rather than a full-screen shader.",
       pipeline: [
@@ -307,6 +355,14 @@ const ENTRIES: readonly Entry[] = [
       { title: "Steer", body: "It moves toward the group, matches their heading, and keeps its distance." },
       { title: "Settle", body: "Left alone, the flock finds a slow circling shape and holds it." },
     ],
+    rationale: {
+      idea: "A flock of birds at dusk, whose shape comes only from each bird watching its neighbours.",
+      firstSeconds: "Calm and patient: thousands of small darts circle in a slow ring that breathes and drifts.",
+      interaction: "Dragging through the flock scatters it, and you watch it find itself again, which is the rules made visible.",
+      headline: "The hollow in the middle of the ring and the dark edges, which the flock rarely crosses.",
+      nearest: "Flux Field, also thousands of moving points. Those follow a current; these follow each other, so the flock answers you and regroups.",
+      risks: "Small bright darts on dark blue can read as screensaver stars, and the milling ring settles into the same shape every visit. Every bird checks every other, which is fine at 1,400 birds but would not scale.",
+    },
     technical: {
       insight: "Every bird reacts to the position and heading of every other bird.",
       pipeline: [
@@ -346,6 +402,14 @@ const ENTRIES: readonly Entry[] = [
       { title: "Find the skin", body: "The view steps forward until it touches that surface." },
       { title: "Reflect", body: "The metal shows a studio that exists only inside the shader." },
     ],
+    rationale: {
+      idea: "Molten metal under hard studio light, six droplets fusing and parting as they orbit.",
+      firstSeconds: "Glossy and slow: a dark chrome mass turns in a studio, strip lights sliding across it as the forms merge.",
+      interaction: "The pointer moves the camera, so the reflections of the studio lights slide over the metal the way they would on a real object.",
+      headline: "The dark studio left of the form, where the backdrop is smooth and even.",
+      nearest: "Event Horizon, the other single object in a dark room. There light bends through empty space; here it bounces off a surface.",
+      risks: "Metaballs are a familiar demo, so the studio lighting has to carry it. Eighty-eight raymarch steps per pixel is mid-weight: fine on a laptop, but not free.",
+    },
     technical: {
       insight: "The metal look comes from what the surface reflects, not from its colour.",
       pipeline: [
@@ -381,6 +445,14 @@ const ENTRIES: readonly Entry[] = [
       { title: "Bend", body: "Each shard offsets whatever sits behind it." },
       { title: "Split", body: "Red, green and blue bend by slightly different amounts." },
     ],
+    rationale: {
+      idea: "A sheet of broken glass over a colour field, each shard bending what lies behind it its own way.",
+      firstSeconds: "Bright and busy: a mosaic of violet and teal shards drifts and turns, with pale seams catching the light.",
+      interaction: "The pointer pulls the refraction toward it, so the shards seem to lean as you move.",
+      headline: "Nowhere calm. The shards fill the frame edge to edge, so text always lands on a seam.",
+      nearest: "Iridescent Silk, the other effect about colour from optics. Silk is one smooth film; this is many flat facets, and the colour comes from splitting light, not from interference.",
+      risks: "Full-frame stained glass in violet and teal reads as wallpaper, and the seams compete with any type. One cheap Voronoi pass, so speed is not the issue.",
+    },
     technical: {
       insight: "Each shard gets its angle from a number derived from its own position.",
       pipeline: [
@@ -416,6 +488,14 @@ const ENTRIES: readonly Entry[] = [
       { title: "Fall away", body: "Brightness fades downward, and the brighter rays reach further." },
       { title: "Colour by height", body: "Magenta sits at the top, green fills in underneath." },
     ],
+    rationale: {
+      idea: "Northern lights over a quiet night sky, in the colours real auroras glow.",
+      firstSeconds: "Still and cold: green curtains with magenta tops hang over a field of stars and sway slowly.",
+      interaction: "The pointer shifts the three layers of curtain against each other, so the sky gains depth. It is parallax and nothing more.",
+      headline: "The dark sky low in the frame where the curtains fade out, and the lower left.",
+      nearest: "Deep Water, the other open sky. That one is daylight reflected off a sea; this is light the sky gives off itself, at night.",
+      risks: "Parallax alone wears off quickly, and auroras are a common wallpaper, so the curtains have to stay thin and the colour true. Three noise layers keep it light.",
+    },
     technical: {
       insight: "The colours follow real emission: magenta high up, oxygen green below.",
       pipeline: [
@@ -451,6 +531,14 @@ const ENTRIES: readonly Entry[] = [
       { title: "Wrap", body: "Panels run around the tube and away along its length." },
       { title: "Fade", body: "Everything deep in the tunnel washes toward its glow." },
     ],
+    rationale: {
+      idea: "A tunnel of glowing panels pulling you toward a light at the far end.",
+      firstSeconds: "Fast and loud: tiled walls rush past toward a bright centre, twisting as they go.",
+      interaction: "The pointer steers the vanishing point, so you lean the tunnel as you fly through it.",
+      headline: "Only the dark corners. The panels run to the edges and the brightest point is the centre.",
+      nearest: "Event Horizon, the other image pulled toward one point. There the depth is real light bending around mass; here a single division fakes it.",
+      risks: "Tunnel flythroughs are a demoscene and screensaver staple, and constant motion toward the viewer tires a page meant to be read. It is one of the cheapest shaders here.",
+    },
     technical: {
       insight: "Nothing is traced. One division turns a flat image into depth.",
       pipeline: [
@@ -485,6 +573,14 @@ const ENTRIES: readonly Entry[] = [
       { title: "Find the slope", body: "How steeply the surface turns gives it its direction." },
       { title: "Interfere", body: "Light off a thin film cancels at some colours and adds at others." },
     ],
+    rationale: {
+      idea: "A folded sheet of fabric that shifts through oil-slick colour as it moves.",
+      firstSeconds: "Soft and expensive-looking: violet folds slide over each other, with green and gold rising where the creases turn.",
+      interaction: "The pointer changes your viewing angle and the colour shifts with it, the way a real thin film does, so it feels like tilting the cloth.",
+      headline: "The broad, flatter folds in the lower left, where the colour is most even. It is mid-tone everywhere, so the text shadow does the work.",
+      nearest: "Prism, the other effect about colour from optics. There flat shards split the light; here one curved film interferes with itself.",
+      risks: "Oil-slick iridescence is a common 3D trend and turns to sludge if the film is too thick. Fading the bands where they would alias stops it sparkling, and it is one pass.",
+    },
     technical: {
       insight: "The colour is interference, the same effect as oil on water.",
       pipeline: [
@@ -520,6 +616,14 @@ const ENTRIES: readonly Entry[] = [
       { title: "Kink", body: "A slow wobble steers it; a fast one breaks it into angles." },
       { title: "Burn out", body: "Bolts live for a beat, then fire again somewhere else." },
     ],
+    rationale: {
+      idea: "A plasma core throwing electric bolts that strike out, burn and fire again elsewhere.",
+      firstSeconds: "Tense and bright: a glowing core with violet bolts kinking outward in short bursts.",
+      interaction: "The core follows the pointer lazily and drags its bolts with it, so you hold the charge in your hand.",
+      headline: "The lower left, away from the core at the centre. Bolts reach the edges, but only for a beat.",
+      nearest: "Aurora Veil, the other picture made of emitted light. The aurora drifts; these strike.",
+      risks: "Lightning is loud, a plasma ball is a gift-shop object, and the bursts flash in a way that fights reading. Seven bolts in one pass is cheap.",
+    },
     technical: {
       insight: "The slow wobble and the fast one have to stay separate, or every bolt curls into a spiral.",
       pipeline: [
@@ -555,6 +659,14 @@ const ENTRIES: readonly Entry[] = [
       { title: "Twist", body: "Rotating by distance from the centre shears the wedge into a spiral." },
       { title: "Draw", body: "A bright line marks exactly where the noise crosses zero." },
     ],
+    rationale: {
+      idea: "A kaleidoscope where shapeless noise is folded into exact symmetry.",
+      firstSeconds: "Hypnotic: a blue, flower-like figure turns slowly at the centre, with white filigree tracing its petals.",
+      interaction: "The pointer shifts the noise under the fold, so the figure reforms into new petals around the same centre.",
+      headline: "Only the edges. The figure fills the frame and is brightest in the middle.",
+      nearest: "Wormhole, the other centred, radial image. The tunnel moves toward you; this turns in place.",
+      risks: "Kaleidoscopes read as screensavers or meditation apps, and symmetry about the centre fights any off-centre layout. It is cheap.",
+    },
     technical: {
       insight: "The noise underneath has no symmetry at all. The fold is what creates it.",
       pipeline: [
@@ -590,6 +702,14 @@ const ENTRIES: readonly Entry[] = [
       { title: "Join", body: "The arcs meet at the tile edges, so paths carry on across the grid." },
       { title: "Pulse", body: "Light travels along each path and straight through its junctions." },
     ],
+    rationale: {
+      idea: "A maze of tiles where light runs along paths nobody drew.",
+      firstSeconds: "Quiet and graphic: thin teal curves cover a black field, and pulses of light travel along them.",
+      interaction: "The pointer charges the circuit near it, so the paths around your hand brighten and the pulses show where they lead.",
+      headline: "Anywhere, with care. The lines are thin over black, so type reads, but the pattern runs edge to edge.",
+      nearest: "Hex Reactor, the other tiled grid with travelling light. That one charges whole cells; here the light runs along the lines between them.",
+      risks: "It is a pattern rather than a picture, and can read as a background texture. It is very cheap.",
+    },
     technical: {
       insight: "Turn every tile the same way and the maze becomes a grid of circles.",
       pipeline: [
@@ -625,6 +745,14 @@ const ENTRIES: readonly Entry[] = [
       { title: "Charge", body: "A cell lights as a wavefront reaches it." },
       { title: "Sweep", body: "A separate beam runs up the lattice, lighting whole rows." },
     ],
+    rationale: {
+      idea: "A honeycomb of cells that charge in waves while a beam sweeps up the lattice.",
+      firstSeconds: "Technical and busy: pale and magenta hexagons light and fade as waves cross a dark teal grid.",
+      interaction: "The pointer is a second source, sending waves through the cells to cross the ones from the centre.",
+      headline: "Nowhere settled. The lit cells travel across the whole frame.",
+      nearest: "Windwall, the other wall of cells that answers in waves. Windwall's cells are physical metal fins; these are abstract light on a sci-fi grid.",
+      risks: "Hexagon grids are the default look for sci-fi interfaces, so it risks looking like a game menu. Cheap to run.",
+    },
     technical: {
       insight: "A hexagonal grid is two rectangular grids. Whichever is nearer wins.",
       pipeline: [
@@ -660,6 +788,14 @@ const ENTRIES: readonly Entry[] = [
       { title: "Fall", body: "Every column runs at its own speed, with its own tail length." },
       { title: "Age", body: "Scanlines and a slow rolling bar finish it as a tube." },
     ],
+    rationale: {
+      idea: "Columns of glyphs falling through an old phosphor screen.",
+      firstSeconds: "Familiar at once: green characters rain down in three layers over black, with scanlines and a slow rolling bar.",
+      interaction: "The pointer shifts the three layers in parallax, so the near columns slide past the far ones.",
+      headline: "In the gaps between columns, which are never wide. The rain fills the frame top to bottom.",
+      nearest: "Letterlight, the other type effect. There every letter is chosen to describe light on a form; here the letters fall as texture.",
+      risks: "It sits very close to a famous film's look, so it reads as a quotation rather than an idea. Cheap to run.",
+    },
     technical: {
       insight: "The glyphs come out of bits rather than a stored font.",
       pipeline: [

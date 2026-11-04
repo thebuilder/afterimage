@@ -108,8 +108,8 @@ export interface HeroEffect {
   /** Two sentences on what makes the image, and what the controls do to it. */
   readonly summary: string
   readonly explanation: readonly Stage[]
-  /** The case for the effect. Required from No. 18 on; the original seventeen leave it out. */
-  readonly rationale?: Rationale
+  /** The case for the effect, all six answers. Required on every entry. */
+  readonly rationale: Rationale
   readonly technical: Technical
   readonly accent: string
   /**

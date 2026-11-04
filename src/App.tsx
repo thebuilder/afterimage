@@ -710,7 +710,7 @@ function Passage({ title, children }: { title: string; children: React.ReactNode
 }
 
 /** The six answers of the rationale, phrased as the questions they answer. */
-const RATIONALE: ReadonlyArray<readonly [keyof NonNullable<HeroEffect["rationale"]>, string]> = [
+const RATIONALE: ReadonlyArray<readonly [keyof HeroEffect["rationale"], string]> = [
   ["idea", "The idea"],
   ["firstSeconds", "In the first three seconds"],
   ["interaction", "What the pointer does"],
@@ -776,17 +776,15 @@ function HowItWorks({
             </blockquote>
           </figure>
 
-          {r ? (
-            <Passage title="Why this one">
-              <div className="grid gap-4 text-dim leading-relaxed">
-                {RATIONALE.map(([key, label]) => (
-                  <p key={key}>
-                    <span className="font-medium text-fg">{label}.</span> {r[key]}
-                  </p>
-                ))}
-              </div>
-            </Passage>
-          ) : null}
+          <Passage title="Why this one">
+            <div className="grid gap-4 text-dim leading-relaxed">
+              {RATIONALE.map(([key, label]) => (
+                <p key={key}>
+                  <span className="font-medium text-fg">{label}.</span> {r[key]}
+                </p>
+              ))}
+            </div>
+          </Passage>
 
           <Passage title="Under the hood">
             <details className="group">

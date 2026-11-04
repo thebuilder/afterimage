@@ -57,8 +57,8 @@ for (const [index, e] of effects.entries()) {
     }
   }
 
-  // 3b. Daily drops ship with their case, all six answers.
-  if (index >= UNDATED) {
+  // 3b. Every effect carries its case, all six answers.
+  {
     const missing = RATIONALE_KEYS.filter((k) => !e.rationale?.includes(k))
     if (missing.length) problems.push(`${at}: rationale is missing ${missing.join(", ")}`)
   }
