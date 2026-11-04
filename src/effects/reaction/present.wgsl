@@ -53,6 +53,12 @@ fn heightAt(uv: vec2f) -> f32 {
   // Thin bright rim exactly at the growth front.
   col += mix(growth, vec3f(0.85, 1.0, 0.95), 0.5) * smoothstep(0.22, 0.27, h) * (1.0 - smoothstep(0.27, 0.33, h)) * 0.75;
 
+  // The pattern runs edge to edge, but under the title in the lower left it
+  // goes quiet: flatter, dimmer, and closer to the substrate, so the type sits
+  // on a soft continuation of the growth rather than its brightest ridges.
+  let hush = smoothstep(1.0, 0.3, length((uv - vec2f(0.0, 1.0)) / vec2f(0.6, 0.62)));
+  col = mix(col, mix(substrate, growth * 0.28, smoothstep(0.04, 0.24, h)), hush * 0.72);
+
   col = filmic(col * (0.72 + 0.45 * present.intensity));
   col *= 0.62 + 0.38 * smoothstep(1.30, 0.10, length((uv - 0.5) * vec2f(1.1, 1.0)));
   return vec4f(col + dither(uv, 1.0 / present.texel), 1.0);

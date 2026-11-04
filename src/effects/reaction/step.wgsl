@@ -40,12 +40,7 @@ fn laplacian(uv: vec2f) -> vec2f {
   // regimes at once: mitosis in one corner, coral in another.
   let g = (uv - 0.5) * vec2f(sim.aspect, 1.0);
   let feed = sim.feed + g.x * 0.0055 + sin(sim.time * 0.05) * 0.0012;
-  // The lower left, where the title sits, is kept hostile: the kill rate climbs
-  // toward that corner until nothing survives, so the pattern thins into a calm
-  // dark shore instead of running under the type. Paint into it and the new
-  // growth dissolves back.
-  let shore = length((uv - vec2f(0.0, 1.0)) / vec2f(0.58, 0.64)) + sin(uv.x * 11.0 - uv.y * 7.0) * 0.05;
-  let kill = sim.kill + g.y * 0.0035 + smoothstep(1.0, 0.55, shore) * 0.016;
+  let kill = sim.kill + g.y * 0.0035;
 
   let a = s.r;
   let b = s.g;

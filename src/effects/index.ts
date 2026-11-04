@@ -221,9 +221,9 @@ const ENTRIES: readonly Entry[] = [
       idea: "A living pattern grown by two chemicals reacting, lit from the side so it reads as relief, like coral or skin.",
       firstSeconds: "Dense and organic: maze-like ridges cover the frame and creep outward, with spots dividing where the balance shifts.",
       interaction: "Moving the pointer paints fresh chemical into the medium, so new growth starts under your hand and spreads into the pattern.",
-      headline: "The lower left. The kill rate climbs toward that corner until nothing survives, so the growth breaks into scattered spots and then a calm dark shore under the title.",
+      headline: "The lower left. The pattern still runs into the corner, but there it is drawn dim and flat, so the title sits on a quiet continuation of the growth.",
       nearest: "Iridescent Silk, the other surface lit as relief. Silk is a folded sheet in motion; this surface is grown, and it keeps rebuilding its own structure.",
-      risks: "Fine detail everywhere fights type, which is why the lower left is kept barren. Twelve simulation steps per frame are cheap one by one but add up on a large screen.",
+      risks: "Fine detail everywhere fights type, which is why it goes quiet under the title. Twelve simulation steps per frame are cheap one by one but add up on a large screen.",
     },
     technical: {
       insight: "Two invented chemicals react and spread across the image.",
