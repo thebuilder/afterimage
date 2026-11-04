@@ -63,6 +63,7 @@ with `strictPort`, so a busy port fails loudly instead of moving; `shots.sh` and
 | 18 | **Lowlight Harbor** | art-pixel quantisation, Bayer dither onto an indexed 16-colour palette, mirrored water | palette, resolution, lamp |
 | 19 | **Overprint** | three rotated cosine halftone screens, subtractive ink overprint, plate misregistration, magnifier remap | screen, register, ink |
 | 20 | **Letterlight** | per-cell sphere trace lit by a moving lamp, coverage-sorted glyph ramp from a bit-packed 5×7 font, typed soft shadow | type size, lamp, spin |
+| 21 | **Windwall** | per-cell wind field, hinged fin projection, curved-fin environment reflection with a narrow glint lobe, backlit gaps | wind, fins, glow |
 
 ## Copy
 

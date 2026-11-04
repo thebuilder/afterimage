@@ -16,6 +16,7 @@ import oceanWgsl from "@/shaders/ocean.wgsl"
 import harborWgsl from "@/shaders/harbor.wgsl"
 import overprintWgsl from "@/shaders/overprint.wgsl"
 import letterlightWgsl from "@/shaders/letterlight.wgsl"
+import windwallWgsl from "@/shaders/windwall.wgsl"
 
 import { createFlux } from "./flux/pipeline"
 import fluxAdvect from "./flux/advect.wgsl"
@@ -815,6 +816,51 @@ const ENTRIES: readonly Entry[] = [
       ctl("size", "Type size", 30, 96, 1, 52),
       ctl("lamp", "Lamp", 0.4, 1.8, 0.01, 1),
       ctl("spin", "Spin", 0, 3, 0.01, 1),
+    ],
+  },
+  {
+    id: "windwall",
+    name: "Windwall",
+    published: "2026-11-04",
+    wgsl: windwallWgsl,
+    category: "Kinetic",
+    tagline: "A facade of metal fins rippling in the wind, with warm light hidden behind it.",
+    summary:
+      "A dark facade of hinged metal fins ripples as wind rolls across it, each fin catching the light for an instant as a gust passes. Move the pointer to blow on it: the fins lift and warm light spills out from behind. Wind sets how hard it blows, Fins how many rows cover the wall, and Glow how bright the light behind them burns.",
+    explanation: [
+      { title: "Blow", body: "A slow field of gusts rolls across the wall with ripples running through it, and each fin works out how far it should swing." },
+      { title: "Swing", body: "Each fin hangs from its top edge, so as it lifts it gets shorter from the front and its face tilts toward the ground." },
+      { title: "Catch the light", body: "The tilted face reflects a dim sky, a dark street and one low warm lamp. Only the fins at exactly the right angle flash." },
+    ],
+    rationale: {
+      idea: "A kinetic facade of a few thousand hinged metal fins rippling in the wind, where your pointer is a gust that lifts them and lets out the warm light behind.",
+      firstSeconds: "Calm and architectural: a dark wall of brushed fins, glints running along the gust fronts as the wind rolls across, and a warm glow breathing through the fins at the centre.",
+      interaction: "The pointer is a gust. It lifts the fins around it so the hidden light spills out, and sends rings of glints rolling outward through the wall.",
+      headline: "The lower left, where the air is calmer and the fins lie flat and dark. The upper left between gusts holds a headline too.",
+      nearest: "Hex Reactor, the other wall of cells that reacts in waves. There the cells glow as abstract light; here they are physical metal plates that only reflect, moved by wind you can almost feel.",
+      risks: "Thousands of glints could read as noise, so the wind moves in broad gusts and the highlight is narrow enough that only the fronts catch it. Small fins can shimmer, so their size follows screen height. It is one pass with three noise lookups per pixel, so it stays light.",
+    },
+    technical: {
+      insight: "A wall of mirrors shows the wind as light: a fin only flashes when its angle lines up with the lamp, so the glints trace the gust fronts.",
+      pipeline: [
+        "single pass · per-cell wind field, hinged fin projection, curved-fin reflection of a three-tone environment, backlit wall through the gaps",
+      ],
+      techniques: [
+        "cell-space instancing",
+        "simplex wind field",
+        "environment reflection",
+        "narrow specular lobe",
+        "analytic projection",
+      ],
+      notes:
+        "Every fragment finds its fin from floor(p * rows), so wind, flutter and gust are evaluated at the cell centre and the whole fin moves as one plate. A fin hinged at its top with swing a projects to a height of len * cos(a) hanging from its rail, which is all the geometry needed: below it, the gap shows the wall. The normal tilts down with a, takes a little per-fin yaw, and bends slightly along the fin so a highlight slides down it rather than switching the fin on. The view ray reflects into an environment of dim overcast sky, dark street and one warm key low and to the right, whose lobe is raised to the 220th power, so only fins within a few degrees of the right angle flash and gust fronts become lines of glints. The wall behind is lit by a pool under the pointer and a low glow, and shaded just under each lifted fin. The pointer adds a lift with a Gaussian falloff plus a decaying travelling ring, and the lower left gets calmer air for the title.",
+      source: "src/shaders/windwall.wgsl",
+    },
+    accent: "#e8c9a0",
+    controls: [
+      ctl("wind", "Wind", 0, 2, 0.01, 1),
+      ctl("fins", "Fins", 28, 80, 1, 44),
+      ctl("glow", "Glow", 0, 2, 0.01, 1),
     ],
   },
 ]
