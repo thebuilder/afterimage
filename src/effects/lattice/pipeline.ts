@@ -36,6 +36,9 @@ export function createLattice(setup: EffectSetup, src: LatticeSources): EffectIn
   const present = effect(gpu, src.present, { set: { samp: linear } })
 
   let lastDims: readonly [number, number] = [w0, h0]
+  // How far the plates facing the pointer open. It eases rather than following
+  // the pointer's own decay, so the shell settles shut instead of snapping.
+  let open = 0.5
 
   const camera = perspectiveCamera({
     fov: 42,
@@ -51,8 +54,29 @@ export function createLattice(setup: EffectSetup, src: LatticeSources): EffectIn
 
     // The camera is a scene node: `position` is a live Float32Array, so it is
     // moved through set() and re-aimed with lookAt() rather than reassigned.
-    camera.set({ position: [Math.sin(mx) * 4.2, 0.6 + my * 2.0, Math.cos(mx) * 4.2] })
+    const eye: [number, number, number] = [Math.sin(mx) * 4.2, 0.6 + my * 2.0, Math.cos(mx) * 4.2]
+    camera.set({ position: eye })
     camera.lookAt([0, 0, 0])
+
+    // The pointer as a direction out of the sphere's centre: across the screen
+    // in the camera's own right and up, and partly toward the eye, so the
+    // plates that open are the ones you are pointing at.
+    const len = Math.hypot(...eye)
+    const back = eye.map((v) => v / len)
+    const rl = Math.hypot(back[2], back[0]) || 1
+    const right = [back[2] / rl, 0, -back[0] / rl]
+    const up = [
+      back[1] * right[2] - back[2] * right[1],
+      back[2] * right[0] - back[0] * right[2],
+      back[0] * right[1] - back[1] * right[0],
+    ]
+    const aspect = lastDims[0] / Math.max(lastDims[1], 1)
+    const px = (inputs.mouse[0] - 0.5) * 2 * aspect
+    const py = (0.5 - inputs.mouse[1]) * 2
+    const aim = [0, 1, 2].map((i) => right[i] * px * 1.3 + up[i] * py * 1.3 + back[i] * 0.9)
+    const al = Math.hypot(...aim) || 1
+    const target = 0.5 + 0.5 * Math.min(1, inputs.pointer * 2)
+    open += (target - open) * Math.min(1, inputs.dt * 2.5)
 
     mesh.set({
       camera: { viewProjection: camera.viewProjection },
@@ -65,6 +89,8 @@ export function createLattice(setup: EffectSetup, src: LatticeSources): EffectIn
         facets: inputs.controls.facets ?? 7,
         // No glow control is declared for this effect; the shader input is fixed.
         glow: 1,
+        aim: aim.map((v) => v / al),
+        open,
       },
     })
 

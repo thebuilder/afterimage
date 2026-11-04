@@ -29,6 +29,11 @@ fn backdrop(p: vec2f, t: f32) -> vec3f {
   let t = params.time;
   let m = (params.mouse - 0.5) * vec2f(1.0, -1.0);
 
+  // The lower left, where the title sits, is a calmer pane: the shards there
+  // bend less and melt into the unbroken backdrop behind them, darkened like
+  // smoked glass, so the type lands on quiet colour instead of a web of edges.
+  let calm = smoothstep(1.0, 0.35, length((uv - vec2f(0.0, 1.0)) / vec2f(0.72, 0.8)));
+
   // The lattice drifts and rotates, so shards slide past each other instead of
   // sitting in a fixed mosaic.
   let q = rot2(t * 0.03) * p * params.shards + vec2f(t * 0.05, t * 0.03);
@@ -41,7 +46,7 @@ fn backdrop(p: vec2f, t: f32) -> vec3f {
 
   // Refraction offset. A flat facet bends everything behind it the same way,
   // which is why the offset is constant across a shard rather than per pixel.
-  let bend = facet * vec2f(1.0, 0.0) * params.refraction * thickness;
+  let bend = facet * vec2f(1.0, 0.0) * params.refraction * thickness * (1.0 - 0.75 * calm);
   let toward = m * 0.35;
 
   // Chromatic split: each channel refracts by a slightly different amount.
@@ -60,9 +65,11 @@ fn backdrop(p: vec2f, t: f32) -> vec3f {
   let edge = v.f2 - v.f1;
   let w = max(fwidth(edge), 0.0035) * 1.6;
   let seam = 1.0 - smoothstep(0.0, w * 1.6, edge);
-  col += vec3f(0.75, 0.95, 1.0) * seam * 1.1;
+  col += vec3f(0.75, 0.95, 1.0) * seam * 1.1 * (1.0 - 0.9 * calm);
   // A thin caustic just inside the seam, where a real bevel would focus light.
-  col += vec3f(1.0, 0.86, 0.62) * smoothstep(w * 1.6, w * 4.0, edge) * (1.0 - smoothstep(w * 4.0, w * 9.0, edge)) * 0.35;
+  col += vec3f(1.0, 0.86, 0.62) * smoothstep(w * 1.6, w * 4.0, edge) * (1.0 - smoothstep(w * 4.0, w * 9.0, edge)) * 0.35 * (1.0 - calm);
+
+  col = mix(col, backdrop(p + toward, t) * 0.55, calm * 0.85);
 
   col = filmic(col * 1.05);
   col *= 0.62 + 0.38 * smoothstep(1.30, 0.10, length((uv - 0.5) * vec2f(1.1, 1.0)));

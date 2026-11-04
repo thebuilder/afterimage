@@ -43,7 +43,7 @@ How it works, Archive or About, not next to them.
 
 The registry is in publish order. An effect's number is its position, and `/`
 shows the last entry, so a new effect is always appended at the end, never
-inserted. Every entry from No. 18 on is a daily drop and carries
+inserted. Every entry from No. 14 on is a daily drop and carries
 `published: "YYYY-MM-DD"` on its own line directly under `name`; the parser in
 `scripts/lib/registry.mjs` matches that exact shape, and `check:registry` fails
 a missing, malformed or out-of-order date.

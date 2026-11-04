@@ -1,4 +1,5 @@
-// Aurora Veil: noise-driven drapes hanging from a wandering ribbon line.
+// Aurora Veil: noise-driven drapes hanging from a wandering ribbon line, with a
+// substorm under the pointer.
 import { fbmSimplex2d, simplex2d } from "@vgpu/wgsl-std/noise/simplex";
 import { centered, filmic, dither, hash21 } from "./common.wgsl";
 
@@ -16,10 +17,15 @@ struct Params {
 /// bright and sharp at the edge, dissolving downward. That shape is what
 /// separates an aurora from a stage curtain.
 /// Returns (density, depth-below-edge) so the caller can colour by altitude.
-fn drape(p: vec2f, t: f32, seed: f32, span: f32) -> vec2f {
+/// `sx` is the pointer's x in this layer's coordinates: a substorm sits there,
+/// where the curtain dips, brightens, reaches further down and ripples.
+fn drape(p: vec2f, t: f32, seed: f32, span: f32, sx: f32) -> vec2f {
+  let storm = exp(-pow((p.x - sx) * 3.0, 2.0));
   // Field lines converge slightly toward the top, so the sheet is sheared in x by y.
-  let q = vec2f(p.x * (1.0 + p.y * 0.18), p.y);
-  let ribbon = 0.30 + fbmSimplex2d(vec2f(q.x * 0.55 + seed, t * 0.07 + seed), 4, 2.0, 0.5) * 0.42;
+  // Inside the storm the rays shiver sideways, the fast pulsing of a real breakup.
+  let shiver = storm * 0.012 * sin(p.y * 9.0 + t * 4.0 + seed);
+  let q = vec2f(p.x * (1.0 + p.y * 0.18) + shiver, p.y);
+  let ribbon = 0.30 + fbmSimplex2d(vec2f(q.x * 0.55 + seed, t * 0.07 + seed), 4, 2.0, 0.5) * 0.42 - storm * 0.10;
   let d = ribbon - q.y;
   if (d < -0.05) { return vec2f(0.0, 0.0); }
 
@@ -30,14 +36,14 @@ fn drape(p: vec2f, t: f32, seed: f32, span: f32) -> vec2f {
 
   // Brighter rays also reach further down: uneven ray length is what makes the
   // bottom edge read as dissolving gas rather than a cropped rectangle.
-  let reach = span * (0.55 + 0.9 * smoothstep(0.0, 1.0, stri * 0.5 + 0.5));
+  let reach = span * (0.55 + 0.9 * smoothstep(0.0, 1.0, stri * 0.5 + 0.5)) * (1.0 + 0.4 * storm);
   let hang = smoothstep(-0.02, 0.05, d) * exp(-max(d, 0.0) * (4.2 / reach));
 
   // The drape does not span the frame: it wanders in and out.
   let centre = sin(t * 0.11 + seed * 2.3) * 0.75;
-  let env = smoothstep(0.95, 0.05, abs(q.x - centre) * (0.9 + 0.35 * seed));
+  let env = max(smoothstep(0.95, 0.05, abs(q.x - centre) * (0.9 + 0.35 * seed)), storm * 0.8);
 
-  return vec2f(hang * vert * env, clamp(d * 0.85, 0.0, 1.0));
+  return vec2f(hang * vert * env * (1.0 + 0.6 * storm), clamp(d * 0.85, 0.0, 1.0));
 }
 
 fn stars(p: vec2f, t: f32) -> vec3f {
@@ -54,6 +60,7 @@ fn stars(p: vec2f, t: f32) -> vec3f {
   let p = centered(uv, params.res);
   let t = params.time * params.drift;
   let m = (params.mouse - 0.5) * vec2f(1.0, -1.0);
+  let mp = centered(params.mouse, params.res);
 
   var col = mix(vec3f(0.020, 0.032, 0.062), vec3f(0.002, 0.003, 0.010), smoothstep(-0.55, 0.65, p.y));
   col += stars(p + vec2f(t * 0.003, 0.0), t) * smoothstep(-0.35, 0.35, p.y);
@@ -70,7 +77,7 @@ fn stars(p: vec2f, t: f32) -> vec3f {
     let depth = 1.0 + fi * 0.42;
     let par = m * (0.30 - fi * 0.08);
     let q = vec2f(p.x * depth + fi * 0.7 + par.x, (p.y - 0.05 * fi) * depth + par.y * 0.5);
-    let s = drape(q, t + fi * 17.0, fi * 5.3, 1.0 + fi * 0.35);
+    let s = drape(q, t + fi * 17.0, fi * 5.3, 1.0 + fi * 0.35, mp.x * depth + fi * 0.7 + par.x);
     let alt = s.y;
     var tint = mix(FRINGE, GREEN, smoothstep(0.0, 0.05 + 0.34 * params.fringe, alt));
     tint = mix(tint, TEAL, smoothstep(0.45, 1.0, alt) * 0.55);

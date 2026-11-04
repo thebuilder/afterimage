@@ -12,9 +12,9 @@ import { parseEffects, paramsMembers, root, wgslImports } from "./lib/registry.m
 
 const MIN_ENTRIES = 15
 const REQUIRED_PARAMS = ["res", "mouse", "time"]
-// The original seventeen effects predate the one-a-day run and carry no date.
+// The original thirteen effects predate the one-a-day run and carry no date.
 // Everything after them is a daily drop and must say which day it went live.
-const UNDATED = 17
+const UNDATED = 13
 const RATIONALE_KEYS = ["idea", "firstSeconds", "interaction", "headline", "nearest", "risks"]
 
 const arg = process.argv[2]

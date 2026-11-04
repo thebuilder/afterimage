@@ -4,8 +4,8 @@ Live visual experiments in WGSL, one at a time, running on
 [vgpu](https://vgpu.sh).
 
 The site is a vertical feed of full-screen effects with scroll snapping, newest
-at the top. A new one lands most days: the first seventeen were the original
-collection, everything from No. 18 on is a daily drop with a publish date. Scroll,
+at the top. A new one lands most days: the first thirteen are the original
+collection, everything from No. 14 on is a daily drop with a publish date. Scroll,
 swipe or press ↓ for older ones; the tick rail on the right and the Archive (with search)
 jump straight to any of them.
 
@@ -53,17 +53,13 @@ with `strictPort`, so a busy port fails loudly instead of moving; `shots.sh` and
 | 08 | **Liquid Chrome** | sphere-traced SDF, smooth minimum, procedural studio HDRI | melt, spin, exposure |
 | 09 | **Prism** | Voronoi cells, per-shard refraction, chromatic split | shards, refraction, dispersion |
 | 10 | **Aurora Veil** | layered fbm drapes, domain shear, parallax | brightness, drift, fringe |
-| 11 | **Wormhole** | perspective by inverse radius, cylindrical panel mapping | speed, twist, flare |
-| 12 | **Iridescent Silk** | double domain warp, analytic normals, thin-film interference | fold scale, film, sheen |
-| 13 | **Tesla Arc** | polar filaments, separated steering and jag noise scales | energy, chaos, fire rate |
-| 14 | **Mandala** | kaleidoscopic fold, radial twist, zero-crossing filigree | segments, twist, zoom |
-| 15 | **Truchet** | Truchet tiling, arc-length parametrisation, travelling pulses | tile scale, flow, charge |
-| 16 | **Hex Reactor** | dual-lattice hex tiling, screen-space derivative rims | charge, cell density, sweep |
-| 17 | **Datastream** | procedural 5×7 dot-matrix font from hash bits, CRT mask | density, fall speed, phosphor |
-| 18 | **Lowlight Harbor** | art-pixel quantisation, Bayer dither onto an indexed 16-colour palette, mirrored water | palette, resolution, lamp |
-| 19 | **Overprint** | three rotated cosine halftone screens, subtractive ink overprint, plate misregistration, magnifier remap | screen, register, ink |
-| 20 | **Letterlight** | per-cell sphere trace lit by a moving lamp, coverage-sorted glyph ramp from a bit-packed 5×7 font, typed soft shadow | type size, lamp, spin |
-| 21 | **Windwall** | per-cell wind field, hinged fin projection, curved-fin environment reflection with a narrow glint lobe, backlit gaps | wind, fins, glow |
+| 11 | **Iridescent Silk** | double domain warp, analytic normals, thin-film interference | fold scale, film, sheen |
+| 12 | **Tesla Arc** | polar filaments, separated steering and jag noise scales | energy, chaos, fire rate |
+| 13 | **Truchet** | Truchet tiling, arc-length parametrisation, travelling pulses | tile scale, flow, charge |
+| 14 | **Lowlight Harbor** | art-pixel quantisation, Bayer dither onto an indexed 16-colour palette, mirrored water | palette, resolution, lamp |
+| 15 | **Overprint** | three rotated cosine halftone screens, subtractive ink overprint, plate misregistration, magnifier remap | screen, register, ink |
+| 16 | **Letterlight** | per-cell sphere trace lit by a moving lamp, coverage-sorted glyph ramp from a bit-packed 5×7 font, typed soft shadow | type size, lamp, spin |
+| 17 | **Windwall** | per-cell wind field, hinged fin projection, curved-fin environment reflection with a narrow glint lobe, backlit gaps | wind, fins, glow |
 
 ## Copy
 

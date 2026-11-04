@@ -3,15 +3,11 @@ import { fullscreen } from "./fullscreen"
 
 import auroraWgsl from "@/shaders/aurora.wgsl"
 import chromeWgsl from "@/shaders/chrome.wgsl"
-import hexgridWgsl from "@/shaders/hexgrid.wgsl"
 import arcsWgsl from "@/shaders/arcs.wgsl"
 import blackholeWgsl from "@/shaders/blackhole.wgsl"
 import silkWgsl from "@/shaders/silk.wgsl"
-import rainWgsl from "@/shaders/rain.wgsl"
 import prismWgsl from "@/shaders/prism.wgsl"
 import truchetWgsl from "@/shaders/truchet.wgsl"
-import mandalaWgsl from "@/shaders/mandala.wgsl"
-import wormholeWgsl from "@/shaders/wormhole.wgsl"
 import oceanWgsl from "@/shaders/ocean.wgsl"
 import harborWgsl from "@/shaders/harbor.wgsl"
 import overprintWgsl from "@/shaders/overprint.wgsl"
@@ -123,6 +119,9 @@ const ENTRIES: readonly Entry[] = [
   {
     id: "blackhole",
     wgsl: blackholeWgsl,
+    // 180 geodesic steps per pixel is the heaviest pass here. The disk and the
+    // lensing are soft-edged, so a 0.7 render upscaled loses nothing visible.
+    renderScale: 0.7,
     name: "Event Horizon",
     category: "Space",
     tagline: "Light bends around a black hole and its burning disk.",
@@ -139,7 +138,7 @@ const ENTRIES: readonly Entry[] = [
       interaction: "The pointer swings the camera around the hole and the bent disk reshapes with it, which is what shows the image is light being pulled off course.",
       headline: "The black sky either side of the disk and the lower left, where only faint stars sit.",
       nearest: "Liquid Chrome, the other single object in a dark room. Chrome bounces light off a surface; here there is no surface, only light bent by mass.",
-      risks: "It is the heaviest single pass in the archive, 180 steps per pixel, and can stutter on a laptop at full resolution. The image is also familiar from film, so it has to be exact to earn its place.",
+      risks: "At 180 steps per pixel it is the heaviest single pass in the archive, so it draws at 0.7 of the screen and upscales; the disk is soft enough that nobody sees the difference. The image is also familiar from film, so it has to be exact to earn its place.",
     },
     technical: {
       insight: "Every pixel traces its own path around the hole.",
@@ -222,9 +221,9 @@ const ENTRIES: readonly Entry[] = [
       idea: "A living pattern grown by two chemicals reacting, lit from the side so it reads as relief, like coral or skin.",
       firstSeconds: "Dense and organic: maze-like ridges cover the frame and creep outward, with spots dividing where the balance shifts.",
       interaction: "Moving the pointer paints fresh chemical into the medium, so new growth starts under your hand and spreads into the pattern.",
-      headline: "Hard to place. The pattern covers the frame, and the only quiet areas are the dark holes the reaction leaves, which move.",
+      headline: "The lower left. The kill rate climbs toward that corner until nothing survives, so the growth breaks into scattered spots and then a calm dark shore under the title.",
       nearest: "Iridescent Silk, the other surface lit as relief. Silk is a folded sheet in motion; this surface is grown, and it keeps rebuilding its own structure.",
-      risks: "It fills every pixel with fine detail, which fights any headline over it. Twelve simulation steps per frame are cheap one by one but add up on a large screen.",
+      risks: "Fine detail everywhere fights type, which is why the lower left is kept barren. Twelve simulation steps per frame are cheap one by one but add up on a large screen.",
     },
     technical: {
       insight: "Two invented chemicals react and spread across the image.",
@@ -314,10 +313,10 @@ const ENTRIES: readonly Entry[] = [
     rationale: {
       idea: "A sphere of plates that breaks apart and rebuilds itself, like a small planet made of tiles.",
       firstSeconds: "Sculptural: a faceted ball turns in the centre while its plates lift and settle, catching blue and sand-coloured light.",
-      interaction: "The pointer orbits the camera around the sphere, so you can look into the gaps as the plates open.",
+      interaction: "The pointer pries the shell open. Plates facing it lift clear and warm up, each by its own amount, while the camera swings to let you look into the gaps.",
       headline: "The empty dark around the sphere, the left side and lower left above all.",
       nearest: "Liquid Chrome, the other single form at centre. Chrome melts into smooth shapes; this one cracks into hard facets.",
-      risks: "The orbit is a weak interaction, since it only moves the camera. Bloom can blur the plates into haze, and a ball in the middle of the screen is a familiar composition.",
+      risks: "Bloom can blur the plates into haze, and a ball in the middle of the screen is a familiar composition. Lifting plates is done in the vertex stage, so it costs nothing extra per pixel.",
     },
     technical: {
       insight: "The only effect here built from real geometry rather than a full-screen shader.",
@@ -449,9 +448,9 @@ const ENTRIES: readonly Entry[] = [
       idea: "A sheet of broken glass over a colour field, each shard bending what lies behind it its own way.",
       firstSeconds: "Bright and busy: a mosaic of violet and teal shards drifts and turns, with pale seams catching the light.",
       interaction: "The pointer pulls the refraction toward it, so the shards seem to lean as you move.",
-      headline: "Nowhere calm. The shards fill the frame edge to edge, so text always lands on a seam.",
+      headline: "The lower left, where the shards stop bending and melt into the unbroken colour behind them, like a pane of smoked glass.",
       nearest: "Iridescent Silk, the other effect about colour from optics. Silk is one smooth film; this is many flat facets, and the colour comes from splitting light, not from interference.",
-      risks: "Full-frame stained glass in violet and teal reads as wallpaper, and the seams compete with any type. One cheap Voronoi pass, so speed is not the issue.",
+      risks: "Stained glass in violet and teal can read as wallpaper, and bright seams compete with type, so they fade out where the title sits. One cheap Voronoi pass, so speed is not the issue.",
     },
     technical: {
       insight: "Each shard gets its angle from a number derived from its own position.",
@@ -491,10 +490,10 @@ const ENTRIES: readonly Entry[] = [
     rationale: {
       idea: "Northern lights over a quiet night sky, in the colours real auroras glow.",
       firstSeconds: "Still and cold: green curtains with magenta tops hang over a field of stars and sway slowly.",
-      interaction: "The pointer shifts the three layers of curtain against each other, so the sky gains depth. It is parallax and nothing more.",
+      interaction: "The pointer sets off a substorm. The curtains above it dip, brighten, reach further down and shiver, and the three layers shift against each other for depth.",
       headline: "The dark sky low in the frame where the curtains fade out, and the lower left.",
       nearest: "Deep Water, the other open sky. That one is daylight reflected off a sea; this is light the sky gives off itself, at night.",
-      risks: "Parallax alone wears off quickly, and auroras are a common wallpaper, so the curtains have to stay thin and the colour true. Three noise layers keep it light.",
+      risks: "Auroras are a common wallpaper, so the curtains have to stay thin and the colour true, and the storm has to stay a shiver rather than a wobble. Three noise layers keep it light.",
     },
     technical: {
       insight: "The colours follow real emission: magenta high up, oxygen green below.",
@@ -516,48 +515,6 @@ const ENTRIES: readonly Entry[] = [
       ctl("brightness", "Brightness", 0.2, 2.2, 0.01, 1),
       ctl("drift", "Drift", 0.1, 3, 0.01, 1),
       ctl("fringe", "Fringe", 0, 1, 0.01, 0.5),
-    ],
-  },
-  {
-    id: "wormhole",
-    wgsl: wormholeWgsl,
-    name: "Wormhole",
-    category: "Tunnel",
-    tagline: "A luminous tunnel twists toward a vanishing point.",
-    summary:
-      "Distance down the tunnel is simply the inverse of distance from the centre of the screen. Twist wrings the walls, Flare feeds the light at the far end.",
-    explanation: [
-      { title: "Invert", body: "A point near the centre reads as a point far away." },
-      { title: "Wrap", body: "Panels run around the tube and away along its length." },
-      { title: "Fade", body: "Everything deep in the tunnel washes toward its glow." },
-    ],
-    rationale: {
-      idea: "A tunnel of glowing panels pulling you toward a light at the far end.",
-      firstSeconds: "Fast and loud: tiled walls rush past toward a bright centre, twisting as they go.",
-      interaction: "The pointer steers the vanishing point, so you lean the tunnel as you fly through it.",
-      headline: "Only the dark corners. The panels run to the edges and the brightest point is the centre.",
-      nearest: "Event Horizon, the other image pulled toward one point. There the depth is real light bending around mass; here a single division fakes it.",
-      risks: "Tunnel flythroughs are a demoscene and screensaver staple, and constant motion toward the viewer tires a page meant to be read. It is one of the cheapest shaders here.",
-    },
-    technical: {
-      insight: "Nothing is traced. One division turns a flat image into depth.",
-      pipeline: [
-        "single pass · inverse-radius tunnel projection, cylindrical panels",
-      ],
-      techniques: [
-        "perspective by inverse radius",
-        "cylindrical mapping",
-        "depth fog",
-      ],
-      notes:
-        "A point at radius r on screen is a point at distance 1/r down the tube, and that single substitution is the whole projection. The shader addresses panels in angle and depth, which should leave no seam around the tube. It leaves one anyway. atan2 cuts at ±π, and the angular index jumps by exactly the panel count across that cut, so it has to be wrapped or a hard seam runs out of the throat for the whole animation.",
-      source: "src/shaders/wormhole.wgsl",
-    },
-    accent: "#86fadd",
-    controls: [
-      ctl("speed", "Speed", 0, 2, 0.01, 0.5),
-      ctl("twist", "Twist", 0, 4, 0.01, 1),
-      ctl("flare", "Flare", 0, 2.5, 0.01, 1),
     ],
   },
   {
@@ -647,49 +604,6 @@ const ENTRIES: readonly Entry[] = [
     ],
   },
   {
-    id: "mandala",
-    wgsl: mandalaWgsl,
-    name: "Mandala",
-    category: "Pattern",
-    tagline: "Noise folds into a precise, endlessly changing symmetry.",
-    summary:
-      "A shapeless noise field is folded into one wedge and mirrored around the circle. Segments sets how many wedges, Twist shears them into spirals.",
-    explanation: [
-      { title: "Fold", body: "The fold cuts the image into wedges and mirrors each one." },
-      { title: "Twist", body: "Rotating by distance from the centre shears the wedge into a spiral." },
-      { title: "Draw", body: "A bright line marks exactly where the noise crosses zero." },
-    ],
-    rationale: {
-      idea: "A kaleidoscope where shapeless noise is folded into exact symmetry.",
-      firstSeconds: "Hypnotic: a blue, flower-like figure turns slowly at the centre, with white filigree tracing its petals.",
-      interaction: "The pointer shifts the noise under the fold, so the figure reforms into new petals around the same centre.",
-      headline: "Only the edges. The figure fills the frame and is brightest in the middle.",
-      nearest: "Wormhole, the other centred, radial image. The tunnel moves toward you; this turns in place.",
-      risks: "Kaleidoscopes read as screensavers or meditation apps, and symmetry about the centre fights any off-centre layout. It is cheap.",
-    },
-    technical: {
-      insight: "The noise underneath has no symmetry at all. The fold is what creates it.",
-      pipeline: [
-        "single pass · polar fold, radial twist, warped fbm",
-      ],
-      techniques: [
-        "kaleidoscopic fold",
-        "radial twist",
-        "cosine palette",
-        "zero-crossing lines",
-      ],
-      notes:
-        "The fold reflects each wedge rather than merely wrapping it. A wrap leaves a visible cut on every spoke; a mirror makes the two sides of the cut agree, and the seams close. Twisting by radius before the fold shears the wedge into spirals, and a thin bright line drawn exactly where the fbm crosses zero gives the figure its filigree.",
-      source: "src/shaders/mandala.wgsl",
-    },
-    accent: "#b890ff",
-    controls: [
-      ctl("segments", "Segments", 3, 24, 1, 10),
-      ctl("twist", "Twist", -2, 2, 0.01, 0.5),
-      ctl("zoom", "Zoom", 0.5, 4, 0.01, 1.6),
-    ],
-  },
-  {
     id: "truchet",
     wgsl: truchetWgsl,
     name: "Truchet",
@@ -707,7 +621,7 @@ const ENTRIES: readonly Entry[] = [
       firstSeconds: "Quiet and graphic: thin teal curves cover a black field, and pulses of light travel along them.",
       interaction: "The pointer charges the circuit near it, so the paths around your hand brighten and the pulses show where they lead.",
       headline: "Anywhere, with care. The lines are thin over black, so type reads, but the pattern runs edge to edge.",
-      nearest: "Hex Reactor, the other tiled grid with travelling light. That one charges whole cells; here the light runs along the lines between them.",
+      nearest: "Windwall, the other wall of small parts that answers in waves. Windwall is physical metal catching light; this is a flat diagram where the light runs along the lines.",
       risks: "It is a pattern rather than a picture, and can read as a background texture. It is very cheap.",
     },
     technical: {
@@ -730,92 +644,6 @@ const ENTRIES: readonly Entry[] = [
       ctl("scale", "Tile scale", 3, 20, 0.1, 9),
       ctl("flow", "Flow", 0, 4, 0.01, 1.4),
       ctl("glow", "Charge", 0, 2.5, 0.01, 1),
-    ],
-  },
-  {
-    id: "hexgrid",
-    wgsl: hexgridWgsl,
-    name: "Hex Reactor",
-    category: "Grid",
-    tagline: "Hexagonal cells charge in waves beneath a scanning beam.",
-    summary:
-      "Waves travel out from the centre and from your pointer, charging cells as they pass. A beam sweeps up the lattice on a clock of its own.",
-    explanation: [
-      { title: "Tile", body: "Two offset grids together make a hexagonal one." },
-      { title: "Charge", body: "A cell lights as a wavefront reaches it." },
-      { title: "Sweep", body: "A separate beam runs up the lattice, lighting whole rows." },
-    ],
-    rationale: {
-      idea: "A honeycomb of cells that charge in waves while a beam sweeps up the lattice.",
-      firstSeconds: "Technical and busy: pale and magenta hexagons light and fade as waves cross a dark teal grid.",
-      interaction: "The pointer is a second source, sending waves through the cells to cross the ones from the centre.",
-      headline: "Nowhere settled. The lit cells travel across the whole frame.",
-      nearest: "Windwall, the other wall of cells that answers in waves. Windwall's cells are physical metal fins; these are abstract light on a sci-fi grid.",
-      risks: "Hexagon grids are the default look for sci-fi interfaces, so it risks looking like a game menu. Cheap to run.",
-    },
-    technical: {
-      insight: "A hexagonal grid is two rectangular grids. Whichever is nearer wins.",
-      pipeline: [
-        "single pass · dual-lattice hex tiling, per-cell energy",
-      ],
-      techniques: [
-        "hex tiling",
-        "screen-space derivatives",
-        "wavefronts",
-        "per-cell hashing",
-      ],
-      notes:
-        "A hex grid is two offset rectangular lattices; the nearer candidate wins, which gives both the cell id and the local offset in a handful of instructions. Building that id from the lattice index matters: recovering it as position minus offset leaves a few ulps of per-pixel jitter, and any per-cell function sharp enough to matter turns that jitter into bands inside the cell. The rim width comes from the screen-space derivative, so it stays a pixel wide at any zoom.",
-      source: "src/shaders/hexgrid.wgsl",
-    },
-    accent: "#86fadd",
-    controls: [
-      ctl("charge", "Charge", 0.2, 2.2, 0.01, 1),
-      ctl("density", "Cell density", 5, 26, 0.5, 11),
-      ctl("sweep", "Sweep", 0, 4, 0.01, 1),
-    ],
-  },
-  {
-    id: "rain",
-    wgsl: rainWgsl,
-    name: "Datastream",
-    category: "Terminal",
-    tagline: "Layers of glyphs fall through a worn phosphor display.",
-    summary:
-      "Columns of characters fall at their own speeds across three layers, the nearest moving fastest. Density sets how tightly the columns pack together.",
-    explanation: [
-      { title: "Draw glyphs", body: "A number switches on the dots in a small grid to make each character." },
-      { title: "Fall", body: "Every column runs at its own speed, with its own tail length." },
-      { title: "Age", body: "Scanlines and a slow rolling bar finish it as a tube." },
-    ],
-    rationale: {
-      idea: "Columns of glyphs falling through an old phosphor screen.",
-      firstSeconds: "Familiar at once: green characters rain down in three layers over black, with scanlines and a slow rolling bar.",
-      interaction: "The pointer shifts the three layers in parallax, so the near columns slide past the far ones.",
-      headline: "In the gaps between columns, which are never wide. The rain fills the frame top to bottom.",
-      nearest: "Letterlight, the other type effect. There every letter is chosen to describe light on a form; here the letters fall as texture.",
-      risks: "It sits very close to a famous film's look, so it reads as a quotation rather than an idea. Cheap to run.",
-    },
-    technical: {
-      insight: "The glyphs come out of bits rather than a stored font.",
-      pipeline: [
-        "single pass · 3 glyph planes, procedural dot-matrix font, CRT mask",
-      ],
-      techniques: [
-        "procedural glyphs",
-        "hash fonts",
-        "depth parallax",
-        "CRT emulation",
-      ],
-      notes:
-        "Each glyph is a 5×7 dot matrix whose cells switch on from hash bits, so nobody had to draw the font. The id alone picks the character. Columns run at their own speed with their own tail length, characters churn on their own clock, and three planes at different densities parallax against the pointer. A scanline mask and a slow roll bar finish it as a tube.",
-      source: "src/shaders/rain.wgsl",
-    },
-    accent: "#86fadd",
-    controls: [
-      ctl("density", "Density", 0.4, 2.2, 0.01, 1),
-      ctl("speed", "Fall speed", 0.1, 3, 0.01, 1),
-      ctl("bleed", "Phosphor", 0, 2.5, 0.01, 1),
     ],
   },
   {
@@ -882,7 +710,7 @@ const ENTRIES: readonly Entry[] = [
       firstSeconds: "Warm and tactile: a light paper ground and bright dots, the opposite of the dark glowing heroes around it, with ripples moving on the sea.",
       interaction: "The plates part as the pointer moves, showing how the colours are built, and a loupe magnifies the dots so the print becomes the picture.",
       headline: "The bare paper in the sky and margins. Dark type reads on it like ink on a real poster.",
-      nearest: "Datastream, which also imitates an old medium. That one is a dark glowing screen; this is ink on paper, and the only light-ground effect so far.",
+      nearest: "Lowlight Harbor, which also imitates an old medium and also sets a sun over water. That one is a dark screen in sixteen colours; this is ink on paper, and the only light-ground effect so far.",
       risks: "The loupe could feel like a demo trick, and a large Register makes it look broken rather than printed. Dense dots can shimmer when scaled down on a phone.",
     },
     technical: {
@@ -927,7 +755,7 @@ const ENTRIES: readonly Entry[] = [
       firstSeconds: "Quiet and sculptural: a twisted column turns in a dark room while a lamp drifts around it on its own, and the letters reset themselves as the light slides across each face.",
       interaction: "The pointer is the lamp. Moving it rewrites every face of the sculpture, swings its typed shadow across the wall and turns the brightest glints ember.",
       headline: "The dark left half and lower left, where the wall stays unlit until the lamp is carried there. On a phone the sculpture rises and leaves the lower half empty.",
-      nearest: "Datastream, the other text effect. There the glyphs fall as decoration on a glowing CRT; here every letter is chosen for its ink to describe light on a solid form, and the page holds still.",
+      nearest: "Overprint, the other picture built from printed marks. There ink dots make a flat poster; here every letter is chosen for its ink to describe light on a solid form that turns.",
       risks: "ASCII art can read as a terminal novelty, so the type is soft inked letterforms on a warm dark ground, not green phosphor. Raymarching every pixel could be slow, so rays that miss a bounding sphere never march, and too much churn would read as noise, so cells only re-roll near the edge of a brightness step.",
     },
     technical: {
@@ -973,7 +801,7 @@ const ENTRIES: readonly Entry[] = [
       firstSeconds: "Calm and architectural: a dark wall of brushed fins, glints running along the gust fronts as the wind rolls across, and a warm glow breathing through the fins at the centre.",
       interaction: "The pointer is a gust. It lifts the fins around it so the hidden light spills out, and sends rings of glints rolling outward through the wall.",
       headline: "The lower left, where the air is calmer and the fins lie flat and dark. The upper left between gusts holds a headline too.",
-      nearest: "Hex Reactor, the other wall of cells that reacts in waves. There the cells glow as abstract light; here they are physical metal plates that only reflect, moved by wind you can almost feel.",
+      nearest: "Truchet, the other field of small repeated parts that answers in waves. Truchet is a flat diagram of light; here the parts are physical metal plates that only reflect, moved by wind you can almost feel.",
       risks: "Thousands of glints could read as noise, so the wind moves in broad gusts and the highlight is narrow enough that only the fronts catch it. Small fins can shimmer, so their size follows screen height. It is one pass with three noise lookups per pixel, so it stays light.",
     },
     technical: {

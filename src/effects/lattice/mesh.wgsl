@@ -9,6 +9,10 @@ struct Shape {
   morph: f32,
   facets: f32,
   glow: f32,
+  /// World-space direction toward the pointer, and how far the plates facing
+  /// it open: the pointer is a hand that pries the shell apart.
+  aim: vec3f,
+  open: f32,
 }
 
 @group(0) @binding(0) var<uniform> camera: Camera;
@@ -20,6 +24,7 @@ struct Out {
   @location(0) world: vec3f,
   @location(1) rounded: vec3f,
   @location(2) height: f32,
+  @location(3) lift: f32,
 }
 
 @vertex
@@ -31,7 +36,12 @@ fn vs_main(@location(0) position: vec3f, @location(1) normal: vec3f) -> Out {
   let q = floor(position * cell + 0.5) / cell;
   let n = fbmSimplex3d(q * 1.35 + vec3f(0.0, shape.time * 0.22, shape.time * 0.09), 4, 2.1, 0.55);
 
-  let displaced = position * (1.0 + n * shape.morph);
+  // Plates facing the pointer lift clear of the shell, each by its own amount,
+  // so the sphere opens toward you and shows the gaps between its tiles.
+  let facing = dot(normalize((model.model * vec4f(q, 0.0)).xyz), shape.aim);
+  let lift = smoothstep(0.45, 0.95, facing) * shape.open * (0.35 + 0.65 * fract(sin(dot(q, vec3f(12.99, 78.23, 37.72))) * 43758.55));
+
+  let displaced = position * (1.0 + n * shape.morph + lift * 0.42);
   let world = (model.model * vec4f(displaced, 1.0)).xyz;
 
   var out: Out;
@@ -39,6 +49,7 @@ fn vs_main(@location(0) position: vec3f, @location(1) normal: vec3f) -> Out {
   out.world = world;
   out.rounded = (model.model * vec4f(normal, 0.0)).xyz;
   out.height = n;
+  out.lift = lift;
   return out;
 }
 
@@ -46,7 +57,8 @@ fn vs_main(@location(0) position: vec3f, @location(1) normal: vec3f) -> Out {
 fn fs_main(
   @location(0) world: vec3f,
   @location(1) rounded: vec3f,
-  @location(2) height: f32
+  @location(2) height: f32,
+  @location(3) lift: f32
 ) -> @location(0) vec4f {
   // The true facet normal, from how world position changes across the 2x2 quad.
   // Taking it from the interpolated vertex normal would shade the plates as a
@@ -68,7 +80,9 @@ fn fs_main(
   let warm = vec3f(1.00, 0.58, 0.30);
   let base = mix(cold, warm, smoothstep(0.35, 0.85, k));
 
-  var col = base * (0.14 + 0.95 * dif);
+  // A lifted plate runs warmer, as if lit from the gap it left.
+  let tone = mix(base, warm, smoothstep(0.05, 0.4, lift) * 0.35);
+  var col = tone * (0.14 + 0.95 * dif);
   col += vec3f(0.16, 0.34, 0.62) * max(dot(normalize(rounded), rim), 0.0) * 0.4;
   col += vec3f(0.45, 0.85, 1.00) * fres * 1.5 * shape.glow;
   col += vec3f(1.0, 0.94, 0.86) * spec * 1.3;
