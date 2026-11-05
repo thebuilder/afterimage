@@ -38,6 +38,10 @@ import { createLattice } from "./lattice/pipeline"
 import latticeMesh from "./lattice/mesh.wgsl"
 import latticePresent from "./lattice/present.wgsl"
 
+import { createMisted } from "./misted/pipeline"
+import mistedStep from "./misted/step.wgsl"
+import mistedPresent from "./misted/present.wgsl"
+
 /** Terse control literal. `key` has to match the WGSL `Params` member for single-pass effects. */
 const ctl = (
   key: string,
@@ -826,6 +830,52 @@ const ENTRIES: readonly Entry[] = [
       ctl("fins", "Fins", 28, 80, 1, 44),
       ctl("glow", "Glow", 0, 2, 0.01, 1),
     ],
+  },
+  {
+    id: "misted",
+    name: "Misted",
+    published: "2026-11-05",
+    category: "Window",
+    tagline: "A fogged window on a city at night. Wipe it to see out.",
+    summary:
+      "A pane of glass fogged over on a cold night, the city behind it reduced to soft blooms of light. Wipe the glass with the pointer and the lights snap into crisp bokeh, while drips slide down on their own and the fog slowly creeps back. Brush sets the size of your hand, Refog how fast the glass mists over, and Drips how often water runs.",
+    explanation: [
+      { title: "Remember the glass", body: "A small texture records how clear each part of the window is. Every frame the fog creeps back a little, faster in some patches than others." },
+      { title: "Wipe and drip", body: "The pointer clears a soft stroke from where it was to where it is, and drips slide down their own columns, each leaving a thin clear trail." },
+      { title: "Look through", body: "Clear glass shows the city as crisp bokeh; fogged glass spreads the same lights into a pale glow beaded with tiny droplets, and wiped edges gather water." },
+    ],
+    rationale: {
+      idea: "A fogged window on a city at night that you wipe clear with your hand, and that slowly mists over again.",
+      firstSeconds: "Quiet and cinematic: soft blooms of city light through misted glass, an unseen hand wiping one stroke clear to show crisp bokeh, and a drip sliding down.",
+      interaction: "Wiping reveals the sharp city behind the fog, and it is the only effect where your mark stays and fades: leave and the glass forgets you over a few seconds.",
+      headline: "The fog itself. Untouched glass is a soft, low-contrast surface, and the lower left sits on dark street with the lights thinned out.",
+      nearest: "Prism, the other glass effect. Prism bends a fixed image through hard shards; this is a soft, wet surface that remembers where you touched it.",
+      risks: "Bokeh can look like a stock photo, so the lights are a layered street with depth and drifting traffic, not a wallpaper. Wiping could get old, so drips and patchy refog keep the glass changing on its own. One small mask pass plus a cheap present keeps it fast.",
+    },
+    technical: {
+      insight: "The window remembers only one number per texel, how clear it is, and everything you see is read from that single soft mask.",
+      pipeline: [
+        "step · decay the clear mask with patchy refog, stamp the pointer stroke as a capsule, clear drip heads",
+        "present · three layers of procedural lights as crisp bokeh and as wide glow, mixed by the mask, droplet lenses, wet edges and drip beads",
+      ],
+      techniques: [
+        "feedback mask",
+        "capsule brush stroke",
+        "procedural bokeh",
+        "jittered-grid lights",
+        "droplet lenses",
+      ],
+      notes:
+        "The state is a single channel in an rgba16float ping-pong at most 720 texels on its long edge, because a slow refog is a smaller change per frame than 8 bits can hold. Each step subtracts a refog rate scaled by low-frequency noise, so the fog grows back in patches, then stamps the pointer as a capsule from the previous position to this one, which keeps fast strokes continuous. Drips are analytic: each of about 26 columns per screen height may hold one whose head follows a hashed speed with a stall and sideways wander, and both passes evaluate the same path, so the bead always sits on its trail. The city is three jittered grids of lights, each evaluated once as a bokeh disc with a slightly bright rim and once as a broad Gaussian; the mask chooses between them per pixel, which stands in for a blur without sampling anything. Fogged areas add a haze that brightens with the light behind it and a 150-per-unit grid of droplet lenses. Before the visitor moves, an unseen hand wipes one stroke across the middle so the first seconds already show the reveal.",
+      source: "src/effects/misted",
+    },
+    accent: "#ffb36b",
+    controls: [
+      ctl("brush", "Brush", 0.5, 2, 0.01, 1),
+      ctl("refog", "Refog", 0.2, 3, 0.01, 1),
+      ctl("drips", "Drips", 0, 2.5, 0.01, 1),
+    ],
+    create: (setup) => createMisted(setup, { step: mistedStep, present: mistedPresent }),
   },
 ]
 

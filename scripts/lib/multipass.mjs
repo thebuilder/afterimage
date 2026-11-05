@@ -41,6 +41,13 @@ export function multipassSpecs(gpu, tgt, { fluxCount = 60_000 } = {}) {
         present: await load("src/effects/lattice/present.wgsl"),
       })
     },
+    misted: async () => {
+      const { createMisted } = await import(path.join(root, "src/effects/misted/pipeline.ts"))
+      return createMisted({ gpu, target: tgt, quality: 1 }, {
+        step: await load("src/effects/misted/step.wgsl"),
+        present: await load("src/effects/misted/present.wgsl"),
+      })
+    },
     reaction: async () => {
       const { createReaction } = await import(path.join(root, "src/effects/reaction/pipeline.ts"))
       const src = {
