@@ -11,6 +11,13 @@ export interface FrameInputs {
   /** 0..1: how recently the pointer moved over this canvas. Decays to 0 when idle. */
   readonly pointer: number
   /**
+   * Counts pointer gestures: it goes up when the pointer leaves the canvas or
+   * a new press begins. An effect that draws strokes between frames uses it so
+   * it never joins the end of one gesture to the start of the next. Optional
+   * because headless harnesses have no pointer.
+   */
+  readonly gesture?: number
+  /**
    * Current value of every control the effect declared, keyed by `Control.key`.
    * For a single-pass effect the key is also the WGSL `Params` member name.
    */

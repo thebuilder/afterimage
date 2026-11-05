@@ -40,6 +40,7 @@ interface Entry {
   controls: Record<string, number>
   time: number
   pointer: number
+  gesture: number
   mouse: [number, number]
   lastDraw: number
   hasDrawn: boolean
@@ -87,6 +88,7 @@ function tick(now: number) {
       dt,
       mouse: e.mouse,
       pointer: e.pointer,
+      gesture: e.gesture,
       controls: e.controls,
     }
     try {
@@ -181,6 +183,7 @@ export async function mountStage(
     controls: Object.fromEntries(effect.controls.map((c) => [c.key, c.value])),
     time: Math.random() * 40, // stagger, so a grid of cards is not in lockstep
     pointer: 0,
+    gesture: 0,
     mouse: [0.5, 0.45],
     // Stagger the first draw across the cap window so 20 tiles capped at the
     // same fps do not all land on the same rAF tick and arrive as a burst.
@@ -206,6 +209,7 @@ export async function mountStage(
     // Capture keeps the stream when a drag leaves the canvas, and makes a bare
     // tap a poke instead of a no-op.
     canvas.setPointerCapture(ev.pointerId)
+    entry.gesture++
     updateFromEvent(ev)
   }
   const onPointerUp = (ev: PointerEvent) => {
@@ -215,7 +219,13 @@ export async function mountStage(
   canvas.addEventListener("pointermove", updateFromEvent, { passive: true })
   canvas.addEventListener("pointerup", onPointerUp, { passive: true })
   canvas.addEventListener("pointercancel", onPointerUp, { passive: true })
+  // Leaving ends the gesture, so coming back somewhere else starts a new one.
+  const onPointerLeave = () => {
+    entry.gesture++
+  }
+  canvas.addEventListener("pointerleave", onPointerLeave, { passive: true })
   entry.detachPointer = () => {
+    canvas.removeEventListener("pointerleave", onPointerLeave)
     canvas.removeEventListener("pointerdown", onPointerDown)
     canvas.removeEventListener("pointermove", updateFromEvent)
     canvas.removeEventListener("pointerup", onPointerUp)

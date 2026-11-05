@@ -49,6 +49,8 @@ export function createMisted(setup: EffectSetup, src: MistedSources): EffectInst
   let prev: [number, number] | null = null
   let wasAuto = false
   let lastPointer = 0
+  let lastGesture = 0
+  let brokenAt: [number, number] | null = null
   let lastDims: readonly [number, number] = [w0, h0]
 
   function render(frame: Frame, tgt: Target, inputs: FrameInputs) {
@@ -56,17 +58,24 @@ export function createMisted(setup: EffectSetup, src: MistedSources): EffectInst
     const auto = inputs.pointer > 0.05 ? null : autoWipe(inputs.time)
     const hand: [number, number] = auto ?? [inputs.mouse[0], inputs.mouse[1]]
     const wipe = auto ? 1 : Math.min(1, inputs.pointer * 1.5)
-    // A stroke only joins frames that belong to one gesture. The pointer arrives
-    // by jumping, not gliding: the first move after idle (or after the unseen
-    // hand) lands far from the last known position, and joining the two would
-    // wipe a long streak at once. So a fresh gesture, a switch of hands, or a
-    // jump too long for one frame starts the stroke where the hand is.
-    const fresh = !auto && lastPointer < 0.02
+    // A stroke only joins frames that belong to one gesture. The pointer
+    // arrives by jumping, not gliding: the first move after idle, after the
+    // unseen hand, or on coming back in from outside lands far from the last
+    // known position, and joining the two would wipe a long streak at once.
+    // So any of those, or a jump too long for one frame, starts a new stroke.
     const jump = prev ? Math.hypot((hand[0] - prev[0]) * aspect, hand[1] - prev[1]) > 0.25 : true
+    // A gesture can end while the pointer is outside, frames before it comes
+    // back, so remember where it ended and start fresh at the first move after.
+    const gesture = inputs.gesture ?? 0
+    if (gesture !== lastGesture) brokenAt = hand
+    const moved = brokenAt !== null && (hand[0] !== brokenAt[0] || hand[1] !== brokenAt[1])
+    const fresh = !auto && (lastPointer < 0.02 || brokenAt !== null)
+    if (moved) brokenAt = null
     const from = prev && !fresh && !jump && wasAuto === (auto !== null) ? prev : hand
     prev = hand
     wasAuto = auto !== null
     lastPointer = inputs.pointer
+    lastGesture = gesture
 
     step.set({
       state: state.read.color,
