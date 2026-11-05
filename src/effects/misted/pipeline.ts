@@ -48,6 +48,7 @@ export function createMisted(setup: EffectSetup, src: MistedSources): EffectInst
 
   let prev: [number, number] | null = null
   let wasAuto = false
+  let lastPointer = 0
   let lastDims: readonly [number, number] = [w0, h0]
 
   function render(frame: Frame, tgt: Target, inputs: FrameInputs) {
@@ -55,11 +56,17 @@ export function createMisted(setup: EffectSetup, src: MistedSources): EffectInst
     const auto = inputs.pointer > 0.05 ? null : autoWipe(inputs.time)
     const hand: [number, number] = auto ?? [inputs.mouse[0], inputs.mouse[1]]
     const wipe = auto ? 1 : Math.min(1, inputs.pointer * 1.5)
-    // Switching between the unseen hand and the real one must not draw a
-    // stroke from one to the other.
-    const from = prev && wasAuto === (auto !== null) ? prev : hand
+    // A stroke only joins frames that belong to one gesture. The pointer arrives
+    // by jumping, not gliding: the first move after idle (or after the unseen
+    // hand) lands far from the last known position, and joining the two would
+    // wipe a long streak at once. So a fresh gesture, a switch of hands, or a
+    // jump too long for one frame starts the stroke where the hand is.
+    const fresh = !auto && lastPointer < 0.02
+    const jump = prev ? Math.hypot((hand[0] - prev[0]) * aspect, hand[1] - prev[1]) > 0.25 : true
+    const from = prev && !fresh && !jump && wasAuto === (auto !== null) ? prev : hand
     prev = hand
     wasAuto = auto !== null
+    lastPointer = inputs.pointer
 
     step.set({
       state: state.read.color,
