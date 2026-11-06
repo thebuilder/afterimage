@@ -19,7 +19,7 @@ struct Params {
 
 const TAU: f32 = 6.2831853;
 const SAND = vec3f(0.95, 0.9, 0.82);
-const STONE = vec3f(0.42, 0.41, 0.40);
+const STONE = vec3f(0.44, 0.43, 0.41);
 const MOSS = vec3f(0.34, 0.36, 0.26);
 
 struct Garden {
@@ -118,7 +118,17 @@ fn heightAt(p: vec2f) -> f32 {
   // glitters faintly instead of reading as smooth plastic.
   let gc = floor(p * params.res.y * 0.55);
   let tilt = vec2f(hash21(gc), hash21(gc + 31.7)) - 0.5;
-  let n = normalize(vec3f(-(hx - g.h) / e + tilt.x * 0.22 * (1.0 - g.stone), -(hy - g.h) / e + tilt.y * 0.22 * (1.0 - g.stone), 1.0));
+  var n = normalize(vec3f(-(hx - g.h) / e + tilt.x * 0.22 * (1.0 - g.stone), -(hy - g.h) / e + tilt.y * 0.22 * (1.0 - g.stone), 1.0));
+  // Rock is rough at every scale: pits, chips and a gritty crystalline grain
+  // bend the normal so light breaks up across the stone instead of sliding.
+  var rough = 0.0;
+  if (g.stone > 0.0) {
+    let rq = p * 90.0;
+    let b1 = vec2f(simplex2d(rq), simplex2d(rq + 17.3));
+    let b2 = vec2f(simplex2d(rq * 3.1 + 5.0), simplex2d(rq * 3.1 + 41.0));
+    rough = simplex2d(p * 34.0 + 9.0);
+    n = normalize(n + vec3f(b1 * 0.2 + b2 * 0.12 + tilt * 0.2, 0.0) * g.stone);
+  }
 
   // Soft shadow: march toward the sun over the height field.
   let horiz = max(length(L.xy), 1e-3);
@@ -143,17 +153,17 @@ fn heightAt(p: vec2f) -> f32 {
   let grain = hash21(floor(p * params.res.y * 0.9));
   var albedo = SAND * (0.93 + 0.1 * grain);
   albedo = mix(albedo, MOSS * (0.8 + 0.4 * grain), g.moss * 0.85);
-  // Weathered granite: broad mottling and a fine grain, no blotches.
-  let speck = 0.82 + 0.12 * simplex2d(p * 14.0) + 0.1 * (grain - 0.5);
-  albedo = mix(albedo, STONE * speck, g.stone);
+  // Weathered granite: broad mottling, a salt-and-pepper grain, and pale
+  // patches of lichen on the upper faces.
+  let speck = 0.8 + 0.12 * simplex2d(p * 14.0) + 0.22 * (grain - 0.5) + 0.08 * rough;
+  let lichen = smoothstep(0.35, 0.75, simplex2d(p * 22.0 + 3.0)) * 0.35;
+  let rock = mix(STONE * speck, vec3f(0.62, 0.62, 0.55), lichen);
+  albedo = mix(albedo, rock, g.stone);
 
   // A high sun is stronger, but exposure follows it, the way an eye or a
   // camera would, so noon reads as a pale field rather than a white-out.
   let exposure = mix(1.3, 0.62, smoothstep(0.25, 1.1, params.sun.w));
   var col = albedo * (params.sun.rgb * diffuse * exposure + sky * 0.55);
-  // Wet-looking sheen on the stones when the light comes low across them.
-  let hv = normalize(L + vec3f(0.0, 0.0, 1.0));
-  col += params.sun.rgb * pow(max(dot(n, hv), 0.0), 30.0) * 0.35 * g.stone * shadow;
 
   col *= 1.0 - 0.28 * dot(uv - 0.5, uv - 0.5);
   col += (hash21(uv * params.res) - 0.5) / 255.0;
