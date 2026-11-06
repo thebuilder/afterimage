@@ -889,7 +889,7 @@ const ENTRIES: readonly Entry[] = [
     summary:
       "Three stones sit in raked gravel, ringed by the lines a rake drew around them. Nothing in the garden moves except the sun: hold the pointer near the middle and it climbs overhead until the garden goes pale and flat, push it out to an edge and it sinks, raking long shadows across every groove. Rake sets the spacing of the lines, Depth how deep they are cut, and Drift how fast the sun circles when you let go.",
     explanation: [
-      { title: "Rake the gravel", body: "The ground is a height field of rounded ridges: straight rows across the garden, bending into rings around each stone." },
+      { title: "Rake the gravel", body: "The ground is a height field of rounded ridges: rings drawn round the stones, merging where stones sit close, and straight rows that stop just short of the outermost ring." },
       { title: "Place the stones", body: "Each stone is a lumpy dome standing far taller than the ridges, with a thin collar of moss where it meets the gravel." },
       { title: "Bring the sun down", body: "Every pixel looks toward the sun across the ground, and whatever rises in the way puts it in shadow. The lower the sun, the longer those shadows reach." },
     ],
@@ -899,7 +899,7 @@ const ENTRIES: readonly Entry[] = [
       interaction: "The pointer is the sun. Near the centre it climbs overhead and the lines disappear; out toward an edge it sinks, and lines that run toward the light vanish while the ones across it leap out.",
       headline: "The open gravel on the left, where only the straight rows run and no stone sits. It flattens to an even pale field whenever the sun is high.",
       nearest: "Windwall, the other piece about light on a fixed surface. Windwall moves its fins and keeps the lamp still; here the garden never moves and the light is all you change.",
-      risks: "Even rows could read as a stripe texture, so they wander and break into rings around the stones. A shadow march could get slow, so it takes sixteen growing steps over a cheap height field and stops as soon as a ray clears the tallest stone.",
+      risks: "Even rows could read as a stripe texture, so they wander, vary in depth and give way to rings around the stones, and the sand has grain so it never reads as plastic. A shadow march could get slow, so it takes sixteen growing steps over a cheap height field and stops as soon as a ray clears the tallest stone.",
     },
     technical: {
       insight: "Raking light is how conservators find hidden texture: a light skimming at a low angle turns heights too small to see into long shadows.",
@@ -915,7 +915,7 @@ const ENTRIES: readonly Entry[] = [
         "eased light steering",
       ],
       notes:
-        "The garden is a pure function of position: straight rows are a raised cosine of y, warped by one low-frequency simplex lookup, and inside a zone around each stone they switch to a raised cosine of distance from that stone's wobbly outline, so the rings follow its shape. Stones are domes about 0.85 of their radius tall, some thirty times the height of the ridges, so at a low sun their shadows run long across the rings. Normals come from two extra height samples. The shadow marches toward the sun over the height field with steps that grow by a third each time, softened by the ray's clearance over distance, and it stops once the ray climbs above the tallest stone. The sun itself is steered in TypeScript: it circles low on its own, follows the pointer while it is active, takes its elevation from how far out the pointer is, and eases back to the orbit over a few seconds. Exposure follows elevation, so noon reads as pale rather than white.",
+        "The garden is a pure function of position. Each stone's wobbly outline gives a distance field, and the three are merged with a smooth minimum so neighbouring rings flow into one shape instead of meeting at a seam. Rings are ridges of that distance, a whole number of rake widths out, so the last ring lands exactly on the border; the straight rows, a ridge of y warped by one low-frequency simplex lookup, fade out just before it, the way a rake lifts, so the two patterns never cut across each other. Stones are lumpy domes some thirty times the height of the ridges, and each few pixels of gravel tilts its normal at random so the sand has grain. Normals come from two extra height samples. The shadow marches toward the sun over the height field with steps that grow by a third each time, softened by the ray's clearance over distance, and stops once the ray climbs above the tallest stone. The sun is steered in TypeScript: it circles low on its own, follows the pointer while it is active, takes its elevation from how far out the pointer is, and eases back to the orbit over a few seconds. Exposure follows elevation, so noon reads as pale rather than white.",
       source: "src/effects/raking",
     },
     accent: "#d9c9a8",

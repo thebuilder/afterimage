@@ -40,7 +40,7 @@ export function createRaking(setup: EffectSetup, wgsl: Wgsl): EffectInstance {
       const vx = (inputs.mouse[0] - 0.5) * aspect
       const vy = 0.5 - inputs.mouse[1]
       const reach = Math.min(1, Math.hypot(vx, vy) / 0.62)
-      const held = fromAngles(Math.atan2(vy, vx), 1.25 - 1.13 * reach * reach * (3 - 2 * reach))
+      const held = fromAngles(Math.atan2(vy, vx), 1.25 - 1.03 * reach * reach * (3 - 2 * reach))
 
       // Hold on to the pointer for a while after it stops, then let go slowly.
       hold = Math.max(inputs.pointer > 0.02 ? 1 : 0, hold - dt * 0.35)

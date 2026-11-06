@@ -45,40 +45,58 @@ fn stoneAt(i: i32, hw: f32) -> vec3f {
   return mix(tall, land, wide);
 }
 
+/// Polynomial smooth minimum, so the rings of neighbouring stones merge into
+/// one shape instead of meeting at a seam.
+fn smin(a: f32, b: f32, k: f32) -> f32 {
+  let h = clamp(0.5 + 0.5 * (b - a) / k, 0.0, 1.0);
+  return mix(b, a, h) - k * h * (1.0 - h);
+}
+
+/// A raked ridge: rounded crest, flatter trough, from a phase in rake widths.
+fn ridgeOf(phase: f32) -> f32 {
+  let c = 0.5 + 0.5 * cos(phase * TAU);
+  return c * c * (3.0 - 2.0 * c);
+}
+
 fn garden(p: vec2f) -> Garden {
   let hw = 0.5 * params.res.x / max(params.res.y, 1.0);
-  let spacing = 0.026 * params.rake;
-  let amp = 0.0027 * params.depth;
+  let wide = smoothstep(0.8, 1.4, 2.0 * hw);
+  let s = 0.026 * params.rake;
   let warp = simplex2d(p * vec2f(1.6, 2.4) + 3.0);
+  // Hand-raked: the depth of the cut wanders a little along the rows.
+  let amp = 0.0027 * params.depth * (0.88 + 0.12 * warp);
 
-  // Straight rows, gently wandering, as a rake drawn across the whole garden.
-  let straight = 0.5 + 0.5 * cos((p.y + 0.014 * warp) / spacing * TAU);
-
-  var g = Garden(0.0, 0.0, 0.0, straight);
+  var g = Garden(0.0, 0.0, 0.0, 0.0);
   var hs = 0.0;
-  var nearest = 1e3;
-  var ringW = 0.0;
-  var ring = 0.0;
+  var field = 1e3;
   for (var i = 0; i < 3; i++) {
-    let s = stoneAt(i, hw);
-    let q = (p - s.xy) * vec2f(1.0, 1.18);
+    let st = stoneAt(i, hw);
+    let q = (p - st.xy) * vec2f(1.0, 1.18);
     // Stones are not circles: a slow wobble in their outline.
     let a = atan2(q.y, q.x);
     let d = length(q) * (1.0 + 0.09 * sin(a * 3.0 + f32(i) * 2.1) + 0.05 * sin(a * 5.0 + f32(i)));
-    let r = s.z;
+    let r = st.z;
     let k = clamp(1.0 - (d * d) / (r * r), 0.0, 1.0);
-    hs = max(hs, 0.85 * r * sqrt(k));
+    if (k > 0.0) {
+      // Weathered faces: low lumps across the dome.
+      let lumps = 1.0 + 0.05 * sin(q.x * 70.0 + f32(i)) * sin(q.y * 64.0 - f32(i) * 2.0);
+      hs = max(hs, 0.8 * r * sqrt(k) * lumps);
+    }
     g.stone = max(g.stone, smoothstep(r * 1.005, r * 0.97, d));
     g.moss = max(g.moss, smoothstep(r * 1.14, r * 1.02, d) * smoothstep(r * 0.94, r * 1.0, d));
-    // Concentric rings around each stone, out to a zone the rake went round.
-    let zone = r * mix(2.0, 2.5, smoothstep(0.8, 1.4, 2.0 * hw)) + mix(0.02, 0.03, smoothstep(0.8, 1.4, 2.0 * hw));
-    if (d < nearest) {
-      nearest = d;
-      ringW = smoothstep(zone + 0.006, zone - 0.006, d);
-      ring = 0.5 + 0.5 * cos((d - r) / spacing * TAU);
-    }
+    // Distance out from the stone's edge, merged smoothly with the others.
+    field = smin(field, d - r, 0.05);
   }
-  g.ridge = mix(straight, ring, ringW);
+
+  // The rake circles each stone a whole number of times, so the outermost
+  // ring sits exactly on the border of its zone.
+  let rings = floor(mix(4.0, 6.0, wide));
+  let zone = rings * s;
+  let ring = ridgeOf(field / s) * (1.0 - smoothstep(zone + 0.25 * s, zone + 0.55 * s, field));
+  // The straight rows stop short of that border, as the rake lifts before
+  // the last ring, so the two patterns never cut across each other.
+  let rows = ridgeOf((p.y + 0.014 * warp) / s) * smoothstep(zone + 0.45 * s, zone + 1.1 * s, field);
+  g.ridge = ring + rows;
   g.h = max(amp * g.ridge, hs);
   return g;
 }
@@ -96,7 +114,11 @@ fn heightAt(p: vec2f) -> f32 {
   let e = 1.25 / params.res.y;
   let hx = heightAt(p + vec2f(e, 0.0));
   let hy = heightAt(p + vec2f(0.0, e));
-  let n = normalize(vec3f(-(hx - g.h) / e, -(hy - g.h) / e, 1.0));
+  // Gravel grain: every few pixels a grain tilts its own way, so the surface
+  // glitters faintly instead of reading as smooth plastic.
+  let gc = floor(p * params.res.y * 0.55);
+  let tilt = vec2f(hash21(gc), hash21(gc + 31.7)) - 0.5;
+  let n = normalize(vec3f(-(hx - g.h) / e + tilt.x * 0.22 * (1.0 - g.stone), -(hy - g.h) / e + tilt.y * 0.22 * (1.0 - g.stone), 1.0));
 
   // Soft shadow: march toward the sun over the height field.
   let horiz = max(length(L.xy), 1e-3);
@@ -107,14 +129,14 @@ fn heightAt(p: vec2f) -> f32 {
   for (var i = 0; i < 16; i++) {
     let ray = g.h + t * slope + 0.0004;
     let dh = ray - heightAt(p + dir * t);
-    shadow = min(shadow, clamp(10.0 * dh / t + 0.5, 0.0, 1.0));
+    shadow = min(shadow, clamp(6.0 * dh / t + 0.5, 0.0, 1.0));
     if (shadow < 0.01 || ray > 0.07) { break; }
     t = t * 1.33 + 0.0008;
   }
 
   let diffuse = max(dot(n, L), 0.0) * shadow;
   // Sky fill from above, cooler than the sun, and less of it in the troughs.
-  let cavity = mix(0.86, 1.0, g.ridge) * mix(1.0, 0.9, g.moss);
+  let cavity = mix(0.86, 1.0, clamp(g.ridge, 0.0, 1.0)) * mix(1.0, 0.9, g.moss);
   let sky = vec3f(0.78, 0.8, 0.84) * (0.5 + 0.25 * n.z) * cavity;
 
   // Gravel grain, and a few darker pebbles.
