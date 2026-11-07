@@ -62,6 +62,7 @@ with `strictPort`, so a busy port fails loudly instead of moving; `shots.sh` and
 | 17 | **Windwall** | per-cell wind field, hinged fin projection, curved-fin environment reflection with a narrow glint lobe, backlit gaps | wind, fins, glow |
 | 18 | **Misted** | feedback clear mask with capsule wipes and patchy refog, procedural bokeh and skyline mixed by the mask, droplet lenses | brush, refog, drips |
 | 19 | **Raking Light** | analytic raked height field with stone rings, finite-difference normals, sixteen-step soft shadow march, CPU-steered sun | rake, depth, drift |
+| 20 | **Ferro** | tilted height-field march with bisection, field-gated hexagonal spike lattice, smooth-union pool on a damped spring, studio Fresnel reflection | field, spikes, pull |
 
 ## Copy
 
@@ -165,7 +166,7 @@ These five are the gate, and the first four need nothing but Node:
 npm run typecheck           # tsc -b --noEmit
 npm run lint                # oxlint
 npm run build               # tsc -b && vite build
-npm run check:registry      # registry invariants: "19 effects checked, 0 problems"
+npm run check:registry      # registry invariants: "20 effects checked, 0 problems"
 npm run check:wgsl          # every .wgsl file: "27 shaders checked, 0 failing"
 ```
 

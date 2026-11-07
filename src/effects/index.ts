@@ -45,6 +45,9 @@ import mistedPresent from "./misted/present.wgsl"
 import { createRaking } from "./raking/pipeline"
 import rakingGarden from "./raking/garden.wgsl"
 
+import { createFerro } from "./ferro/pipeline"
+import ferroWgsl from "./ferro/ferro.wgsl"
+
 /** Terse control literal. `key` has to match the WGSL `Params` member for single-pass effects. */
 const ctl = (
   key: string,
@@ -925,6 +928,53 @@ const ENTRIES: readonly Entry[] = [
       ctl("drift", "Drift", 0, 3, 0.01, 1),
     ],
     create: (setup) => createRaking(setup, rakingGarden),
+  },
+  {
+    id: "ferro",
+    name: "Ferro",
+    published: "2026-11-07",
+    category: "Magnetism",
+    tagline: "A pool of black ferrofluid that bristles into spikes over the magnet in your hand.",
+    summary:
+      "A glossy black pool sits on a white plinth with a magnet beneath it. Where the field is strong enough the surface breaks into a crown of spikes, and as the magnet moves the crown follows while the rest of the pool is dragged along behind. Field sets the magnet's strength, Spikes how densely they pack, and Pull how slowly and stretchily the pool follows.",
+    explanation: [
+      { title: "Pour the pool", body: "The fluid is a soft blob with a rounded edge, joined by a tapering arm to wherever the magnet is, so it reaches toward it." },
+      { title: "Switch on the field", body: "Spikes stand on a hexagonal grid. Each one only grows where the magnet's field at its foot passes a threshold, which is how real ferrofluid decides between smooth and spiked." },
+      { title: "Light it like a product", body: "The camera looks down at an angle and every ray finds the surface by stepping down through it. The black fluid then reflects a dark studio, a big softbox and the white plinth." },
+    ],
+    rationale: {
+      idea: "A pool of black ferrofluid on a white plinth that bristles into a crown of spikes wherever you hold the magnet.",
+      firstSeconds: "Strange and tactile: a glossy black pool on clean white, its crown of spikes slowly wandering as an unseen magnet circles underneath.",
+      interaction: "The pointer is the magnet. Spikes rise only where you hold it, and a quick move pulls the crown away so the pool stretches out after it, smooth and spikeless, until it catches up.",
+      headline: "The bare white plinth on the left. The pool lives right of centre, and dark type on white is the easiest headline there is.",
+      nearest: "Liquid Chrome, the other glossy liquid. Chrome is molten forms merging under hard light; this is a single pool that answers a field, with a structure, the spike lattice, that only appears under force.",
+      risks: "Marching a height field could be slow, so only pixels whose ray can meet the pool march at all, in 64 steps and a short bisection. Top-down ferrofluid reads as bubble wrap, so the camera is tilted. A black blob could be dull, so the spikes catch a softbox and the pool trails the magnet.",
+    },
+    technical: {
+      insight: "Ferrofluid only grows spikes above a critical field strength, so a soft threshold on the field at each spike's foot is enough to make them appear and vanish convincingly.",
+      pipeline: [
+        "cpu · magnet follows the pointer or an idle loop; pool centre chases it on a damped spring",
+        "fragment · tilted orthographic camera, 64-step height-field march plus bisection, smooth-union pool and arm, hexagonal spike lattice gated by field strength, studio reflection with Fresnel",
+      ],
+      techniques: [
+        "height-field ray marching",
+        "bisection refinement",
+        "hexagonal lattice",
+        "smooth union",
+        "damped spring",
+        "Fresnel reflection",
+      ],
+      notes:
+        "The pool is a signed distance: a wobbling disc at the spring-driven pool centre, smoothly unioned with a tapered capsule out to the magnet, so a fast move stretches it into an arm. Height is a narrow meniscus at the edge plus a smooth Gaussian dome, kept apart from the distance field so its creases never show in reflections, plus a heap under the magnet and the spikes: a concave cone on every cell of a hexagonal lattice, scaled by a smoothstep of the field at the cell's foot with a little per-cell jitter. The camera is orthographic and tilted 47 degrees, so each pixel's ray is a straight line from the top of the scene to the floor; it steps down that line 64 times, bisects the crossing five times, and takes normals from two extra height samples. Pixels whose ray cannot reach the pool skip the march. The surface is nearly black with a Fresnel-weighted reflection of a dark studio, a large softbox ahead and the bright plinth near the horizon. On narrow screens the camera pulls back so the pool still fits.",
+      source: "src/effects/ferro",
+    },
+    accent: "#d8d6d0",
+    controls: [
+      ctl("field", "Field", 0.3, 1.8, 0.01, 1),
+      ctl("spikes", "Spikes", 0.6, 1.6, 0.01, 1),
+      ctl("pull", "Pull", 0.4, 2.5, 0.01, 1),
+    ],
+    create: (setup) => createFerro(setup, ferroWgsl),
   },
 ]
 
