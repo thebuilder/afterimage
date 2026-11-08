@@ -843,6 +843,8 @@ const ENTRIES: readonly Entry[] = [
   },
   {
     id: "misted",
+    // Heavy per pixel on a retina screen; capped so laptop GPUs stay calm.
+    maxDpr: 1.25,
     name: "Misted",
     published: "2026-11-05",
     category: "Window",
@@ -889,6 +891,8 @@ const ENTRIES: readonly Entry[] = [
   },
   {
     id: "raking",
+    // Heavy per pixel on a retina screen; capped so laptop GPUs stay calm.
+    maxDpr: 1.5,
     name: "Raking Light",
     published: "2026-11-06",
     category: "Garden",
@@ -935,6 +939,8 @@ const ENTRIES: readonly Entry[] = [
   },
   {
     id: "ferro",
+    // Heavy per pixel on a retina screen; capped so laptop GPUs stay calm.
+    maxDpr: 1.25,
     name: "Ferro",
     published: "2026-11-07",
     category: "Magnetism",

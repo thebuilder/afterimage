@@ -127,5 +127,11 @@ export interface HeroEffect {
   readonly published?: string
   /** The knobs this effect exposes. One to three; more than that is a control panel, not a hero. */
   readonly controls: readonly Control[]
+  /**
+   * Device pixel ratio ceiling for this effect, below the page's 1.5. For an
+   * effect that is heavy per pixel and soft to look at (marches, wide blurs),
+   * where a full retina buffer costs far more than it shows.
+   */
+  readonly maxDpr?: number
   create(setup: EffectSetup): EffectInstance
 }

@@ -350,7 +350,7 @@ function Screen({
           // display doubles the GPU load for nothing, and a GPU pinned at full
           // tilt is what makes some laptops hiss (coil whine).
           fps={60}
-          maxDpr={2}
+          maxDpr={effect.maxDpr ?? 1.5}
           // Neighbours mount while the current screen is settled, so they
           // render a few frames up front and arrive with a picture.
           prime={!active}
