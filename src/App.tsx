@@ -346,6 +346,10 @@ function Screen({
           // Neighbours run too, but only while some of them is on screen: the
           // view's own observer stops them the moment they are fully off.
           enabled={running}
+          // 60 is plenty for every effect here. Uncapped, a 120 or 144Hz
+          // display doubles the GPU load for nothing, and a GPU pinned at full
+          // tilt is what makes some laptops hiss (coil whine).
+          fps={60}
           maxDpr={2}
           // Neighbours mount while the current screen is settled, so they
           // render a few frames up front and arrive with a picture.

@@ -67,7 +67,9 @@ function tick(now: number) {
   for (const e of entries) {
     if (!e.active) continue
     const minStepMs = e.opts.fps > 0 ? 1000 / e.opts.fps : 0
-    if (now - e.lastDraw < minStepMs) continue
+    // A little slack, so a 60fps cap on a 60Hz display does not drop the
+    // frames whose rAF lands a fraction of a millisecond early.
+    if (minStepMs > 0 && now - e.lastDraw < minStepMs - 2) continue
 
     // Each entry advances by its own elapsed time, so a capped tile plays at
     // the same speed as the hero instead of at cap/refresh speed. The clamp
