@@ -48,6 +48,10 @@ import rakingGarden from "./raking/garden.wgsl"
 import { createFerro } from "./ferro/pipeline"
 import ferroWgsl from "./ferro/ferro.wgsl"
 
+import { createChladni } from "./chladni/pipeline"
+import chladniStep from "./chladni/step.wgsl"
+import chladniPresent from "./chladni/present.wgsl"
+
 /** Terse control literal. `key` has to match the WGSL `Params` member for single-pass effects. */
 const ctl = (
   key: string,
@@ -975,6 +979,54 @@ const ENTRIES: readonly Entry[] = [
       ctl("pull", "Pull", 0.4, 2.5, 0.01, 1),
     ],
     create: (setup) => createFerro(setup, ferroWgsl),
+  },
+  {
+    id: "chladni",
+    name: "Chladni",
+    published: "2026-11-08",
+    category: "Sound",
+    tagline: "Sand on a singing steel plate, gathering into the figure of whichever note you play.",
+    summary:
+      "A square steel plate is clamped at its centre and bowed into a note. Sand hops off the parts that move and comes to rest along the lines that stay still, drawing the note's figure grain by grain. Move across the screen to tune the plate: between notes the sand only shivers, and on the next one it races into a new figure. Bow sets how hard the plate is driven, Sand how much is scattered on it, and Tempo how quickly it changes note when left alone.",
+    explanation: [
+      { title: "Find the still lines", body: "Each note sets the plate ringing in a standing wave. Most of the plate moves up and down, but along certain lines it never moves at all." },
+      { title: "Shake the sand", body: "Grains on a moving patch are tossed about and land a little further downhill of the motion, so over a few seconds they all end up on the still lines." },
+      { title: "Tune between notes", body: "Only a true resonance makes the plate ring. Halfway between two notes it barely moves, so the old figure holds until the next note pulls the sand apart." },
+    ],
+    rationale: {
+      idea: "A steel plate clamped at its centre and bowed into a note, with white sand running off the moving parts and gathering on the still lines into the note's Chladni figure.",
+      firstSeconds: "The plate starts evenly dusted, and within two seconds the sand visibly crawls into a crisp, symmetric figure. Every few seconds the note changes, the figure breaks up and a new one assembles.",
+      interaction: "Moving across the screen tunes the plate. You hear nothing, but you see the note: between resonances the sand only shivers, and landing on one makes it race into a new figure, so you are playing an instrument by sight.",
+      headline: "The bare dark bench on the left. The plate sits right of centre and the sand is its only bright thing, so light type on the left never competes with it.",
+      nearest: "Membrane, the other pattern that grows. Membrane is chemistry spreading on its own; here every grain is pushed by a physical standing wave, the figure is exact and symmetric, and it changes the moment you change the note.",
+      risks: "A crossfade between pictures would read as fake, so the sand is a real simulation that never loses a grain. Grains on a pixel grid look like noise, so they sit on two tilted grids with their own sizes. Half floats leak sand on deep piles, so the state is full precision.",
+    },
+    technical: {
+      insight: "Sand on a vibrating plate drifts down the gradient of the squared amplitude, so moving density along that gradient, conservatively, draws an exact Chladni figure without tracking a single particle.",
+      pipeline: [
+        "cpu · note follows the pointer across the screen, or walks the resonances on its own; resonance strength falls off between whole notes",
+        "fragment × 4 · finite-volume sand step on a 512² grid: upwind drift toward the nodal lines plus scattering that grows with the plate's motion, ping-ponged in r32float",
+        "fragment · blued steel plate with bevel and bolt, sand drawn as two layers of hashed grains on tilted grids, deep piles shaded as heaps with a cast shadow",
+      ],
+      techniques: [
+        "Chladni plate modes",
+        "finite-volume advection",
+        "upwind scheme",
+        "nonlinear diffusion",
+        "ping-pong simulation",
+        "hashed grain rendering",
+      ],
+      notes:
+        "A free square plate clamped at its centre rings in modes cos(nπx)cos(mπy) ± cos(mπx)cos(nπy); the plate walks a list of ten of them, and resonance strength falls smoothly to nothing halfway between two. The sand is a density on a 512 by 512 grid. Each step moves it across every cell face with an upwind flux driven by minus the gradient of the squared amplitude, scaled to the mode's spacing, and adds scattering whose strength grows with the local motion plus a little that grows with pile depth, so heaps slump along their line. Because every face's flow leaves one cell and enters its neighbour, no sand is ever lost; the grid is r32float, since half floats round away the trickle arriving at a deep pile. Four substeps run per frame, as two pairs of passes with fixed bindings. The present pass filters the grid by hand, draws grains from two hashed grids at different tilts so no lattice shows, lets grains on moving patches flicker as they hop, and shades thick piles from the density gradient with a short cast shadow.",
+      source: "src/effects/chladni",
+    },
+    accent: "#e8e2d6",
+    controls: [
+      ctl("bow", "Bow", 0.4, 1.6, 0.01, 1),
+      ctl("sand", "Sand", 0.5, 2, 0.01, 1),
+      ctl("tempo", "Tempo", 0.4, 2.5, 0.01, 1),
+    ],
+    create: (setup) => createChladni(setup, { step: chladniStep, present: chladniPresent }),
   },
 ]
 
