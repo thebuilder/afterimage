@@ -55,6 +55,22 @@ const pathFor = (r: Route) => {
   return r.how ? `${base}/how-it-works` : base || "/"
 }
 
+/**
+ * Warm the Archive's card pictures when the pointer heads for its button, so
+ * they are there when it opens. Once per visit, and only on intent: the feed
+ * itself never pays for them.
+ */
+let thumbsFetched = false
+const prefetchThumbs = () => {
+  if (thumbsFetched) return
+  thumbsFetched = true
+  for (const e of FEED) {
+    const img = new Image()
+    img.decoding = "async"
+    img.src = `/thumb/${e.id}.webp`
+  }
+}
+
 /** A click the browser should keep: new tab, new window, anything but a plain primary press. */
 const isModifiedClick = (ev: React.MouseEvent) =>
   ev.button !== 0 || [ev.metaKey, ev.ctrlKey, ev.shiftKey, ev.altKey].some(Boolean)
@@ -236,7 +252,11 @@ export default function App() {
             <span className="font-medium text-sm tracking-tight">Afterimage</span>
           </a>
           <nav className="pointer-events-auto flex items-center gap-1 rounded-full border border-line bg-glass p-1 backdrop-blur-md">
-            <TextButton onClick={() => setArchiveOpen(true)}>
+            <TextButton
+              onClick={() => setArchiveOpen(true)}
+              onFocus={prefetchThumbs}
+              onPointerEnter={prefetchThumbs}
+            >
               Archive <span className="text-fg/45">{FEED.length}</span>
             </TextButton>
             <TextButton onClick={() => setAboutOpen(true)}>About</TextButton>

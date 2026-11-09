@@ -365,13 +365,25 @@ export function ArchiveTrack({
                           })
                         }
                       }}
-                      style={{ aspectRatio: "1200 / 630", background: e.accent }}
+                      // Until the picture arrives, a dark ground with only a hint of the
+                      // effect's colour: a full accent fill flashes on first open.
+                      style={{
+                        aspectRatio: "1200 / 630",
+                        background: `color-mix(in srgb, ${e.accent} 10%, var(--color-bg))`,
+                      }}
                       tabIndex={front ? 0 : -1}
                     >
                       <img
                         alt=""
-                        className="size-full object-cover transition-transform duration-700 ease-out-quint group-hover:scale-[1.03]"
+                        className="size-full object-cover opacity-0 transition-[opacity,scale] duration-700 ease-out-quint group-hover:scale-[1.03] data-[loaded]:opacity-100"
                         decoding="async"
+                        onLoad={(ev) => {
+                          ev.currentTarget.dataset.loaded = ""
+                        }}
+                        ref={(img) => {
+                          // A cached picture can finish before React attaches onLoad.
+                          if (img?.complete && img.naturalWidth > 0) img.dataset.loaded = ""
+                        }}
                         draggable={false}
                         height={315}
                         src={`/thumb/${e.id}.webp`}
