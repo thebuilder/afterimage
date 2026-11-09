@@ -79,6 +79,17 @@ const isModifiedClick = (ev: React.MouseEvent) =>
 /** The name the Archive's front card and its screen share across a view transition. */
 const CARD_TRANSITION = "archive-card"
 
+/** Resolve once `done()` holds, checked every 16ms, or after `ms` regardless. */
+const until = (done: () => boolean, ms: number) =>
+  new Promise<void>((resolve) => {
+    const t0 = performance.now()
+    const check = () => {
+      if (done() || performance.now() - t0 > ms) resolve()
+      else window.setTimeout(check, 16)
+    }
+    check()
+  })
+
 const canTransition = () =>
   typeof document.startViewTransition === "function" && !prefersReducedMotion()
 
@@ -100,7 +111,21 @@ export default function App() {
   const [archiveVisit, setArchiveVisit] = useState(0)
   // The screen just opened from the Archive shows its card's picture on top
   // until its own canvas is drawing, then lets it fade.
-  const [arrival, setArrival] = useState<{ index: number; settled: boolean } | null>(null)
+  // The effect whose card is at the front of the Archive. Its screen mounts
+  // behind the sheet and draws a frame, so opening it morphs the card straight
+  // into the live picture rather than into a still of it.
+  const [preview, setPreview] = useState<number | null>(null)
+  const previewTimer = useRef(0)
+  const drawn = useRef(new Set<number>())
+  const onDrawn = useCallback((i: number, yes: boolean) => {
+    if (yes) drawn.current.add(i)
+    else drawn.current.delete(i)
+  }, [])
+  const warm = useCallback((i: number) => {
+    window.clearTimeout(previewTimer.current)
+    // Only once the ride has rested on a card, not for every card it passes.
+    previewTimer.current = window.setTimeout(() => setPreview(i), 250)
+  }, [])
   const [aboutOpen, setAboutOpen] = useState(false)
   const [scrolled, setScrolled] = useState(initial.index !== 0)
 
@@ -188,26 +213,36 @@ export default function App() {
 
   const openFromArchive = useCallback(
     (index: number) => {
+      window.clearTimeout(previewTimer.current)
       const land = () => {
         flushSync(() => {
           setArchiveOpen(false)
-          setArrival({ index, settled: false })
+          setPreview(index)
         })
         goTo(index, false)
       }
       if (!canTransition()) {
         land()
-        setArrival(null)
+        setPreview(null)
         return
       }
-      document
-        .startViewTransition(land)
-        .finished.finally(() => {
-          // The screen fades the picture off as soon as its canvas has a frame
-          // (see Screen). If that never comes, the picture still goes.
-          setArrival((a) => (a?.index === index ? { index, settled: true } : a))
-          window.setTimeout(() => setArrival((a) => (a?.index === index ? null : a)), 3000)
-        })
+      // The new picture is the live canvas, so it needs a frame first. It is
+      // usually drawn already, warmed while its card was at the front; if not,
+      // warm it now and wait a moment. Rendering pauses inside a view
+      // transition's update, so the wait has to come before it starts.
+      setPreview(index)
+      void until(() => drawn.current.has(index), 600).then(() => {
+        const section = sections.current[index]
+        document
+          .startViewTransition(() => {
+            land()
+            if (section) section.style.viewTransitionName = CARD_TRANSITION
+          })
+          .finished.finally(() => {
+            if (section) section.style.viewTransitionName = ""
+            setPreview(null)
+          })
+      })
     },
     [goTo]
   )
@@ -276,14 +311,12 @@ export default function App() {
             controls={i === active ? controls : undefined}
             effect={e}
             index={i}
-            arrival={arrival?.index === i ? (arrival.settled ? "settled" : "moving") : undefined}
             key={e.id}
             // Only the screen in view and its neighbours hold a canvas, so a
             // year of daily effects never means a year of GPU surfaces.
-            // The screen opened from the Archive mounts at once, so its canvas
-            // starts compiling during the view transition, not after it.
-            live={Math.abs(i - active) <= 1 || arrival?.index === i}
-            onArrived={() => window.setTimeout(() => setArrival((a) => (a?.index === i ? null : a)), 700)}
+            // So does the one warmed behind the Archive.
+            live={Math.abs(i - active) <= 1 || preview === i}
+            onDrawn={onDrawn}
             ref={(el) => {
               sections.current[i] = el
             }}
@@ -376,7 +409,12 @@ export default function App() {
       <ArchiveSheet
         active={active}
         key={archiveVisit}
-        onClose={() => setArchiveOpen(false)}
+        onClose={() => {
+          window.clearTimeout(previewTimer.current)
+          setPreview(null)
+          setArchiveOpen(false)
+        }}
+        onFocusEffect={warm}
         onGo={openFromArchive}
         open={archiveOpen}
       />
@@ -399,8 +437,7 @@ export default function App() {
 function Screen({
   effect,
   index,
-  arrival,
-  onArrived,
+  onDrawn,
   active,
   live,
   running,
@@ -415,34 +452,14 @@ function Screen({
   running: boolean
   controls: Readonly<Record<string, number>> | undefined
   showCopy: boolean
-  /**
-   * Just opened from the Archive: its card's picture covers it while the view
-   * transition runs ("moving"), and fades the moment the canvas has a frame
-   * after it ends ("settled").
-   */
-  arrival?: "moving" | "settled"
-  /** The picture has started to fade. */
-  onArrived: () => void
+  /** Reports whether this screen's canvas holds a drawn frame. */
+  onDrawn: (index: number, drawn: boolean) => void
   ref: React.Ref<HTMLElement>
 }) {
-  // Whether this screen's canvas has drawn. It is unmounted when far away.
-  const [drawn, setDrawn] = useState(false)
-  const [wasLive, setWasLive] = useState(live)
-  if (live !== wasLive) {
-    setWasLive(live)
-    if (!live) setDrawn(false)
-  }
-  const fading = arrival === "settled" && drawn
-  const announced = useRef(false)
+  // A canvas that goes away takes its frame with it.
   useEffect(() => {
-    if (!fading) {
-      announced.current = false
-      return
-    }
-    if (announced.current) return
-    announced.current = true
-    onArrived()
-  }, [fading, onArrived])
+    if (!live) onDrawn(index, false)
+  }, [live, index, onDrawn])
 
   return (
     <section
@@ -464,7 +481,7 @@ function Screen({
           // tilt is what makes some laptops hiss (coil whine).
           fps={60}
           maxDpr={effect.maxDpr ?? 1.5}
-          onReady={() => setDrawn(true)}
+          onReady={() => onDrawn(index, true)}
           // Neighbours mount while the current screen is settled, so they
           // render a few frames up front and arrive with a picture.
           prime={!active}
@@ -481,19 +498,6 @@ function Screen({
           }}
         />
       )}
-
-      {arrival ? (
-        <img
-          alt=""
-          aria-hidden
-          className={cn(
-            "pointer-events-none absolute inset-0 size-full object-cover transition-opacity duration-500 ease-out-quint",
-            fading ? "opacity-0" : "opacity-100"
-          )}
-          src={`/thumb/${effect.id}.webp`}
-          style={{ viewTransitionName: arrival === "moving" ? CARD_TRANSITION : undefined }}
-        />
-      ) : null}
 
       {/* Only the name sits on the picture. The number, date, category and
           tagline live in the Archive and in How it works, so no gradient has to
@@ -734,11 +738,14 @@ function ArchiveSheet({
   open,
   onClose,
   onGo,
+  onFocusEffect,
   active,
 }: {
   open: boolean
   onClose: () => void
   onGo: (i: number) => void
+  /** The card at the front changed; its feed position. */
+  onFocusEffect: (i: number) => void
   active: number
 }) {
   const [query, setQuery] = useState("")
@@ -756,6 +763,10 @@ function ArchiveSheet({
   }, [query])
 
   const current = results[Math.min(focus, results.length - 1)]
+  const currentIndex = current?.index
+  useEffect(() => {
+    if (open && currentIndex !== undefined) onFocusEffect(currentIndex)
+  }, [open, currentIndex, onFocusEffect])
   // No reset on the way out: App remounts the sheet for each visit, and
   // resetting here would flash the newest card into the view transition.
   const close = onClose
