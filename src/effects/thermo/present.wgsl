@@ -38,12 +38,12 @@ fn crystal(t: f32) -> vec3f {
 @fragment fn fs_main(@location(0) uv: vec2f) -> @location(0) vec4f {
   let asp = vec2f(view.aspect, 1.0);
   let p = uv * asp;
-  // The film is not perfectly even: its response drifts in soft mottles,
-  // so the bands of colour have ragged, living edges.
-  let warp = vec2f(simplex2d(p * 7.0 + view.time * 0.05), simplex2d(p * 7.0 + 31.0 - view.time * 0.04));
-  let t = textureSampleLevel(state, samp, uv + warp * 0.0035, 0.0).r;
+  // The film is not perfectly even: its response varies in faint, still
+  // mottles, so the bands of colour are not ruled lines.
+  let warp = vec2f(simplex2d(p * 9.0), simplex2d(p * 9.0 + 31.0));
+  let t = textureSampleLevel(state, samp, uv + warp * 0.0012, 0.0).r;
   let mottle = 0.9 + 0.1 * simplex2d(p * 14.0);
-  var col = crystal(t * (0.985 + 0.03 * simplex2d(p * 16.0))) * mottle;
+  var col = crystal(t * (0.99 + 0.02 * simplex2d(p * 16.0))) * mottle;
 
   // A satin sheet catches a broad soft light from above.
   let sheen = smoothstep(1.1, -0.2, uv.y) * 0.022 + 0.008;

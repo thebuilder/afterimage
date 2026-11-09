@@ -42,15 +42,15 @@ fn smin(a: f32, b: f32, k: f32) -> f32 {
 /// and narrows a little toward the wrist.
 fn hand(q: vec2f) -> f32 {
   let taper = 1.0 + 0.22 * clamp(-(q.y + 0.02) / 0.09, 0.0, 1.0);
-  let pd = abs(vec2f(q.x * taper, q.y + 0.018)) - vec2f(0.03, 0.05);
+  let pd = abs(vec2f(q.x * taper, q.y + 0.012)) - vec2f(0.031, 0.056);
   var d = length(max(pd, vec2f(0.0))) + min(max(pd.x, pd.y), 0.0) - 0.026;
   // Knuckles sit in a gentle arc along the palm's top edge; the fingers fan out.
-  d = smin(d, capsule(q, vec2f(-0.04, 0.052), vec2f(-0.063, 0.168), 0.0165), 0.008);
-  d = smin(d, capsule(q, vec2f(-0.013, 0.06), vec2f(-0.018, 0.192), 0.0175), 0.008);
-  d = smin(d, capsule(q, vec2f(0.014, 0.058), vec2f(0.024, 0.181), 0.0165), 0.008);
-  d = smin(d, capsule(q, vec2f(0.04, 0.045), vec2f(0.066, 0.138), 0.0145), 0.008);
+  d = smin(d, capsule(q, vec2f(-0.04, 0.056), vec2f(-0.058, 0.151), 0.0165), 0.008);
+  d = smin(d, capsule(q, vec2f(-0.013, 0.064), vec2f(-0.017, 0.173), 0.0175), 0.008);
+  d = smin(d, capsule(q, vec2f(0.014, 0.062), vec2f(0.023, 0.164), 0.0165), 0.008);
+  d = smin(d, capsule(q, vec2f(0.04, 0.05), vec2f(0.061, 0.128), 0.0145), 0.008);
   // The thumb leaves from low on the palm's side and angles out and up.
-  d = smin(d, capsule(q, vec2f(-0.04, -0.045), vec2f(-0.112, 0.022), 0.019), 0.016);
+  d = smin(d, capsule(q, vec2f(-0.04, -0.048), vec2f(-0.1, 0.01), 0.019), 0.016);
   return d;
 }
 
