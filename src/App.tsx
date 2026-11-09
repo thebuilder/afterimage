@@ -1,5 +1,6 @@
 import type * as React from "react"
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
+import { flushSync } from "react-dom"
 
 import { ArchiveTrack, type TrackHandle, type TrackItem } from "@/components/archive-track"
 import { ShaderView } from "@/components/shader-view"
@@ -75,6 +76,12 @@ const prefetchThumbs = () => {
 const isModifiedClick = (ev: React.MouseEvent) =>
   ev.button !== 0 || [ev.metaKey, ev.ctrlKey, ev.shiftKey, ev.altKey].some(Boolean)
 
+/** The name the Archive's front card and its screen share across a view transition. */
+const CARD_TRANSITION = "archive-card"
+
+const canTransition = () =>
+  typeof document.startViewTransition === "function" && !prefersReducedMotion()
+
 const prefersReducedMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches
 
 export default function App() {
@@ -89,6 +96,11 @@ export default function App() {
   const [chrome, setChrome] = useState(true)
   const [tuneOpen, setTuneOpen] = useState(false)
   const [archiveOpen, setArchiveOpen] = useState(false)
+  // Each visit to the Archive is a fresh sheet: empty search, at the current effect.
+  const [archiveVisit, setArchiveVisit] = useState(0)
+  // The screen just opened from the Archive shows its card's picture on top
+  // until its own canvas is drawing, then lets it fade.
+  const [arrival, setArrival] = useState<{ index: number; leaving: boolean } | null>(null)
   const [aboutOpen, setAboutOpen] = useState(false)
   const [scrolled, setScrolled] = useState(initial.index !== 0)
 
@@ -152,6 +164,53 @@ export default function App() {
     })
   }, [])
 
+  /**
+   * Into the Archive and back out with a view transition: the screen shrinks
+   * into its card on the track, and a card grows into its screen. Browsers
+   * without view transitions, and reduced motion, just cut.
+   */
+  const openArchive = useCallback(() => {
+    setArchiveVisit((v) => v + 1)
+    const section = sections.current[active]
+    if (!canTransition() || !section) {
+      setArchiveOpen(true)
+      return
+    }
+    section.style.viewTransitionName = CARD_TRANSITION
+    const t = document.startViewTransition(() => {
+      section.style.viewTransitionName = ""
+      flushSync(() => setArchiveOpen(true))
+    })
+    t.finished.finally(() => {
+      section.style.viewTransitionName = ""
+    })
+  }, [active])
+
+  const openFromArchive = useCallback(
+    (index: number) => {
+      const land = () => {
+        flushSync(() => {
+          setArchiveOpen(false)
+          setArrival({ index, leaving: false })
+        })
+        goTo(index, false)
+      }
+      if (!canTransition()) {
+        land()
+        setArrival(null)
+        return
+      }
+      document
+        .startViewTransition(land)
+        .finished.finally(() => {
+          // Give the canvas a moment to draw, then fade the picture off it.
+          window.setTimeout(() => setArrival({ index, leaving: true }), 350)
+          window.setTimeout(() => setArrival(null), 1100)
+        })
+    },
+    [goTo]
+  )
+
   const controls = useMemo(() => {
     const base: Record<string, number> = {}
     for (const c of effect.controls) base[c.key] = c.value
@@ -188,7 +247,7 @@ export default function App() {
       else if (key === "t") setTuneOpen((v) => !v)
       else if (key === "a" || ev.key === "/") {
         ev.preventDefault()
-        setArchiveOpen(true)
+        openArchive()
       }
       else if (ev.key === "?") setAboutOpen(true)
       else if (ev.key === "Escape") {
@@ -198,7 +257,7 @@ export default function App() {
     }
     window.addEventListener("keydown", onKey)
     return () => window.removeEventListener("keydown", onKey)
-  }, [active, goTo, modalOpen])
+  }, [active, goTo, modalOpen, openArchive])
 
   if (status.state === "unsupported") return <Unsupported reason={status.reason} />
 
@@ -216,6 +275,7 @@ export default function App() {
             controls={i === active ? controls : undefined}
             effect={e}
             index={i}
+            arrival={arrival?.index === i ? (arrival.leaving ? "leaving" : "here") : undefined}
             key={e.id}
             // Only the screen in view and its neighbours hold a canvas, so a
             // year of daily effects never means a year of GPU surfaces.
@@ -253,7 +313,7 @@ export default function App() {
           </a>
           <nav className="pointer-events-auto flex items-center gap-1 rounded-full border border-line bg-glass p-1 backdrop-blur-md">
             <TextButton
-              onClick={() => setArchiveOpen(true)}
+              onClick={openArchive}
               onFocus={prefetchThumbs}
               onPointerEnter={prefetchThumbs}
             >
@@ -311,11 +371,9 @@ export default function App() {
       <HowItWorks effect={effect} onClose={() => setHow(false)} open={how} />
       <ArchiveSheet
         active={active}
+        key={archiveVisit}
         onClose={() => setArchiveOpen(false)}
-        onGo={(i) => {
-          setArchiveOpen(false)
-          goTo(i, false)
-        }}
+        onGo={openFromArchive}
         open={archiveOpen}
       />
       <About onClose={() => setAboutOpen(false)} open={aboutOpen} />
@@ -337,6 +395,7 @@ export default function App() {
 function Screen({
   effect,
   index,
+  arrival,
   active,
   live,
   running,
@@ -351,6 +410,8 @@ function Screen({
   running: boolean
   controls: Readonly<Record<string, number>> | undefined
   showCopy: boolean
+  /** Just opened from the Archive: its card's picture covers it, then fades. */
+  arrival?: "here" | "leaving"
   ref: React.Ref<HTMLElement>
 }) {
   return (
@@ -389,6 +450,19 @@ function Screen({
           }}
         />
       )}
+
+      {arrival ? (
+        <img
+          alt=""
+          aria-hidden
+          className={cn(
+            "pointer-events-none absolute inset-0 size-full object-cover transition-opacity duration-700 ease-out-quint",
+            arrival === "leaving" ? "opacity-0" : "opacity-100"
+          )}
+          src={`/thumb/${effect.id}.webp`}
+          style={{ viewTransitionName: arrival === "here" ? CARD_TRANSITION : undefined }}
+        />
+      ) : null}
 
       {/* Only the name sits on the picture. The number, date, category and
           tagline live in the Archive and in How it works, so no gradient has to
@@ -565,7 +639,8 @@ function Sheet({
   children: React.ReactNode
 }) {
   const ref = useRef<HTMLDialogElement>(null)
-  useEffect(() => {
+  // A layout effect, so a view transition's flushSync sees the dialog open or shut.
+  useLayoutEffect(() => {
     const d = ref.current
     if (!d) return
     if (open && !d.open) {
@@ -650,16 +725,10 @@ function ArchiveSheet({
   }, [query])
 
   const current = results[Math.min(focus, results.length - 1)]
-  const close = () => {
-    setQuery("")
-    setFocus(0)
-    onClose()
-  }
-  const openEffect = (i: number) => {
-    setQuery("")
-    setFocus(0)
-    onGo(i)
-  }
+  // No reset on the way out: App remounts the sheet for each visit, and
+  // resetting here would flash the newest card into the view transition.
+  const close = onClose
+  const openEffect = onGo
 
   return (
     <Sheet label="Archive" onClose={close} open={open} wide>

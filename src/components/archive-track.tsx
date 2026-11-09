@@ -368,6 +368,8 @@ export function ArchiveTrack({
                       // Until the picture arrives, a dark ground with only a hint of the
                       // effect's colour: a full accent fill flashes on first open.
                       style={{
+                        // The front card and its screen morph into each other (see App).
+                        viewTransitionName: front ? "archive-card" : undefined,
                         aspectRatio: "1200 / 630",
                         background: `color-mix(in srgb, ${e.accent} 10%, var(--color-bg))`,
                       }}

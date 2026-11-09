@@ -154,6 +154,24 @@
   }
 }
 
+/*
+ * Archive card to screen and back. The picture is cropped, not squashed, while
+ * the card's 1200x630 frame grows into the screen's.
+ */
+::view-transition-group(archive-card) {
+  animation-duration: 0.7s;
+  animation-timing-function: var(--ease-out-quint);
+}
+::view-transition-old(archive-card),
+::view-transition-new(archive-card) {
+  height: 100%;
+  object-fit: cover;
+}
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 0.45s;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
