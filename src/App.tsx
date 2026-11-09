@@ -1,5 +1,6 @@
 import type * as React from "react"
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
+import { flushSync } from "react-dom"
 
 import { ArchiveTrack, type TrackHandle, type TrackItem } from "@/components/archive-track"
 import { ShaderView } from "@/components/shader-view"
@@ -75,6 +76,23 @@ const prefetchThumbs = () => {
 const isModifiedClick = (ev: React.MouseEvent) =>
   ev.button !== 0 || [ev.metaKey, ev.ctrlKey, ev.shiftKey, ev.altKey].some(Boolean)
 
+/** The name the Archive's front card and its screen share across a view transition. */
+const CARD_TRANSITION = "archive-card"
+
+/** Resolve once `done()` holds, checked every 16ms, or after `ms` regardless. */
+const until = (done: () => boolean, ms: number) =>
+  new Promise<void>((resolve) => {
+    const t0 = performance.now()
+    const check = () => {
+      if (done() || performance.now() - t0 > ms) resolve()
+      else window.setTimeout(check, 16)
+    }
+    check()
+  })
+
+const canTransition = () =>
+  typeof document.startViewTransition === "function" && !prefersReducedMotion()
+
 const prefersReducedMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches
 
 export default function App() {
@@ -89,6 +107,25 @@ export default function App() {
   const [chrome, setChrome] = useState(true)
   const [tuneOpen, setTuneOpen] = useState(false)
   const [archiveOpen, setArchiveOpen] = useState(false)
+  // Each visit to the Archive is a fresh sheet: empty search, at the current effect.
+  const [archiveVisit, setArchiveVisit] = useState(0)
+  // The screen just opened from the Archive shows its card's picture on top
+  // until its own canvas is drawing, then lets it fade.
+  // The effect whose card is at the front of the Archive. Its screen mounts
+  // behind the sheet and draws a frame, so opening it morphs the card straight
+  // into the live picture rather than into a still of it.
+  const [preview, setPreview] = useState<number | null>(null)
+  const previewTimer = useRef(0)
+  const drawn = useRef(new Set<number>())
+  const onDrawn = useCallback((i: number, yes: boolean) => {
+    if (yes) drawn.current.add(i)
+    else drawn.current.delete(i)
+  }, [])
+  const warm = useCallback((i: number) => {
+    window.clearTimeout(previewTimer.current)
+    // Only once the ride has rested on a card, not for every card it passes.
+    previewTimer.current = window.setTimeout(() => setPreview(i), 250)
+  }, [])
   const [aboutOpen, setAboutOpen] = useState(false)
   const [scrolled, setScrolled] = useState(initial.index !== 0)
 
@@ -152,6 +189,64 @@ export default function App() {
     })
   }, [])
 
+  /**
+   * Into the Archive and back out with a view transition: the screen shrinks
+   * into its card on the track, and a card grows into its screen. Browsers
+   * without view transitions, and reduced motion, just cut.
+   */
+  const openArchive = useCallback(() => {
+    setArchiveVisit((v) => v + 1)
+    const section = sections.current[active]
+    if (!canTransition() || !section) {
+      setArchiveOpen(true)
+      return
+    }
+    section.style.viewTransitionName = CARD_TRANSITION
+    const t = document.startViewTransition(() => {
+      section.style.viewTransitionName = ""
+      flushSync(() => setArchiveOpen(true))
+    })
+    t.finished.finally(() => {
+      section.style.viewTransitionName = ""
+    })
+  }, [active])
+
+  const openFromArchive = useCallback(
+    (index: number) => {
+      window.clearTimeout(previewTimer.current)
+      const land = () => {
+        flushSync(() => {
+          setArchiveOpen(false)
+          setPreview(index)
+        })
+        goTo(index, false)
+      }
+      if (!canTransition()) {
+        land()
+        setPreview(null)
+        return
+      }
+      // The new picture is the live canvas, so it needs a frame first. It is
+      // usually drawn already, warmed while its card was at the front; if not,
+      // warm it now and wait a moment. Rendering pauses inside a view
+      // transition's update, so the wait has to come before it starts.
+      setPreview(index)
+      void until(() => drawn.current.has(index), 600).then(() => {
+        const section = sections.current[index]
+        document
+          .startViewTransition(() => {
+            land()
+            if (section) section.style.viewTransitionName = CARD_TRANSITION
+          })
+          .finished.finally(() => {
+            if (section) section.style.viewTransitionName = ""
+            setPreview(null)
+          })
+      })
+    },
+    [goTo]
+  )
+
   const controls = useMemo(() => {
     const base: Record<string, number> = {}
     for (const c of effect.controls) base[c.key] = c.value
@@ -188,7 +283,7 @@ export default function App() {
       else if (key === "t") setTuneOpen((v) => !v)
       else if (key === "a" || ev.key === "/") {
         ev.preventDefault()
-        setArchiveOpen(true)
+        openArchive()
       }
       else if (ev.key === "?") setAboutOpen(true)
       else if (ev.key === "Escape") {
@@ -198,7 +293,7 @@ export default function App() {
     }
     window.addEventListener("keydown", onKey)
     return () => window.removeEventListener("keydown", onKey)
-  }, [active, goTo, modalOpen])
+  }, [active, goTo, modalOpen, openArchive])
 
   if (status.state === "unsupported") return <Unsupported reason={status.reason} />
 
@@ -219,7 +314,9 @@ export default function App() {
             key={e.id}
             // Only the screen in view and its neighbours hold a canvas, so a
             // year of daily effects never means a year of GPU surfaces.
-            live={Math.abs(i - active) <= 1}
+            // So does the one warmed behind the Archive.
+            live={Math.abs(i - active) <= 1 || preview === i}
+            onDrawn={onDrawn}
             ref={(el) => {
               sections.current[i] = el
             }}
@@ -253,7 +350,7 @@ export default function App() {
           </a>
           <nav className="pointer-events-auto flex items-center gap-1 rounded-full border border-line bg-glass p-1 backdrop-blur-md">
             <TextButton
-              onClick={() => setArchiveOpen(true)}
+              onClick={openArchive}
               onFocus={prefetchThumbs}
               onPointerEnter={prefetchThumbs}
             >
@@ -311,11 +408,14 @@ export default function App() {
       <HowItWorks effect={effect} onClose={() => setHow(false)} open={how} />
       <ArchiveSheet
         active={active}
-        onClose={() => setArchiveOpen(false)}
-        onGo={(i) => {
+        key={archiveVisit}
+        onClose={() => {
+          window.clearTimeout(previewTimer.current)
+          setPreview(null)
           setArchiveOpen(false)
-          goTo(i, false)
         }}
+        onFocusEffect={warm}
+        onGo={openFromArchive}
         open={archiveOpen}
       />
       <About onClose={() => setAboutOpen(false)} open={aboutOpen} />
@@ -337,6 +437,7 @@ export default function App() {
 function Screen({
   effect,
   index,
+  onDrawn,
   active,
   live,
   running,
@@ -351,8 +452,15 @@ function Screen({
   running: boolean
   controls: Readonly<Record<string, number>> | undefined
   showCopy: boolean
+  /** Reports whether this screen's canvas holds a drawn frame. */
+  onDrawn: (index: number, drawn: boolean) => void
   ref: React.Ref<HTMLElement>
 }) {
+  // A canvas that goes away takes its frame with it.
+  useEffect(() => {
+    if (!live) onDrawn(index, false)
+  }, [live, index, onDrawn])
+
   return (
     <section
       aria-label={effect.name}
@@ -373,6 +481,7 @@ function Screen({
           // tilt is what makes some laptops hiss (coil whine).
           fps={60}
           maxDpr={effect.maxDpr ?? 1.5}
+          onReady={() => onDrawn(index, true)}
           // Neighbours mount while the current screen is settled, so they
           // render a few frames up front and arrive with a picture.
           prime={!active}
@@ -565,7 +674,8 @@ function Sheet({
   children: React.ReactNode
 }) {
   const ref = useRef<HTMLDialogElement>(null)
-  useEffect(() => {
+  // A layout effect, so a view transition's flushSync sees the dialog open or shut.
+  useLayoutEffect(() => {
     const d = ref.current
     if (!d) return
     if (open && !d.open) {
@@ -628,11 +738,14 @@ function ArchiveSheet({
   open,
   onClose,
   onGo,
+  onFocusEffect,
   active,
 }: {
   open: boolean
   onClose: () => void
   onGo: (i: number) => void
+  /** The card at the front changed; its feed position. */
+  onFocusEffect: (i: number) => void
   active: number
 }) {
   const [query, setQuery] = useState("")
@@ -650,16 +763,14 @@ function ArchiveSheet({
   }, [query])
 
   const current = results[Math.min(focus, results.length - 1)]
-  const close = () => {
-    setQuery("")
-    setFocus(0)
-    onClose()
-  }
-  const openEffect = (i: number) => {
-    setQuery("")
-    setFocus(0)
-    onGo(i)
-  }
+  const currentIndex = current?.index
+  useEffect(() => {
+    if (open && currentIndex !== undefined) onFocusEffect(currentIndex)
+  }, [open, currentIndex, onFocusEffect])
+  // No reset on the way out: App remounts the sheet for each visit, and
+  // resetting here would flash the newest card into the view transition.
+  const close = onClose
+  const openEffect = onGo
 
   return (
     <Sheet label="Archive" onClose={close} open={open} wide>

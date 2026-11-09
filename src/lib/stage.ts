@@ -26,6 +26,8 @@ export interface StageHandle {
   setActive(active: boolean): void
   /** Frames per second, averaged over the last second. */
   readonly fps: number
+  /** True once the effect has drawn a frame to its canvas. */
+  readonly drawn: boolean
   dispose(): void
 }
 
@@ -275,6 +277,9 @@ export async function mountStage(
     },
     get fps() {
       return entry.fps
+    },
+    get drawn() {
+      return entry.hasDrawn
     },
     dispose() {
       teardown()

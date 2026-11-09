@@ -17,6 +17,8 @@ export interface ShaderViewProps extends React.ComponentProps<"div"> {
   /** Master switch from the page: paused, or not the effect on screen. */
   enabled?: boolean
   onFps?: (fps: number) => void
+  /** Called once, when the effect's first frame is on the canvas. */
+  onReady?: () => void
   /**
    * Render briefly on mount even while off screen, then stop. Compiles the
    * pipelines and leaves a real frame on the canvas, so a screen that is about
@@ -44,6 +46,7 @@ export function ShaderView({
   controls,
   enabled = true,
   onFps,
+  onReady,
   prime = false,
   rootMargin = "160px",
   className,
@@ -125,6 +128,28 @@ export function ShaderView({
     io.observe(el)
     return () => io.disconnect()
   }, [rootMargin])
+
+  // Watch for the first frame. The handle can arrive late, so poll per frame;
+  // one more frame after the draw lets the browser present it.
+  const readyRef = useRef(onReady)
+  useEffect(() => {
+    readyRef.current = onReady
+  })
+  useEffect(() => {
+    let id = 0
+    let drawnAt = -1
+    const check = () => {
+      const handle = handleRef.current
+      if (handle?.drawn && drawnAt < 0) drawnAt = 0
+      else if (drawnAt >= 0) {
+        readyRef.current?.()
+        return
+      }
+      id = requestAnimationFrame(check)
+    }
+    id = requestAnimationFrame(check)
+    return () => cancelAnimationFrame(id)
+  }, [])
 
   useEffect(() => {
     if (!onFps) return
