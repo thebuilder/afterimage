@@ -55,6 +55,13 @@ export function multipassSpecs(gpu, tgt, { fluxCount = 60_000 } = {}) {
         present: await load("src/effects/chladni/present.wgsl"),
       })
     },
+    thermo: async () => {
+      const { createThermo } = await import(path.join(root, "src/effects/thermo/pipeline.ts"))
+      return createThermo({ gpu, target: tgt, quality: 1 }, {
+        step: await load("src/effects/thermo/step.wgsl"),
+        present: await load("src/effects/thermo/present.wgsl"),
+      })
+    },
     ferro: async () => {
       const { createFerro } = await import(path.join(root, "src/effects/ferro/pipeline.ts"))
       return createFerro({ gpu, target: tgt, quality: 1 }, await load("src/effects/ferro/ferro.wgsl"))

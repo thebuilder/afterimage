@@ -52,6 +52,10 @@ import { createChladni } from "./chladni/pipeline"
 import chladniStep from "./chladni/step.wgsl"
 import chladniPresent from "./chladni/present.wgsl"
 
+import { createThermo } from "./thermo/pipeline"
+import thermoStep from "./thermo/step.wgsl"
+import thermoPresent from "./thermo/present.wgsl"
+
 /** Terse control literal. `key` has to match the WGSL `Params` member for single-pass effects. */
 const ctl = (
   key: string,
@@ -1033,6 +1037,53 @@ const ENTRIES: readonly Entry[] = [
       ctl("tempo", "Tempo", 0.4, 2.5, 0.01, 1),
     ],
     create: (setup) => createChladni(setup, { step: chladniStep, present: chladniPresent }),
+  },
+  {
+    id: "thermo",
+    name: "Thermochrome",
+    published: "2026-11-09",
+    category: "Heat",
+    tagline: "A black liquid crystal sheet that blooms through the spectrum wherever it is touched.",
+    summary:
+      "A sheet of thermochromic film over a black backing. Where it is warmed it turns rust, gold, green, blue and violet, and as it cools it runs back down the spectrum to black. Left alone, an unseen hand presses a palm print onto it now and then. Your touch is a fingertip: move slowly and it burns hot and blue, swipe quickly and it leaves only a copper line. Warmth sets how much heat a touch gives, and Cooling how fast the sheet forgets.",
+    explanation: [
+      { title: "Remember the heat", body: "The sheet keeps a temperature for every patch. A touch adds heat, it spreads a little sideways through the film, and it slowly bleeds away into the room." },
+      { title: "Speed is temperature", body: "Each frame a fingertip gives the same heat, spread along however far it moved, so lingering burns hot and a quick swipe barely warms the film." },
+      { title: "Read it as colour", body: "Liquid crystal reflects a different colour at each temperature: black when cool, then rust through to violet, and dark again past its range, so the hottest middle of a palm goes black with a rainbow rim." },
+    ],
+    rationale: {
+      idea: "A black thermochromic sheet that holds the heat of a touch as colour, blooming through the spectrum where it is warmed and fading back to black as it cools.",
+      firstSeconds: "Black, then an unseen palm presses flat and lifts, leaving a glowing handprint with a dark burnt-out middle and a rainbow rim that slowly cools from violet to rust and fades. Another print follows a few seconds later.",
+      interaction: "The pointer is a warm fingertip, and how long you linger is the colour. Slow strokes burn blue and violet, quick ones leave copper lines, and every mark cools through the whole spectrum, so you are drawing with time.",
+      headline: "The black sheet on the left. The unseen hand only presses right of centre, and everything it leaves fades to black, so the left stays clear.",
+      nearest: "Misted, the other surface that remembers your touch. Misted wipes fog away to reveal a city behind; here nothing is revealed, the touch itself becomes the image, and its colour tells how warm and how recent it was.",
+      risks: "A plain heat map would read as a thermal camera, so the palette follows real liquid crystal, including going dark again past its range. Fast pointers could leave nothing, so any touch warms the film a little. A cartoon hand would cheapen it, so the print is warmest in the palm, coolest at the fingertips, and blurs as heat spreads.",
+    },
+    technical: {
+      insight: "Depositing a fixed amount of heat per frame along the stroke turns pointer speed into temperature for free: the slower you move, the more heat each patch of film receives.",
+      pipeline: [
+        "cpu · pointer strokes joined only within one gesture; an unseen hand presses a palm on a timer while nobody touches",
+        "fragment · heat step on a capped grid: five-tap diffusion, exponential cooling, segment-shaped fingertip deposit, palm print from a hand SDF",
+        "fragment · liquid crystal palette from heat, noise-warped lookup for ragged band edges, satin sheen and film grain",
+      ],
+      techniques: [
+        "ping-pong simulation",
+        "heat diffusion",
+        "signed distance fields",
+        "smooth union",
+        "thermochromic palette",
+        "domain warping",
+      ],
+      notes:
+        "Heat lives in an rgba16float ping-pong buffer capped at 640 pixels on its long edge. Each frame it is mixed toward the mean of four neighbours two texels away, multiplied down by an exponential cooling term, and nudged to exactly zero. A fingertip deposits heat along the segment from the last pointer position with a Gaussian falloff, divided by the segment's length so slow strokes run hot, and never less than a small floor so a swipe still shows. The unseen hand is a smooth union of a rounded box and five capsules, mirrored for a left hand, with an extra Gaussian of warmth at the palm's centre; it only presses while the pointer is idle. The present pass maps heat through nine liquid crystal keys from black through rust, copper, gold, green, turquoise, blue and violet back to near black, and warps the lookup with slow noise so the colour bands have living edges.",
+      source: "src/effects/thermo",
+    },
+    accent: "#3fc6b4",
+    controls: [
+      ctl("warmth", "Warmth", 0.4, 2, 0.01, 1),
+      ctl("cool", "Cooling", 0.3, 3, 0.01, 1),
+    ],
+    create: (setup) => createThermo(setup, { step: thermoStep, present: thermoPresent }),
   },
 ]
 
