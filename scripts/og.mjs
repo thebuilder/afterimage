@@ -12,6 +12,9 @@
 //
 // Every effect page links its own card, and `/` links the newest one, so
 // `check:registry` fails when any effect is missing its card.
+//
+// The same art, without type, is also written small as public/thumb/<id>.webp:
+// the picture on the effect's card in the Archive.
 import { mkdirSync, writeFileSync } from "node:fs"
 import { createRequire } from "node:module"
 import path from "node:path"
@@ -47,6 +50,11 @@ for (const t of targets) {
 
 mkdirSync(path.join(root, "out"), { recursive: true })
 mkdirSync(path.join(root, "public", "og"), { recursive: true })
+mkdirSync(path.join(root, "public", "thumb"), { recursive: true })
+
+/** Archive thumbnails: the card's art without type, small enough that all of them weigh little. */
+const THUMB_W = 640
+const THUMB_H = Math.round((THUMB_W * H) / W)
 
 const chromium = await loadChromium()
 const browser = chromium ? await chromium.launch() : null
@@ -168,6 +176,31 @@ await page.evaluate(() => document.fonts.ready)
 await page.screenshot({ path: path.join(root, "public", "og", `${fx.id}.jpg`), type: "jpeg", quality: 84 })
 await page.close()
 console.log(`wrote public/og/${fx.id}.jpg (${fx.name})`)
+
+// ── Thumbnail ───────────────────────────────────────────────────────────
+// Chromium encodes WebP from a canvas; Playwright screenshots cannot.
+const thumbPage = await browser.newPage()
+const webp = await thumbPage.evaluate(
+  async ({ src, w, h }) => {
+    const img = new Image()
+    img.src = src
+    await img.decode()
+    const c = document.createElement("canvas")
+    c.width = w
+    c.height = h
+    const ctx = c.getContext("2d")
+    ctx.imageSmoothingQuality = "high"
+    ctx.drawImage(img, 0, 0, w, h)
+    return c.toDataURL("image/webp", 0.8)
+  },
+  { src: `data:image/png;base64,${art.toString("base64")}`, w: THUMB_W, h: THUMB_H }
+)
+await thumbPage.close()
+writeFileSync(
+  path.join(root, "public", "thumb", `${fx.id}.webp`),
+  Buffer.from(webp.slice(webp.indexOf(",") + 1), "base64")
+)
+console.log(`wrote public/thumb/${fx.id}.webp`)
 }
 
 async function loadChromium() {

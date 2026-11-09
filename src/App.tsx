@@ -1,6 +1,7 @@
 import type * as React from "react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
+import { ArchiveTrack, type TrackHandle, type TrackItem } from "@/components/archive-track"
 import { ShaderView } from "@/components/shader-view"
 import { EFFECTS } from "@/effects"
 import type { HeroEffect } from "@/effects/types"
@@ -206,7 +207,8 @@ export default function App() {
             ref={(el) => {
               sections.current[i] = el
             }}
-            running={running}
+            // The Archive covers the whole screen, so the feed rests under it.
+            running={running && !archiveOpen}
             showCopy={chrome}
           />
         ))}
@@ -532,11 +534,14 @@ function Sheet({
   open,
   onClose,
   label,
+  wide = false,
   children,
 }: {
   open: boolean
   onClose: () => void
   label: string
+  /** Edge to edge, on solid ground, instead of a reading column over the blurred picture. */
+  wide?: boolean
   children: React.ReactNode
 }) {
   const ref = useRef<HTMLDialogElement>(null)
@@ -554,7 +559,7 @@ function Sheet({
   return (
     <dialog
       aria-label={label}
-      className="sheet"
+      className={cn("sheet", wide && "bg-bg backdrop-blur-none")}
       onClick={(ev) => {
         if (ev.target === ev.currentTarget) onClose()
       }}
@@ -562,7 +567,7 @@ function Sheet({
       ref={ref}
     >
       {open ? (
-        <div className="relative mx-auto flex h-full max-w-5xl flex-col">
+        <div className={cn("relative mx-auto flex h-full flex-col", !wide && "max-w-5xl")}>
           <button
             className="absolute top-4 right-4 z-10 rounded-full border border-line bg-bg px-3.5 py-1.5 text-dim text-sm transition-colors hover:border-fg/40 hover:text-fg sm:top-6 sm:right-6"
             onClick={onClose}
@@ -593,9 +598,11 @@ const haystack = (e: HeroEffect) =>
 const HAYSTACKS = new Map(FEED.map((e) => [e, haystack(e)]))
 
 /**
- * Every experiment, newest first, with a search box over names, categories,
- * taglines and techniques. Every word typed has to match somewhere, so
- * "fluid pointer" narrows rather than widens. Enter opens the first result.
+ * Every experiment, newest first, as cards on a winding track that scrolling
+ * rides along (see ArchiveTrack). A search box over names, categories,
+ * taglines and techniques narrows the track: every word typed has to match
+ * somewhere, so "fluid pointer" narrows rather than widens. Up and Down ride
+ * the track from the search box, and Enter opens the card at the front.
  */
 function ArchiveSheet({
   open,
@@ -609,96 +616,131 @@ function ArchiveSheet({
   active: number
 }) {
   const [query, setQuery] = useState("")
-  const words = query.toLowerCase().split(/\s+/).filter(Boolean)
-  const results = FEED.map((e, i) => ({ e, i })).filter(({ e }) => {
-    const hay = HAYSTACKS.get(e) ?? ""
-    return words.every((w) => hay.includes(w))
-  })
+  const [focus, setFocus] = useState(0)
+  const track = useRef<TrackHandle>(null)
+
+  const results = useMemo<TrackItem[]>(() => {
+    const words = query.toLowerCase().split(/\s+/).filter(Boolean)
+    return FEED.map((e, i) => ({ effect: e, index: i, href: pathFor({ index: i, how: false }) })).filter(
+      ({ effect }) => {
+        const hay = HAYSTACKS.get(effect) ?? ""
+        return words.every((w) => hay.includes(w))
+      }
+    )
+  }, [query])
+
+  const current = results[Math.min(focus, results.length - 1)]
+  const close = () => {
+    setQuery("")
+    setFocus(0)
+    onClose()
+  }
+  const openEffect = (i: number) => {
+    setQuery("")
+    setFocus(0)
+    onGo(i)
+  }
 
   return (
-    <Sheet
-      label="Archive"
-      onClose={() => {
-        setQuery("")
-        onClose()
-      }}
-      open={open}
-    >
-      <div className="px-4 pt-7 sm:px-6 sm:pt-9">
-        <p className="text-dim text-sm">The archive, newest first</p>
-        <label className="mt-6 flex items-baseline gap-3 border-line border-b pb-3 focus-within:border-fg">
-          <span className="sr-only">Search the archive</span>
-          <svg aria-hidden className="size-4 shrink-0 self-center text-faint" fill="none" stroke="currentColor" viewBox="0 0 16 16">
-            <circle cx="7" cy="7" r="5" />
-            <path d="m11 11 4 4" />
-          </svg>
-          <input
-            autoComplete="off"
-            // Focused when the sheet opens, so typing searches at once.
-            data-autofocus
-            className="w-full bg-transparent font-medium text-2xl tracking-tight outline-none placeholder:text-faint sm:text-3xl [&::-webkit-search-cancel-button]:appearance-none"
-            onChange={(ev) => setQuery(ev.target.value)}
-            onKeyDown={(ev) => {
-              if (ev.key === "Enter" && results.length > 0) {
-                setQuery("")
-                onGo(results[0].i)
-              }
-            }}
-            placeholder="Search by name, mood or technique"
-            spellCheck={false}
-            type="search"
-            value={query}
-          />
-          <span className="meta shrink-0 text-faint tabular-nums">
-            {results.length}/{FEED.length}
-          </span>
-        </label>
-      </div>
-      <ol className="min-h-0 flex-1 overflow-y-auto px-4 pb-10 sm:px-6">
-        {results.map(({ e, i }) => (
-          <li key={e.id}>
+    <Sheet label="Archive" onClose={close} open={open} wide>
+      {/* The keys work wherever focus is, in the search box or on a card. */}
+      <div
+        className="absolute inset-0"
+        onKeyDown={(ev) => {
+          if (ev.metaKey || ev.ctrlKey || ev.altKey) return
+          if (ev.key === "Enter" && current) {
+            ev.preventDefault()
+            openEffect(current.index)
+          } else if (ev.key === "ArrowDown" || ev.key === "PageDown") {
+            ev.preventDefault()
+            track.current?.go(focus + 1)
+          } else if (ev.key === "ArrowUp" || ev.key === "PageUp") {
+            ev.preventDefault()
+            track.current?.go(focus - 1)
+          }
+        }}
+      >
+        {/* A low glow in the colour of the card at the front. */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 transition-[background] duration-700"
+          style={{
+            background: current
+              ? `radial-gradient(70% 55% at 50% 42%, color-mix(in srgb, ${current.effect.accent} 16%, transparent), transparent 70%)`
+              : undefined,
+          }}
+        />
+
+        <ArchiveTrack
+          initial={query ? 0 : active}
+          items={results}
+          onFocusChange={setFocus}
+          onOpen={openEffect}
+          ref={track}
+        />
+
+        <div className="pointer-events-none absolute inset-x-0 top-0 px-4 pt-4 pr-24 sm:px-6 sm:pt-6 sm:pr-28">
+          <label className="pointer-events-auto flex max-w-xl items-center gap-3 rounded-full border border-line bg-glass py-2 pr-4 pl-4 backdrop-blur-md focus-within:border-fg/50">
+            <span className="sr-only">Search the archive</span>
+            <svg aria-hidden className="size-4 shrink-0 text-faint" fill="none" stroke="currentColor" viewBox="0 0 16 16">
+              <circle cx="7" cy="7" r="5" />
+              <path d="m11 11 4 4" />
+            </svg>
+            <input
+              autoComplete="off"
+              // Focused when the sheet opens, so typing searches at once.
+              data-autofocus
+              className="w-full bg-transparent text-base outline-none placeholder:text-faint [&::-webkit-search-cancel-button]:appearance-none"
+              onChange={(ev) => setQuery(ev.target.value)}
+              placeholder="Search by name, mood or technique"
+              spellCheck={false}
+              type="search"
+              value={query}
+            />
+            <span className="meta shrink-0 text-faint tabular-nums">
+              {results.length}/{FEED.length}
+            </span>
+          </label>
+        </div>
+
+        {current ? (
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-end justify-between gap-6 px-4 pb-5 sm:px-6 sm:pb-7">
             <a
-              aria-current={i === active ? "true" : undefined}
-              className="group grid grid-cols-[2.5rem_1fr] items-baseline gap-x-4 border-line border-b py-3 sm:grid-cols-[3.5rem_1fr_auto]"
-              href={pathFor({ index: i, how: false })}
+              className="pointer-events-auto group min-w-0 max-w-2xl"
+              href={current.href}
+              key={current.effect.id}
               onClick={(ev) => {
                 if (isModifiedClick(ev)) return
                 ev.preventDefault()
-                setQuery("")
-                onGo(i)
+                openEffect(current.index)
               }}
             >
-              <span className="meta tabular-nums" style={{ color: e.accent }}>
-                {numberOf(e)}
+              <span className="meta block text-faint">
+                <span style={{ color: current.effect.accent }}>No. {numberOf(current.effect)}</span>
+                {"  ·  "}
+                {current.effect.published ? formatDate(current.effect.published) : current.effect.category}
               </span>
-              <span className="min-w-0">
-                <span
-                  className={cn(
-                    "block font-medium text-2xl tracking-tight transition-colors sm:text-4xl",
-                    i === active ? "text-fg" : "text-dim group-hover:text-fg"
-                  )}
-                >
-                  {e.name}
-                </span>
-                <span className="mt-1 block truncate text-faint text-sm transition-colors group-hover:text-dim">
-                  {e.tagline}
-                </span>
+              <span className="mt-2 block font-medium text-4xl leading-[0.95] tracking-tight sm:text-6xl">
+                {current.effect.name}
               </span>
-              <span className="meta hidden text-faint sm:block">
-                {e.published ? formatDate(e.published) : e.category}
-              </span>
+              <span className="mt-2 line-clamp-2 block text-dim text-sm sm:text-base">{current.effect.tagline}</span>
             </a>
-          </li>
-        ))}
-        {results.length === 0 ? (
-          <li className="py-10 text-dim">
+            <div className="meta hidden shrink-0 text-right text-faint sm:block">
+              <span className="text-fg tabular-nums">{String(focus + 1).padStart(2, "0")}</span>
+              {" / "}
+              <span className="tabular-nums">{String(results.length).padStart(2, "0")}</span>
+              <span className="mt-1 block">Scroll to ride · Enter to open</span>
+            </div>
+          </div>
+        ) : (
+          <p className="absolute inset-x-0 top-1/2 px-6 text-center text-dim">
             Nothing matches “{query}”.{" "}
             <button className="text-fg underline underline-offset-4" onClick={() => setQuery("")} type="button">
               Clear the search
             </button>
-          </li>
-        ) : null}
-      </ol>
+          </p>
+        )}
+      </div>
     </Sheet>
   )
 }

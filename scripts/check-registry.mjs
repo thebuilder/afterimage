@@ -120,6 +120,9 @@ if (!arg) {
     if (!existsSync(path.join(root, "public/og", `${e.id}.jpg`))) {
       problems.push(`public/og/${e.id}.jpg is missing, run \`npm run og -- ${e.id}\``)
     }
+    if (!existsSync(path.join(root, "public/thumb", `${e.id}.webp`))) {
+      problems.push(`public/thumb/${e.id}.webp is missing, run \`npm run og -- ${e.id}\``)
+    }
   }
 }
 
