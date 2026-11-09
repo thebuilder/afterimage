@@ -1,5 +1,6 @@
 import type * as React from "react"
 import { useEffect, useImperativeHandle, useLayoutEffect, useRef, useState } from "react"
+import { flushSync } from "react-dom"
 
 import type { HeroEffect } from "@/effects/types"
 import { cn } from "@/lib/utils"
@@ -160,9 +161,18 @@ export function ArchiveTrack({
   useLayoutEffect(() => {
     const el = scroller.current
     if (!el) return
-    const measure = () => setGeo(geometryFor(el.clientWidth, el.clientHeight))
-    measure()
-    const ro = new ResizeObserver(measure)
+    // The track mounts inside a dialog that is only shown after this effect
+    // runs, so the first look can find no box at all. A ride sized to nothing
+    // would also start at the top, and its first move would ride backwards
+    // from there, so it waits for the box.
+    const size = () => (el.clientHeight > 0 ? geometryFor(el.clientWidth, el.clientHeight) : null)
+    const first = size()
+    if (first) setGeo(first)
+    const ro = new ResizeObserver(() => {
+      const g = size()
+      // Synchronously, so a view transition into the Archive already sees the cards.
+      if (g) flushSync(() => setGeo(g))
+    })
     ro.observe(el)
     return () => ro.disconnect()
   }, [])
@@ -252,6 +262,10 @@ export function ArchiveTrack({
       if (scroller.current) scroller.current.scrollTop = p * geo.scroll
       pos.current = p
       target.current = p
+    } else if (geo && scroller.current) {
+      // A resize changes the scroll per card: keep the scroll on the same card,
+      // or the next scroll event would read a different place and ride there.
+      scroller.current.scrollTop = target.current * geo.scroll
     }
     draw.current()
   }, [geo, items, count, initial])

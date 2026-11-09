@@ -100,7 +100,7 @@ export default function App() {
   const [archiveVisit, setArchiveVisit] = useState(0)
   // The screen just opened from the Archive shows its card's picture on top
   // until its own canvas is drawing, then lets it fade.
-  const [arrival, setArrival] = useState<{ index: number; leaving: boolean } | null>(null)
+  const [arrival, setArrival] = useState<{ index: number; settled: boolean } | null>(null)
   const [aboutOpen, setAboutOpen] = useState(false)
   const [scrolled, setScrolled] = useState(initial.index !== 0)
 
@@ -191,7 +191,7 @@ export default function App() {
       const land = () => {
         flushSync(() => {
           setArchiveOpen(false)
-          setArrival({ index, leaving: false })
+          setArrival({ index, settled: false })
         })
         goTo(index, false)
       }
@@ -203,9 +203,10 @@ export default function App() {
       document
         .startViewTransition(land)
         .finished.finally(() => {
-          // Give the canvas a moment to draw, then fade the picture off it.
-          window.setTimeout(() => setArrival({ index, leaving: true }), 350)
-          window.setTimeout(() => setArrival(null), 1100)
+          // The screen fades the picture off as soon as its canvas has a frame
+          // (see Screen). If that never comes, the picture still goes.
+          setArrival((a) => (a?.index === index ? { index, settled: true } : a))
+          window.setTimeout(() => setArrival((a) => (a?.index === index ? null : a)), 3000)
         })
     },
     [goTo]
@@ -275,11 +276,14 @@ export default function App() {
             controls={i === active ? controls : undefined}
             effect={e}
             index={i}
-            arrival={arrival?.index === i ? (arrival.leaving ? "leaving" : "here") : undefined}
+            arrival={arrival?.index === i ? (arrival.settled ? "settled" : "moving") : undefined}
             key={e.id}
             // Only the screen in view and its neighbours hold a canvas, so a
             // year of daily effects never means a year of GPU surfaces.
-            live={Math.abs(i - active) <= 1}
+            // The screen opened from the Archive mounts at once, so its canvas
+            // starts compiling during the view transition, not after it.
+            live={Math.abs(i - active) <= 1 || arrival?.index === i}
+            onArrived={() => window.setTimeout(() => setArrival((a) => (a?.index === i ? null : a)), 700)}
             ref={(el) => {
               sections.current[i] = el
             }}
@@ -396,6 +400,7 @@ function Screen({
   effect,
   index,
   arrival,
+  onArrived,
   active,
   live,
   running,
@@ -410,10 +415,35 @@ function Screen({
   running: boolean
   controls: Readonly<Record<string, number>> | undefined
   showCopy: boolean
-  /** Just opened from the Archive: its card's picture covers it, then fades. */
-  arrival?: "here" | "leaving"
+  /**
+   * Just opened from the Archive: its card's picture covers it while the view
+   * transition runs ("moving"), and fades the moment the canvas has a frame
+   * after it ends ("settled").
+   */
+  arrival?: "moving" | "settled"
+  /** The picture has started to fade. */
+  onArrived: () => void
   ref: React.Ref<HTMLElement>
 }) {
+  // Whether this screen's canvas has drawn. It is unmounted when far away.
+  const [drawn, setDrawn] = useState(false)
+  const [wasLive, setWasLive] = useState(live)
+  if (live !== wasLive) {
+    setWasLive(live)
+    if (!live) setDrawn(false)
+  }
+  const fading = arrival === "settled" && drawn
+  const announced = useRef(false)
+  useEffect(() => {
+    if (!fading) {
+      announced.current = false
+      return
+    }
+    if (announced.current) return
+    announced.current = true
+    onArrived()
+  }, [fading, onArrived])
+
   return (
     <section
       aria-label={effect.name}
@@ -434,6 +464,7 @@ function Screen({
           // tilt is what makes some laptops hiss (coil whine).
           fps={60}
           maxDpr={effect.maxDpr ?? 1.5}
+          onReady={() => setDrawn(true)}
           // Neighbours mount while the current screen is settled, so they
           // render a few frames up front and arrive with a picture.
           prime={!active}
@@ -456,11 +487,11 @@ function Screen({
           alt=""
           aria-hidden
           className={cn(
-            "pointer-events-none absolute inset-0 size-full object-cover transition-opacity duration-700 ease-out-quint",
-            arrival === "leaving" ? "opacity-0" : "opacity-100"
+            "pointer-events-none absolute inset-0 size-full object-cover transition-opacity duration-500 ease-out-quint",
+            fading ? "opacity-0" : "opacity-100"
           )}
           src={`/thumb/${effect.id}.webp`}
-          style={{ viewTransitionName: arrival === "here" ? CARD_TRANSITION : undefined }}
+          style={{ viewTransitionName: arrival === "moving" ? CARD_TRANSITION : undefined }}
         />
       ) : null}
 
