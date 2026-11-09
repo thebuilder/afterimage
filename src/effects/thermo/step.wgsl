@@ -38,14 +38,19 @@ fn smin(a: f32, b: f32, k: f32) -> f32 {
 }
 
 /// A flat right hand, fingers up, in screen units of height 1: negative inside.
+/// The palm is no wider than the four fingers that grow from its top edge,
+/// and narrows a little toward the wrist.
 fn hand(q: vec2f) -> f32 {
-  let pd = abs(q - vec2f(0.0, -0.01)) - vec2f(0.06, 0.07);
-  var d = length(max(pd, vec2f(0.0))) + min(max(pd.x, pd.y), 0.0) - 0.035;
-  d = smin(d, capsule(q, vec2f(-0.052, 0.07), vec2f(-0.074, 0.19), 0.019), 0.012);
-  d = smin(d, capsule(q, vec2f(-0.017, 0.08), vec2f(-0.022, 0.222), 0.02), 0.012);
-  d = smin(d, capsule(q, vec2f(0.02, 0.078), vec2f(0.032, 0.208), 0.019), 0.012);
-  d = smin(d, capsule(q, vec2f(0.054, 0.062), vec2f(0.082, 0.16), 0.017), 0.012);
-  d = smin(d, capsule(q, vec2f(-0.062, -0.05), vec2f(-0.15, 0.03), 0.023), 0.02);
+  let taper = 1.0 + 0.22 * clamp(-(q.y + 0.02) / 0.09, 0.0, 1.0);
+  let pd = abs(vec2f(q.x * taper, q.y + 0.018)) - vec2f(0.03, 0.05);
+  var d = length(max(pd, vec2f(0.0))) + min(max(pd.x, pd.y), 0.0) - 0.026;
+  // Knuckles sit in a gentle arc along the palm's top edge; the fingers fan out.
+  d = smin(d, capsule(q, vec2f(-0.04, 0.052), vec2f(-0.063, 0.168), 0.0165), 0.008);
+  d = smin(d, capsule(q, vec2f(-0.013, 0.06), vec2f(-0.018, 0.192), 0.0175), 0.008);
+  d = smin(d, capsule(q, vec2f(0.014, 0.058), vec2f(0.024, 0.181), 0.0165), 0.008);
+  d = smin(d, capsule(q, vec2f(0.04, 0.045), vec2f(0.066, 0.138), 0.0145), 0.008);
+  // The thumb leaves from low on the palm's side and angles out and up.
+  d = smin(d, capsule(q, vec2f(-0.04, -0.045), vec2f(-0.112, 0.022), 0.019), 0.016);
   return d;
 }
 
@@ -85,12 +90,12 @@ fn heatAt(uv: vec2f) -> f32 {
     let s = sin(sim.palm.z);
     let q = vec2f(c * rel.x + s * rel.y, -s * rel.x + c * rel.y);
     // Smaller on a narrow screen, so the whole hand fits across it.
-    let size = 1.55 * mix(0.72, 1.0, clamp((sim.aspect - 0.5) / 0.7, 0.0, 1.0));
+    let size = 1.75 * mix(0.72, 1.0, clamp((sim.aspect - 0.5) / 0.7, 0.0, 1.0));
     let d = hand(q / size) * size;
     // The palm's middle is the warmest part of a hand, the fingertips the coolest.
-    let qc = q / size - vec2f(0.0, -0.015);
-    let core = exp(-dot(qc, qc) / 0.005);
-    let inside = smoothstep(0.006, -0.01, d) * (0.55 + 0.25 * smoothstep(0.0, -0.05, d) + 0.5 * core);
+    let qc = (q / size - vec2f(0.0, -0.03)) * vec2f(1.25, 1.0);
+    let core = exp(-dot(qc, qc) / 0.0035);
+    let inside = smoothstep(0.006, -0.01, d) * (0.55 + 0.25 * smoothstep(0.0, -0.04, d) + 0.5 * core);
     t += sim.dt * 1.0 * sim.warmth * sim.palm.w * inside;
   }
 
