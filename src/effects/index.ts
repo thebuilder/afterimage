@@ -56,6 +56,10 @@ import { createThermo } from "./thermo/pipeline"
 import thermoStep from "./thermo/step.wgsl"
 import thermoPresent from "./thermo/present.wgsl"
 
+import { createHarmonograph } from "./harmonograph/pipeline"
+import harmonographDraw from "./harmonograph/draw.wgsl"
+import harmonographPresent from "./harmonograph/present.wgsl"
+
 /** Terse control literal. `key` has to match the WGSL `Params` member for single-pass effects. */
 const ctl = (
   key: string,
@@ -1084,6 +1088,54 @@ const ENTRIES: readonly Entry[] = [
       ctl("cool", "Cooling", 0.3, 3, 0.01, 1),
     ],
     create: (setup) => createThermo(setup, { step: thermoStep, present: thermoPresent }),
+  },
+  {
+    id: "harmonograph",
+    name: "Harmonograph",
+    published: "2026-11-10",
+    category: "Drawing",
+    tagline: "Two pendulums swing a pen across cream paper, and you tune them while it draws.",
+    summary:
+      "A Victorian drawing machine: two pendulums swing a pen over a sheet of laid paper on a slowly turning table. Each swing dies away, so the pen spirals inward through dozens of loops and leaves a fine figure in blue-black ink, darker where lines cross. When the swing has died, the sheet clears and a new figure begins. Moving the pointer retunes the pendulums as the pen runs. Speed sets how fast the pen moves, Weight the line, and Damping how quickly each swing dies.",
+    explanation: [
+      { title: "Swing the pendulums", body: "Each axis is driven by two pendulums at nearly the same rate. Their sum beats slowly, and x against y in a simple ratio, such as two to three, sets the figure." },
+      { title: "Let it die away", body: "Every swing loses a little energy each cycle, so the loops shrink toward the middle, and the paper table turns slowly beneath the pen so they never retrace." },
+      { title: "Lay the ink", body: "Each frame only the pixels near the pen's path are touched. The stretch the pen covered is inked with flat ends, so frames join without beads, and ink pools darker where the pen slows." },
+    ],
+    rationale: {
+      idea: "A pendulum drawing machine that traces a fine, ever-tightening figure in ink on cream paper, with the pointer retuning the pendulums while it draws.",
+      firstSeconds: "A small steel pen is already moving, sweeping big confident loops across the paper; within ten seconds dozens of fine lines have built up into a symmetrical, woven figure.",
+      interaction: "Moving across and up the screen detunes the second pendulum on each axis. Near the middle the loops close neatly on themselves; further out they precess into spirals and lace. The drawing records every change, so the sheet becomes a record of where your hand was.",
+      headline: "The empty paper on the left. The figure is drawn right of centre and never leaves its circle, and dark type on cream is the easiest headline there is.",
+      nearest: "Ink, the other effect where ink lands on paper. Ink is a fluid that blooms and drifts; here a single precise line is laid by machinery, nothing moves once drawn, and the picture is made of time.",
+      risks: "A shader redrawing the whole curve every frame would be slow, so the sheet keeps the ink and only the pixels near this frame's stretch of path do any work. Retuning a pendulum mid-drawing would jump the pen, so phases are carried forward frame by frame. Round line ends would bead every join, so both ends are cut flat.",
+    },
+    technical: {
+      insight: "Keeping the drawing in a texture and inking only the stretch of path the pen covered this frame makes an endlessly growing figure cost almost nothing, however many loops it holds.",
+      pipeline: [
+        "cpu · pendulum phases carried forward frame by frame so retuning never jumps the pen; sheet timing, ratios and the box the pen swept this frame",
+        "fragment · ink pass on a screen-sized half-float sheet: pixels outside the swept box copy through; the rest measure distance to 24 flat-ended segments of the path and add ink",
+        "fragment · laid paper, ink darkening as it crosses itself with a faint bleed, and a steel pen with its shadow",
+      ],
+      techniques: [
+        "harmonograph",
+        "decaying Lissajous curves",
+        "persistent ink buffer",
+        "bounding-box culling",
+        "segment distance fields",
+        "phase accumulation",
+      ],
+      notes:
+        "Each axis is the sum of two damped sines at nearly equal frequency, so the axis beats slowly, and the axes run in a simple ratio that changes from sheet to sheet; the whole is rotated by a slowly turning table. The phases are integrated on the CPU and passed as the phase at the start of the frame, so when the pointer detunes a pendulum its speed changes but its position does not. The ink lives in an rgba16float ping-pong buffer at screen resolution, capped at 2400 pixels. Each frame the CPU evaluates the pen at 25 points over the frame's stretch of pendulum time and passes their bounding box; pixels outside it copy their ink and return. Inside, the shader measures distance to the 24 segments, cutting the first and last flat so neighbouring frames never ink the same spot twice, and adds coverage scaled up where the pen moves slowly. When the swing has died to an eighth, the pen lifts, the sheet fades out over a second and a half, and a new sheet begins with fresh phases and the next ratio.",
+      source: "src/effects/harmonograph",
+    },
+    accent: "#1d2550",
+    controls: [
+      ctl("speed", "Speed", 0.4, 2.5, 0.01, 1),
+      ctl("weight", "Weight", 0.5, 2.5, 0.01, 1),
+      ctl("damping", "Damping", 0.5, 2.5, 0.01, 1),
+    ],
+    create: (setup) => createHarmonograph(setup, { draw: harmonographDraw, present: harmonographPresent }),
   },
 ]
 

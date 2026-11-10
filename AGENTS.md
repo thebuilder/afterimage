@@ -109,7 +109,7 @@ something worth leaving on with the UI hidden. One to three controls.
 
 ```bash
 npm run check:wgsl        # 27 shaders checked, 0 failing
-npm run check:registry    # 22 effects checked, 0 problems
+npm run check:registry    # 23 effects checked, 0 problems
 npm run typecheck
 npm run lint
 npm run build
