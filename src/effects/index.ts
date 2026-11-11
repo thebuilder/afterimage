@@ -60,6 +60,9 @@ import { createHarmonograph } from "./harmonograph/pipeline"
 import harmonographDraw from "./harmonograph/draw.wgsl"
 import harmonographPresent from "./harmonograph/present.wgsl"
 
+import { createMoire } from "./moire/pipeline"
+import moireWgsl from "./moire/moire.wgsl"
+
 /** Terse control literal. `key` has to match the WGSL `Params` member for single-pass effects. */
 const ctl = (
   key: string,
@@ -1137,6 +1140,51 @@ const ENTRIES: readonly Entry[] = [
       ctl("damping", "Damping", 0.5, 2.5, 0.01, 1),
     ],
     create: (setup) => createHarmonograph(setup, { draw: harmonographDraw, present: harmonographPresent }),
+  },
+  {
+    id: "moire",
+    name: "Moiré",
+    published: "2026-11-11",
+    category: "Optics",
+    tagline: "Two sheets of printed rings on a light table, and broad fringes that swing with the slightest move.",
+    summary:
+      "Two clear acetate sheets, each printed with hundreds of fine concentric rings, lie on a warm light table, one on top of the other. Where the rings cross, big soft fringes appear that are printed on neither sheet. The top sheet slides with your hand, and because a shift of a single ring width moves every fringe across the disc, the smallest movement sends them sweeping. Pitch sets how fine the rings are, Scale how much larger the top sheet's rings are than the bottom's.",
+    explanation: [
+      { title: "Print the rings", body: "Each sheet is a set of concentric rings, drawn from the distance to its centre. The lines are box-filtered over each pixel, so they stay crisp up close and fade to an even grey where they get finer than a pixel." },
+      { title: "Stack the sheets", body: "Light from the table passes through the bottom ink and then the top, so the two multiply. Where rings fall between each other the light is blocked; where they line up it gets through. That slow alternation is the moiré." },
+      { title: "Slide the top one", body: "The pointer moves the top sheet a small fraction of its own travel, on a stiff spring. Two sets of rings with offset centres make fringes shaped like hyperbolas, and every ring width of offset adds another pair." },
+    ],
+    rationale: {
+      idea: "Two acetate sheets of fine printed rings on a light table, where the picture you see is the interference between them and not on either sheet.",
+      firstSeconds: "Crisp and graphic: a dark disc of hairline rings on warm white, with soft fringes already slowly turning through it as the top sheet drifts.",
+      interaction: "The pointer slides the top sheet. Moiré magnifies motion, so a hand moving a few centimetres sends the fringes sweeping across the whole disc and reshaping, from a bow tie to a fan to a target. It feels like the pattern is far more alive than the hand that moves it.",
+      headline: "The empty light table on the left. The sheets sit right of centre, and dark type on warm white is the easiest headline there is.",
+      nearest: "Overprint, the other effect about inks layered on a light ground. Overprint is a riso image with misregistered colours; here nothing is drawn at all, and the only picture is the interference that two simple patterns make.",
+      risks: "Fine rings alias into false moiré of the screen's own, so every line is box-filtered over its pixel footprint and fades to grey before it can. Too dark a pair of inks turns the disc into a black hole, so the lines are thinner than their gaps. It is one cheap pass with no loops, so it costs almost nothing.",
+    },
+    technical: {
+      insight: "Moiré is a magnifier for motion: shifting one pattern by a single line width moves every fringe by a whole fringe, so a tiny input reads as a big, smooth change.",
+      pipeline: [
+        "cpu · sheet layout from aspect; top sheet follows the pointer at a fraction of its travel on a stiff, slightly underdamped spring, or a slow loop when idle",
+        "fragment · two concentric square-wave ring sets, each box-filtered with fwidth, multiplied through the table light, with clear acetate, cut edges and a soft drop shadow",
+      ],
+      techniques: [
+        "moiré interference",
+        "box-filtered square wave",
+        "analytic antialiasing",
+        "multiplicative compositing",
+        "damped spring",
+      ],
+      notes:
+        "Each sheet's rings are a square wave in the distance to its centre divided by the pitch. Instead of thresholding, the shader integrates the wave over the pixel's footprint, taken from fwidth of the phase: the difference of the wave's running integral at either side divided by the width. Up close that gives crisp antialiased edges; where rings fall below a pixel it settles to the duty cycle, an even grey, so the screen grid never adds its own moiré. The table colour is multiplied by the bottom ink, then by the top ink, each at about 90 percent, so overlapping lines go nearly black and the fringes appear where the two sets fall in and out of step. The top sheet's rings are drawn a little larger, which adds circular fringes to the hyperbolic ones the offset makes. The top sheet floats above the lower one with a soft offset shadow, and both cut edges catch a hairline of light. On the CPU the top sheet's target is the lower sheet's centre plus the pointer's offset from it scaled down to about a sixth and capped, and it follows on a spring with slight overshoot.",
+      source: "src/effects/moire",
+    },
+    accent: "#2a2f55",
+    controls: [
+      ctl("pitch", "Pitch", 0.6, 1.6, 0.01, 1),
+      ctl("scale", "Scale", 0.97, 1.08, 0.001, 1.02),
+    ],
+    create: (setup) => createMoire(setup, moireWgsl),
   },
 ]
 

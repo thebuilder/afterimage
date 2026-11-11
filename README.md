@@ -66,6 +66,7 @@ with `strictPort`, so a busy port fails loudly instead of moving; `shots.sh` and
 | 21 | **Chladni** | finite-volume sand on a 512² r32float grid drifting to the nodal lines of square plate modes, resonance falloff between notes, hashed grains on tilted grids | bow, sand, tempo |
 | 22 | **Thermochrome** | ping-pong heat field with diffusion and cooling, speed-weighted fingertip deposit, hand SDF palm prints, liquid crystal palette with noise-warped bands | warmth, cool |
 | 23 | **Harmonograph** | damped two-pendulum curves pushed by the pointer, persistent ink buffer inked only inside the frame's swept box, flat-ended segment distances, laid paper | speed, weight, damping |
+| 24 | **Moiré** | two box-filtered concentric ring sheets multiplied on a light table, top sheet slid by the pointer on a spring, fringes from interference alone | pitch, scale |
 
 ## Copy
 
@@ -169,7 +170,7 @@ These five are the gate, and the first four need nothing but Node:
 npm run typecheck           # tsc -b --noEmit
 npm run lint                # oxlint
 npm run build               # tsc -b && vite build
-npm run check:registry      # registry invariants: "23 effects checked, 0 problems"
+npm run check:registry      # registry invariants: "24 effects checked, 0 problems"
 npm run check:wgsl          # every .wgsl file: "27 shaders checked, 0 failing"
 ```
 

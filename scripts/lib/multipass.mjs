@@ -73,6 +73,10 @@ export function multipassSpecs(gpu, tgt, { fluxCount = 60_000 } = {}) {
       const { createFerro } = await import(path.join(root, "src/effects/ferro/pipeline.ts"))
       return createFerro({ gpu, target: tgt, quality: 1 }, await load("src/effects/ferro/ferro.wgsl"))
     },
+    moire: async () => {
+      const { createMoire } = await import(path.join(root, "src/effects/moire/pipeline.ts"))
+      return createMoire({ gpu, target: tgt, quality: 1 }, await load("src/effects/moire/moire.wgsl"))
+    },
     raking: async () => {
       const { createRaking } = await import(path.join(root, "src/effects/raking/pipeline.ts"))
       return createRaking({ gpu, target: tgt, quality: 1 }, await load("src/effects/raking/garden.wgsl"))
