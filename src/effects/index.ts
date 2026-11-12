@@ -63,6 +63,10 @@ import harmonographPresent from "./harmonograph/present.wgsl"
 import { createMoire } from "./moire/pipeline"
 import moireWgsl from "./moire/moire.wgsl"
 
+import { createLido } from "./lido/pipeline"
+import lidoSim from "./lido/sim.wgsl"
+import lidoPresent from "./lido/present.wgsl"
+
 /** Terse control literal. `key` has to match the WGSL `Params` member for single-pass effects. */
 const ctl = (
   key: string,
@@ -1185,6 +1189,55 @@ const ENTRIES: readonly Entry[] = [
       ctl("scale", "Scale", 0.97, 1.08, 0.001, 1.02),
     ],
     create: (setup) => createMoire(setup, moireWgsl),
+  },
+  {
+    id: "lido",
+    name: "Lido",
+    published: "2026-11-12",
+    category: "Caustics",
+    tagline: "A sunlit pool seen from above, its tiled floor laced with light, and a fingertip trailing through the water.",
+    summary:
+      "Looking straight down at an outdoor pool on a bright day: warm stone deck on one side, then the water, whose white mosaic floor and dark lane line are covered in a moving net of sunlight. Trail the pointer through the water and a wake spreads out behind it, bending the net and the tiles beneath it, and bouncing back off the pool wall. Left alone, a drop falls now and then. Sun sets how bright the caustics are, Depth how deep and blue the pool reads, and Wake how hard your finger pushes the water.",
+    explanation: [
+      { title: "Ripple the water", body: "A wave equation runs on a coarse grid twice a frame. Your fingertip presses the surface down along its path, a drop makes a sharp dimple, and the wall holds the water flat so ripples reflect off it." },
+      { title: "Bend the light", body: "Where the surface is concave it focuses sunlight and where it is convex it spreads it, so each ripple shows on the floor as a ring of light and a ring of shade, worked out from the surface's curvature." },
+      { title: "Lace the floor", body: "The fine net of light from the wind on the water is a cheap self-warping pattern, pushed around by the ripples' slope so your wake visibly drags it." },
+      { title: "Look through", body: "The tiles are drawn where the refracted view lands, so they wobble under every ripple, then tinted by the water: red light is lost first, so deeper reads bluer." },
+    ],
+    rationale: {
+      idea: "A sunlit lido seen from straight above, its tiled floor laced with moving light, where your fingertip trails through the water.",
+      firstSeconds: "Summer at once: pale stone on the left, clear aqua water on the right, a bright net of sunlight wriggling over white tiles and a dark lane line, and now and then a drop ringing out.",
+      interaction: "The pointer is a fingertip in the water. Drag it and a wake opens out behind you, the light on the floor bends and rings with it, the tiles and lane line wobble underneath, and the ripples bounce back off the pool wall.",
+      headline: "The stone deck on the left, a calm, warm, nearly flat surface where dark type reads cleanly. On a phone the deck runs along the bottom.",
+      nearest: "Ocean, the other water. Ocean looks across open sea at the sunset; here you look down through still, clear water, the waves are almost invisible, and what you see is the light they throw on the floor.",
+      risks: "A full-resolution water sim would be heavy, so ripples run on a grid capped at 640 pixels and the caustic net is a cheap pattern rather than traced light. A wave solver leaves grid-scale chatter that curvature makes sparkle, so curvature is measured over two cells, which cannot see it. A held finger could punch a hole, so it only pushes when it moves.",
+    },
+    technical: {
+      insight: "Caustics on a pool floor are the surface's curvature made visible: where the water is concave the light converges, so brightness goes as one over the determinant of I minus depth times the height field's Hessian.",
+      pipeline: [
+        "cpu · fingertip stroke, harder the faster it moves and never joined across touches; idle drops at random spots on the water; wall placement from aspect",
+        "fragment × 2 · wave equation on a capped rgba16float ping-pong grid with a little velocity viscosity; pointer stroke and drops pressed in; deck cells held flat so the wall reflects",
+        "fragment · gentle analytic wind waves plus the ripples' slope and two-cell curvature; self-warping caustic net displaced by the slope; focus from the curvature; refracted mosaic tiles and lane line, absorption tint, glints, travertine deck and coping",
+      ],
+      techniques: [
+        "wave equation",
+        "ping-pong simulation",
+        "caustics from curvature",
+        "refraction",
+        "Beer-Lambert absorption",
+        "procedural tiling",
+      ],
+      notes:
+        "The water height lives in an rgba16float ping-pong buffer capped at 640 pixels on its long edge, holding the height now and a step ago, stored a hundred times larger so half floats keep the fine curvature. Each frame it takes two steps of the explicit wave equation with a small viscous term on the velocity's Laplacian, and damping; cells on the deck are clamped to zero, which makes the wall a reflecting edge. The fingertip presses a Gaussian groove along the segment it moved this frame, scaled by speed, and a drop presses a sharper dimple. The present pass reads the slope by central differences and the curvature over a two-cell stencil, which is exactly blind to the checkerboard mode the solver leaves behind. The curvature gives a focus term, one over the determinant of I minus D times the Hessian, softened. The fine net comes from a few rounds of the well-known self-warping trig map, tiled across the floor and displaced by the ripples' slope and seven gentle wind waves. Tiles and the lane line with its T are drawn in floor coordinates offset by the refracted slope, lit by the net times the focus, darkened in the band of shade under the coping, and tinted by exponential absorption that takes red first.",
+      source: "src/effects/lido",
+    },
+    accent: "#3fb6c8",
+    controls: [
+      ctl("sun", "Sun", 0.3, 1.8, 0.01, 1),
+      ctl("depth", "Depth", 0.5, 1.8, 0.01, 1),
+      ctl("wake", "Wake", 0.3, 2.5, 0.01, 1),
+    ],
+    create: (setup) => createLido(setup, { sim: lidoSim, present: lidoPresent }),
   },
 ]
 
