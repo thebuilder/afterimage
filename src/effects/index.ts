@@ -67,6 +67,10 @@ import { createLido } from "./lido/pipeline"
 import lidoSim from "./lido/sim.wgsl"
 import lidoPresent from "./lido/present.wgsl"
 
+import { createSurvey } from "./survey/pipeline"
+import surveySculpt from "./survey/sculpt.wgsl"
+import surveyPresent from "./survey/present.wgsl"
+
 /** Terse control literal. `key` has to match the WGSL `Params` member for single-pass effects. */
 const ctl = (
   key: string,
@@ -1238,6 +1242,55 @@ const ENTRIES: readonly Entry[] = [
       ctl("wake", "Wake", 0.3, 2.5, 0.01, 1),
     ],
     create: (setup) => createLido(setup, { sim: lidoSim, present: lidoPresent }),
+  },
+  {
+    id: "survey",
+    name: "Survey",
+    published: "2026-11-13",
+    category: "Cartography",
+    tagline: "A coast drawn live as a survey map, and a hand that raises islands out of the sea.",
+    summary:
+      "A topographic map on cream paper: pale blue sea ringed with water-lines on one side, land on the other in brown contours, every fifth one heavier, over soft hypsometric tints and hill shading. The terrain is never quite still, so ridges creep and the coast slowly redraws itself. Move the pointer and the ground under it rises: sweep over the sea and an island surfaces, ringed at once by new contours, and a loop leaves an atoll with a lagoon. What you raise slowly wears back down. Detail sets the contour interval, Lift how fast the hand raises land, and Wear how quickly it erodes.",
+    explanation: [
+      { title: "Shape the land", body: "The terrain is five octaves of smooth noise, each drifting its own way so the land morphs rather than slides, tilted so the sea lies on the left, plus whatever the hand has raised." },
+      { title: "Raise it by hand", body: "A small grid remembers how much the pointer has lifted each spot. The hand pushes up a broad mound along its path, and each frame the raised land slumps toward its neighbours and wears a little lower." },
+      { title: "Draw the lines", body: "Contours are lines at every whole multiple of the interval. Each is antialiased by how fast the height changes across the pixel, so it stays a crisp single line on steep slopes and flat ones alike." },
+      { title: "Chart the sea", body: "Below sea level the same trick draws water-lines, spaced by the square root of depth so they crowd the shore and spread out to sea, under a heavy coastline and a faint graticule." },
+    ],
+    rationale: {
+      idea: "A survey map of a coast drawn live in contour lines, where your hand raises land out of the sea.",
+      firstSeconds: "Calm and cartographic: pale blue sea with fine water-lines on the left, a coast of brown contours and hill shading on the right, and the whole map slowly shifting as ridges creep and the shoreline redraws itself.",
+      interaction: "The pointer lifts the ground under it. Sweep over the sea and an island surfaces within a second, ringed by new contours and water-lines; draw a loop and you get an atoll with a lagoon. Left alone, what you raised slowly wears back into the sea.",
+      headline: "The open sea on the left, pale blue with only faint water-lines and the graticule. On a phone the sea fills the bottom.",
+      nearest: "Raking Light, the other landscape made of lines. There the lines are raked into stone and only show in low sun; here every line is a measured height, and you change the land itself rather than the light on it.",
+      risks: "Contours of a coarse grid kink at every cell, so the raised land is read through a smooth cubic lookup. Lines must stay one pixel wide at any slope, so each is antialiased by its own screen derivative. It is five noise octaves a pixel and one small grid pass, so it stays cheap. A held pointer could build an endless spire, so lift falls off as the land gets high.",
+    },
+    technical: {
+      insight: "A contour is a line at every whole multiple of height over interval, and dividing the distance to the nearest one by its screen derivative turns any height field into crisp, evenly weighted map lines for free.",
+      pipeline: [
+        "cpu · pointer stroke, harder the faster it sweeps and never joined across touches; land tilt from aspect so the sea sits under the headline",
+        "fragment · raised-land grid on a capped rgba16float ping-pong: slump toward neighbours, exponential wear, Gaussian lift along the stroke that saturates with height",
+        "fragment · drifting five-octave terrain plus the raised land through a cubic B-spline lookup; hypsometric tints and hill shading; contours, index contours, coastline and depth-spaced water-lines, each antialiased by its own derivative; graticule and paper",
+      ],
+      techniques: [
+        "contour lines",
+        "derivative antialiasing",
+        "hypsometric tinting",
+        "hill shading",
+        "ping-pong simulation",
+        "cubic B-spline filtering",
+      ],
+      notes:
+        "Height is the sum of a drifting terrain and a hand-raised layer. The terrain is five octaves of quintic value noise, each rotated and offset, and each drifting in its own direction at its own speed, so ridges creep and change shape; a linear tilt pushes the land to the right of wide screens and the top of narrow ones. The raised layer lives in an rgba16float ping-pong grid capped at 512 pixels on its long edge. Each frame it mixes toward the mean of its neighbours, decays exponentially, and gains a Gaussian mound along the segment the pointer covered, scaled by speed and by how far the spot still is from a cap. The present pass reads it with a four-tap cubic B-spline so its contours are smooth curves. Every line is the same function: the distance from height over spacing to the nearest whole number, divided by fwidth of that same quantity and pushed through a smoothstep, which keeps lines a fixed number of pixels wide whatever the slope. Contours use the interval, index contours five intervals, the coastline height itself, and water-lines the square root of depth, so they crowd the shore. Land takes pale hypsometric tints, green through tan to near white, and is shaded by its screen-space gradient against light from the upper left.",
+      source: "src/effects/survey",
+    },
+    accent: "#8c5a2e",
+    controls: [
+      ctl("detail", "Detail", 0.6, 1.8, 0.01, 1),
+      ctl("lift", "Lift", 0.3, 2.5, 0.01, 1),
+      ctl("wear", "Wear", 0.2, 4, 0.01, 1),
+    ],
+    create: (setup) => createSurvey(setup, { sculpt: surveySculpt, present: surveyPresent }),
   },
 ]
 
