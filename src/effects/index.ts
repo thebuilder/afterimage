@@ -71,6 +71,9 @@ import { createSurvey } from "./survey/pipeline"
 import surveySculpt from "./survey/sculpt.wgsl"
 import surveyPresent from "./survey/present.wgsl"
 
+import { createVigil } from "./vigil/pipeline"
+import vigilWgsl from "./vigil/vigil.wgsl"
+
 /** Terse control literal. `key` has to match the WGSL `Params` member for single-pass effects. */
 const ctl = (
   key: string,
@@ -1291,6 +1294,53 @@ const ENTRIES: readonly Entry[] = [
       ctl("wear", "Wear", 0.2, 4, 0.01, 1),
     ],
     create: (setup) => createSurvey(setup, { sculpt: surveySculpt, present: surveyPresent }),
+  },
+  {
+    id: "vigil",
+    name: "Vigil",
+    published: "2026-11-14",
+    category: "Fire",
+    tagline: "One candle in a dark room, and the pointer is the air around it.",
+    summary:
+      "A single ivory candle burns in a near-dark room. Its flame breathes and sways, and the warm light it throws flickers over the wax, the wall behind and the table beneath. The pointer is moving air: pass a hand near the flame and it bows away and sways back upright, sweep past quickly and it gutters, the room darkens, and a thin ribbon of smoke curls up before the flame steadies. Breath sets how strongly the air moves it, and Warmth the colour of the light.",
+    explanation: [
+      { title: "Move the air", body: "The pointer's speed is air, felt more weakly the further it passes from the flame. It pushes the flame on an underdamped spring, so it bows, overshoots and sways back through upright." },
+      { title: "Shape the flame", body: "The flame is a teardrop, round at the root and drawn to a tip, bent further the higher up you go, with turbulence that grows as the air disturbs it: a blue root, a white core and an orange envelope." },
+      { title: "Light the room", body: "Everything else is lit by the flame alone: the wall with a soft falloff, the wax glowing through near the top and darkening down to its foot, and a pool of light along the table." },
+      { title: "Gutter and smoke", body: "A strong enough gust dims the flame and the room with it. While it struggles, smoke builds up and rises as a wandering ribbon that slowly fades once the flame recovers." },
+    ],
+    rationale: {
+      idea: "One candle burning in a dark room, and the pointer is the air around it.",
+      firstSeconds: "Still and intimate: near black, a single ivory candle right of centre, its flame breathing and swaying gently while warm light flickers over the wax and the wall.",
+      interaction: "Moving the pointer moves the air. Pass a hand near the flame and it bows away and sways back; sweep past fast and it gutters, the whole room darkens, and a ribbon of smoke curls up before it steadies. It reads like real breath on a real flame.",
+      headline: "The dark wall on the left, barely touched by the light, where pale type sits on near black. On a phone, the darkness above the flame.",
+      nearest: "Arcs, the other light that the pointer disturbs on a dark ground. Arcs is electric filaments striking at random; this is a single soft flame with weight and sway, and its light is the only thing lighting the scene.",
+      risks: "Fire can look cheap, so the flame has a blue root, a white core and an orange envelope with soft edges, and the room answers its flicker. Air from anywhere on screen would make it twitchy, so its push falls off with distance. It is one pass with a handful of noise lookups, so it costs almost nothing.",
+    },
+    technical: {
+      insight: "A candle scene lit only by its flame reads as real when the flame's brightness and position drive every light in the frame, so one small spring and one brightness value carry the whole picture.",
+      pipeline: [
+        "cpu · pointer velocity as air with an inverse-cube falloff from the flame; underdamped spring for bend and stretch; flicker, gutter brightness and smoke built from the air's strength; slow idle draft and a periodic gust",
+        "fragment · bent teardrop flame with noise turbulence and blue, core and envelope layers; wall, table and wax lit from the moving flame position; melt pool, wick ember, wax runs and a rising smoke ribbon; filmic tonemap",
+      ],
+      techniques: [
+        "procedural flame",
+        "damped spring",
+        "subsurface glow",
+        "inverse-square lighting",
+        "value noise turbulence",
+        "filmic tonemapping",
+      ],
+      notes:
+        "The CPU turns the pointer's velocity, in screen units per second, into air at the flame by weighting it with an inverse-cube falloff of its distance. The air drives two damped springs: sideways bend and vertical stretch, with low damping so the flame overshoots and sways back. The air's strength also raises a flicker value that decays over half a second, lowers the brightness quickly when it passes a threshold and lets it recover slowly, and builds smoke while the flame is dim. In the shader the flame is a teardrop width profile in height, its centreline bent by the lean times height to the power 1.7 and jittered by noise in proportion to flicker; Gaussian cross-sections give an orange envelope, a narrower white core and a blue root. The light position follows the bend. The wall is near black plus a falloff from that light; the wax is a cylinder shaded across its width, lit from above with an exponential fall down its length and an orange subsurface glow near the top; the table carries a pool of light and the candle's contact shade. Smoke is a thin Gaussian ribbon whose centreline wanders with noise and widens as it rises. A filmic curve keeps the core from clipping. Narrow screens zoom out.",
+      source: "src/effects/vigil",
+    },
+    accent: "#f0a050",
+    controls: [
+      ctl("breath", "Breath", 0.3, 2.5, 0.01, 1),
+      ctl("warmth", "Warmth", 0, 1, 0.01, 0.5),
+    ],
+    create: (setup) => createVigil(setup, vigilWgsl),
   },
 ]
 

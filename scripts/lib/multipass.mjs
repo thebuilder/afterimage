@@ -73,6 +73,10 @@ export function multipassSpecs(gpu, tgt, { fluxCount = 60_000 } = {}) {
       const { createFerro } = await import(path.join(root, "src/effects/ferro/pipeline.ts"))
       return createFerro({ gpu, target: tgt, quality: 1 }, await load("src/effects/ferro/ferro.wgsl"))
     },
+    vigil: async () => {
+      const { createVigil } = await import(path.join(root, "src/effects/vigil/pipeline.ts"))
+      return createVigil({ gpu, target: tgt, quality: 1 }, await load("src/effects/vigil/vigil.wgsl"))
+    },
     survey: async () => {
       const { createSurvey } = await import(path.join(root, "src/effects/survey/pipeline.ts"))
       return createSurvey({ gpu, target: tgt, quality: 1 }, {
