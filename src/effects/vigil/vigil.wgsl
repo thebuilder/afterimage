@@ -68,13 +68,23 @@ fn flame(p: vec2f) -> vec3f {
   let grain = vnoise(s * 180.0) * 0.5 + vnoise(s * 41.0) * 0.5;
   var col = vec3f(0.014, 0.011, 0.01) * (0.9 + 0.2 * grain) + warm * wallLight * (0.85 + 0.15 * grain);
 
-  // The table top, a little lighter and lit along the candle's foot.
-  let onTable = 1.0 - smoothstep(params.floor - px, params.floor + px, s.y);
-  let tableLight = L * 0.05 / (0.03 + pow(s.x - w.x, 2.0) * 3.0 + pow(s.y - params.floor, 2.0) * 9.0);
-  let table = vec3f(0.02, 0.016, 0.013) + warm * tableLight * 0.25 * (0.9 + 0.1 * vnoise(vec2f(s.x * 300.0, s.y * 20.0)));
-  // The candle's own shadow falls straight down in front of it, onto the table.
-  let shadow = smoothstep(R * 1.1, R * 0.6, abs(s.x - w.x)) * smoothstep(params.floor - 0.12, params.floor, s.y);
-  col = mix(col, table * (1.0 - 0.5 * shadow), onTable);
+  // The table: dark waxed wood seen at a low angle, so it recedes to a back
+  // edge. The flame lays an oval pool of light around the candle's foot and
+  // the gloss carries a soft, stretched reflection of the lit wax.
+  let z = max(params.floor - s.y, 0.0);
+  let onTable = smoothstep(params.floor + 1.5 * px, params.floor - 1.5 * px, s.y);
+  let dx = s.x - w.x;
+  let spill = L / (1.0 + (dx * dx * 2.5 + z * z * 30.0) / 0.03);
+  let wood = 0.86 + 0.14 * vnoise(vec2f(s.x * 7.0 + vnoise(vec2f(s.x * 2.0, z * 30.0)) * 2.0, z * 160.0 / (1.0 + z * 4.0)));
+  var table = vec3f(0.018, 0.012, 0.009) * wood + vec3f(0.55, 0.36, 0.2) * warm * spill * 0.3 * wood;
+  // The reflection of the candle: its width, fading and blurring toward us.
+  let reflX = 1.0 - smoothstep(0.85, 1.15 + z * 2.0, abs(dx) / R);
+  table += vec3f(0.95, 0.8, 0.6) * warm * L * reflX * exp(-z / 0.06) * 0.07 * wood;
+  // Contact shade right at the foot, and the back edge catching the light.
+  table *= 1.0 - 0.6 * (1.0 - smoothstep(0.0, 0.012, z)) * (1.0 - smoothstep(0.9, 1.3, abs(dx) / R));
+  let edge = exp(-pow((s.y - params.floor) / (1.5 * px), 2.0));
+  table += vec3f(0.6, 0.38, 0.2) * warm * edge * L * 0.25 / (1.0 + dx * dx * 12.0);
+  col = mix(col, table, onTable);
 
   // The candle: an ivory pillar lit from its own flame above, glowing through
   // the wax near the top, darker toward its edges and its foot.
@@ -102,11 +112,15 @@ fn flame(p: vec2f) -> vec3f {
   col = mix(col, vec3f(0.03, 0.02, 0.015), onWick);
   col += vec3f(1.0, 0.3, 0.05) * exp(-length(s - w) / 0.003) * 0.8 * max(params.bright, 0.25);
 
-  // Smoke: a thin wandering ribbon rising from the wick after a disturbance.
-  let sy = s.y - w.y;
-  let sway = (vnoise(vec2f(sy * 6.0 - params.time * 0.8, 2.0)) - 0.5) * sy * 0.5 + params.lean.x * sy * 0.4;
-  let sd = abs(s.x - w.x - sway) / (0.003 + sy * 0.05);
-  let smoke = exp(-sd * sd) * smoothstep(0.02, 0.08, sy) * exp(-sy * 3.5) * params.smoke;
+  // Smoke: soot rising straight off the flame's tip after a disturbance, so
+  // it leaves where the tip is, leaning with it, then wanders as it climbs.
+  let H = 0.15 * (1.0 + params.lean.y) * mix(0.35, 1.0, params.bright);
+  let tip = w + vec2f(params.lean.x * H, H - 0.02);
+  let sy = s.y - tip.y;
+  let climb = max(sy, 0.0);
+  let sway = (vnoise(vec2f(climb * 6.0 - params.time * 0.8, 2.0)) - 0.5) * climb * 0.5 + params.lean.x * climb * 0.35;
+  let sd = abs(s.x - tip.x - sway) / (0.0025 + climb * 0.05);
+  let smoke = exp(-sd * sd) * smoothstep(-0.015, 0.02, sy) * exp(-climb * 3.0) * params.smoke;
   col += vec3f(0.55, 0.52, 0.5) * smoke * 0.5 * (0.12 + wallLight * 5.0);
 
   // The flame itself, and the halo it throws in the air.
