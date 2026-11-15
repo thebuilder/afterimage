@@ -22,6 +22,11 @@ fn pushed(x: f32, l: i32) -> f32 {
   return textureSampleLevel(state, samp, uv, 0.0).r;
 }
 
+/// Everything bending the grass in row l at x: the wind and the hand.
+fn field(x: f32, t: f32, l: i32) -> f32 {
+  return clamp(wind(x, t, f32(l), view.gust) + pushed(x, l), -1.6, 1.6);
+}
+
 @fragment fn fs_main(@location(0) uv: vec2f) -> @location(0) vec4f {
   let aspect = view.aspect;
   let s = vec2f(uv.x * aspect, 1.0 - uv.y);
@@ -42,14 +47,22 @@ fn pushed(x: f32, l: i32) -> f32 {
     let r = row(l);
     let f = f32(l) / 5.0;
     let sp = r.z;
-    let cell = floor(s.x / sp);
     // Distant rows dissolve into the haze; near ones are near-black shapes.
     let haze = mix(col, vec3f(1.0, 0.7, 0.42), 0.4);
     let dark = mix(haze * vec3f(0.75, 0.62, 0.5), vec3f(0.03, 0.022, 0.015), 0.3 + 0.7 * pow(f, 0.6));
     var cov = 0.0;
     var edge = 0.0;
     var along = 0.0;
-    for (var j = -2; j <= 2; j++) {
+    // A bent blade's tip can lean many slots away from its root. Every blade
+    // in a row bends by the same curve of height above ground, so walk back
+    // down that curve to the root this pixel would belong to, and search the
+    // slots around there instead of around the pixel itself.
+    let dy = max(s.y - r.x, 0.0);
+    let lean = 0.55 * dy * dy / r.y;
+    let b0 = field(s.x, t, l);
+    let b1 = field(s.x - b0 * lean, t, l);
+    let cell = floor((s.x - b1 * lean) / sp);
+    for (var j = -3; j <= 3; j++) {
       let id = cell + f32(j);
       let k = vec2f(id, f32(l) * 13.1);
       let h1 = hash21(k);
@@ -57,14 +70,13 @@ fn pushed(x: f32, l: i32) -> f32 {
       let h3 = hash21(k + 19.7);
       let root = (id + 0.5 + (h1 - 0.5) * 0.9) * sp;
       let height = r.y * (0.6 + 0.55 * h2);
-      let ty = (s.y - r.x) / height;
-      if (ty < 0.0 || ty > 1.08) { continue; }
-      let bend = wind(root, t, f32(l), view.gust) * (0.6 + 0.7 * h3) + pushed(root, l) + (h1 - 0.5) * 0.35;
-      let off = bend * height * 0.55 * ty * ty;
-      let slope = 1.1 * bend * ty;
+      let ty = dy / height;
+      if (s.y < r.x || ty > 1.08) { continue; }
+      let bend = field(root, t, l) * (0.95 + 0.1 * h3) + (h1 - 0.5) * 0.12;
+      let off = bend * lean;
+      let slope = 1.1 * bend * dy / r.y;
       let d = abs(s.x - root - off) / sqrt(1.0 + slope * slope);
       var w = r.w * (0.8 + 0.5 * h2) * (1.0 - 0.88 * min(ty, 1.0));
-      // About a third of the stems carry a seed head.
       // About a third of the stems carry a slim seed head, like wild oats.
       if (h3 > 0.66) {
         let q = (ty - 0.93) / 0.11;
