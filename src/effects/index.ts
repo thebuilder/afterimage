@@ -74,6 +74,10 @@ import surveyPresent from "./survey/present.wgsl"
 import { createVigil } from "./vigil/pipeline"
 import vigilWgsl from "./vigil/vigil.wgsl"
 
+import { createMeadow } from "./meadow/pipeline"
+import meadowSpring from "./meadow/spring.wgsl"
+import meadowPresent from "./meadow/present.wgsl"
+
 /** Terse control literal. `key` has to match the WGSL `Params` member for single-pass effects. */
 const ctl = (
   key: string,
@@ -1341,6 +1345,55 @@ const ENTRIES: readonly Entry[] = [
       ctl("warmth", "Warmth", 0, 1, 0.01, 0.5),
     ],
     create: (setup) => createVigil(setup, vigilWgsl),
+  },
+  {
+    id: "meadow",
+    name: "Meadow",
+    published: "2026-11-15",
+    category: "Botanical",
+    tagline: "A field of tall grass at golden hour that you can run your hand through.",
+    summary:
+      "Low sun over a meadow: six rows of grass from hazy distance to a dark foreground, every blade outlined in gold where the light shines through it, wild oat heads nodding, pollen drifting, and gusts rolling across the field. Trail the pointer through the grass and the blades you pass are dragged along and parted around your hand, then spring back and sway past upright, so every sweep sends a wave through the field. Wind sets how hard it blows, Glow how strongly the sun comes through, and Brush how firmly your hand moves the grass.",
+    explanation: [
+      { title: "Plant the rows", body: "Six rows of grass, from short and dense near the horizon to tall and sparse up close. Each pixel only looks at the five blades nearest it in each row, picked by hashing which slot along the row it falls in." },
+      { title: "Bend each blade", body: "A blade bends as a curve that leans more toward its tip. Its bend is the wind, a steady lean plus swells and gust fronts that roll across the field, plus whatever the hand has pushed it." },
+      { title: "Remember the hand", body: "A strip of springs per row, 384 across, holds how far the grass there is pushed and how fast it is moving. The hand drags them the way it moves and parts them around it; each springs back with a little overshoot." },
+      { title: "Light from behind", body: "The sun is low and behind the grass, so blades are dark shapes with gold along their edges and tips, strongest near the sun, and distant rows fade into the warm haze." },
+    ],
+    rationale: {
+      idea: "A field of tall grass at golden hour that you can run your hand through.",
+      firstSeconds: "Warm and quiet: dark grass against a low sun, gold light along every blade edge, gusts rolling across the field from left to right, and pollen drifting in the light.",
+      interaction: "The pointer is a hand trailing through the grass. Blades it passes are dragged along and parted around it, then spring back and sway past upright, so a sweep leaves a wave travelling through the field behind you.",
+      headline: "The clear evening sky over the left half. Down in the lower left the foreground grass is near-black shadow, so pale type reads cleanly over it too.",
+      nearest: "Windwall, the other field of things that bend in the wind. Windwall is a rigid metal facade of hinged fins; here every blade is a soft curve that springs back on its own, lit from behind by a setting sun.",
+      risks: "Testing every blade at every pixel would be slow, so each pixel checks only the five nearest blades in each of six rows, about thirty cheap tests. Per-blade physics would be heavy, so the hand's effect lives in a tiny 384 by 6 strip of springs. Flat silhouettes can look like clip art, so blades carry gold rims where the sun comes through and distant rows dissolve into haze.",
+    },
+    technical: {
+      insight: "Grass only needs physics where a hand has been, and a strip of springs per row, sampled at each blade's root, gives every blade a memory of the hand for the cost of a texture lookup.",
+      pipeline: [
+        "cpu · pointer position and smoothed velocity in screen heights; sun placed low and right of centre",
+        "fragment × 2 · spring strips, 384 by 6 rgba16float ping-pong: bend and velocity per column and row, driven by the hand's velocity and a parting push where the hand is among that row's blades",
+        "fragment · golden-hour sky and sun; six rows back to front, each testing five hashed blades with wind plus spring bend, quadratic lean, slope-corrected width and oat heads; backlit gold rims, haze, pollen; filmic tonemap",
+      ],
+      techniques: [
+        "procedural grass",
+        "damped springs",
+        "ping-pong simulation",
+        "backlighting",
+        "aerial perspective",
+        "spatial hashing",
+      ],
+      notes:
+        "Rows are defined once in a shared WGSL module: ground height, blade height, spacing and width all grow from back to front. For each row a pixel finds its slot along the row and tests that slot and two either side; each blade's root jitter, height, stiffness and whether it carries a seed head come from hashes of its slot and row. The bend is the wind at the root, a steady lean plus two travelling swells and a gust front that sweeps the field every few seconds, scaled per blade, plus the spring value at the root read from the strip texture. The blade's centreline leans by bend times height times the square of the distance up the blade, and the pixel's horizontal distance to it is divided by the slope's length so bent blades keep their width. Coverage is antialiased over a pixel. The strips are stepped twice a frame as damped springs with low damping; the hand applies a force proportional to its horizontal velocity plus a push away from its own x, weighted by a Gaussian in x and by whether its height falls between that row's roots and tips. Shading takes a hazy colour for distant rows and near black up close, plus gold weighted toward edges and tips and toward the sun.",
+      source: "src/effects/meadow",
+    },
+    accent: "#e0a24a",
+    controls: [
+      ctl("wind", "Wind", 0, 2.5, 0.01, 1),
+      ctl("glow", "Glow", 0.3, 1.8, 0.01, 1),
+      ctl("brush", "Brush", 0.3, 2.5, 0.01, 1),
+    ],
+    create: (setup) => createMeadow(setup, { spring: meadowSpring, present: meadowPresent }),
   },
 ]
 

@@ -70,6 +70,7 @@ with `strictPort`, so a busy port fails loudly instead of moving; `shots.sh` and
 | 25 | **Lido** | wave equation on a capped ping-pong grid with a reflecting pool wall, caustic focus from two-cell curvature, self-warping caustic net, refracted mosaic tiles | sun, depth, wake |
 | 26 | **Survey** | drifting five-octave terrain plus a hand-raised ping-pong layer read through a cubic B-spline, derivative-antialiased contours, index contours and depth-spaced water-lines, hill shading | detail, lift, wear |
 | 27 | **Vigil** | bent teardrop flame on an underdamped spring driven by pointer air, flame-lit wall, wax and table, gutter and smoke ribbon, filmic tonemap | breath, warmth |
+| 28 | **Meadow** | six hashed rows of backlit grass blades bent by travelling wind and a 384 by 6 spring strip the hand drags and parts, gold rims, haze, pollen | wind, glow, brush |
 
 ## Copy
 
@@ -173,7 +174,7 @@ These five are the gate, and the first four need nothing but Node:
 npm run typecheck           # tsc -b --noEmit
 npm run lint                # oxlint
 npm run build               # tsc -b && vite build
-npm run check:registry      # registry invariants: "27 effects checked, 0 problems"
+npm run check:registry      # registry invariants: "28 effects checked, 0 problems"
 npm run check:wgsl          # every .wgsl file: "27 shaders checked, 0 failing"
 ```
 
