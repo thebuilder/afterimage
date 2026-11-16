@@ -73,6 +73,13 @@ export function multipassSpecs(gpu, tgt, { fluxCount = 60_000 } = {}) {
       const { createFerro } = await import(path.join(root, "src/effects/ferro/pipeline.ts"))
       return createFerro({ gpu, target: tgt, quality: 1 }, await load("src/effects/ferro/ferro.wgsl"))
     },
+    noctiluca: async () => {
+      const { createNoctiluca } = await import(path.join(root, "src/effects/noctiluca/pipeline.ts"))
+      return createNoctiluca({ gpu, target: tgt, quality: 1 }, {
+        sim: await load("src/effects/noctiluca/sim.wgsl"),
+        present: await load("src/effects/noctiluca/present.wgsl"),
+      })
+    },
     meadow: async () => {
       const { createMeadow } = await import(path.join(root, "src/effects/meadow/pipeline.ts"))
       return createMeadow({ gpu, target: tgt, quality: 1 }, {

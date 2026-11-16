@@ -77,6 +77,9 @@ import vigilWgsl from "./vigil/vigil.wgsl"
 import { createMeadow } from "./meadow/pipeline"
 import meadowSpring from "./meadow/spring.wgsl"
 import meadowPresent from "./meadow/present.wgsl"
+import { createNoctiluca } from "./noctiluca/pipeline"
+import noctilucaSim from "./noctiluca/sim.wgsl"
+import noctilucaPresent from "./noctiluca/present.wgsl"
 
 /** Terse control literal. `key` has to match the WGSL `Params` member for single-pass effects. */
 const ctl = (
@@ -1394,6 +1397,54 @@ const ENTRIES: readonly Entry[] = [
       ctl("brush", "Brush", 0.3, 2.5, 0.01, 1),
     ],
     create: (setup) => createMeadow(setup, { spring: meadowSpring, present: meadowPresent }),
+  },
+  {
+    id: "noctiluca",
+    name: "Noctiluca",
+    published: "2026-11-16",
+    category: "Bioluminescence",
+    tagline: "A beach at night where the breaking surf glows blue, and so does your touch.",
+    summary:
+      "Seen from above on a moonless night: dark ribbed sand on the left, black sea on the right, and surf rolling in. The water is full of plankton that flash blue when disturbed, so every wave lights up along its lip as it breaks, its swash carries the glow up the beach and drags it back, and the light dies away in a second or two. Move the pointer through the water and it leaves a trail of thousands of blue sparks that drifts with the swash; brush the wet sand and it sparkles too. Surf sets how big and fast the waves are, Glow how bright the plankton are, and Linger how long their light lasts.",
+    explanation: [
+      { title: "Lay out the shore", body: "Every point is measured as a distance out to sea from a wandering waterline and a position along the beach. Three waves cycle in turn: each crest travels in, breaks, then runs up the sand as swash and drains back." },
+      { title: "Remember the light", body: "A small texture holds how brightly the water glows at each point, how wet the sand is, and the pointer's own trail. Each frame the glow fades, rides along with the swash, and is topped up wherever a wave is breaking or the pointer moves." },
+      { title: "Make it sparkle", body: "The glow is drawn as a soft haze plus single points of light: a fine grid of plankton, each with its own threshold, lights once the glow there is high enough and twinkles. Two turned grids keep the sparks from lining up." },
+      { title: "Draw the night", body: "Ribbed sand under faint moonlight, glossy where the sea has wet it, a thin film of swash, lit wave faces, lace of foam behind breaking crests, and a crisp glowing lip drawn exactly on each breaker." },
+    ],
+    rationale: {
+      idea: "A beach at night where the breaking surf glows blue, and so does your touch.",
+      firstSeconds: "Dark and calm, then a wave breaks along the shore and its whole lip lights up electric blue, the glow washes up the sand and fades, and the next crest is already rolling in.",
+      interaction: "The pointer stirs the water, and the plankton answer instantly with a trail of blue sparks that brightens the faster you move, drifts with the swash and fades over a couple of seconds. On wet sand a touch makes the stranded plankton sparkle, the way footsteps glow on a real bioluminescent beach.",
+      headline: "The dark sand on the left third, the lower left included, which stays dim and nearly flat. On phones the sand sits at the top and the sea below is near-black between waves.",
+      nearest: "Lido, the other water seen from above. Lido is a sunlit pool whose caustics bend around a fingertip wake; here it is night, the sea does nothing visible until it is disturbed, and the light comes from the water itself rather than the sun.",
+      risks: "Glow that lingers too long turns into a blue wash, so surf light fades in under a second and only the pointer trail lasts longer. Smooth glow would look like paint, so it is broken into sparks, which must not line up into a grid at 1:1. The sim is a single cheap pass at reduced size, and the picture is one pass with a few noise lookups.",
+    },
+    technical: {
+      insight: "The sim only needs to hold a soft field of how much light there is; the sparkle that makes it read as living plankton is added at full resolution by thresholding that field per grid cell.",
+      pipeline: [
+        "cpu · pointer segment since the last frame and its smoothed speed; shore direction and waterline point for wide or tall screens",
+        "fragment · glow state, up to 560 px on the long edge, rgba16float ping-pong: surf glow, sand wetness and pointer trail, advected back along the swash and the pointer's drag, decayed, excited along breaking fronts and the pointer segment",
+        "fragment · ribbed sand, wet sheen, sea with chop and lit wave faces, foam lace, analytic breaking lip, glow haze plus two rotated spark grids, filmic tonemap",
+      ],
+      techniques: [
+        "semi-Lagrangian advection",
+        "ping-pong simulation",
+        "analytic swash",
+        "threshold sparkle",
+        "shared WGSL module",
+      ],
+      notes:
+        "The shore lives in a shared WGSL module used by both passes. A point's distance out to sea is measured along a fixed direction from a waterline that wanders with two sines. Each of three waves has a cycle phase that varies slightly along the beach, so crests arrive curved and break in a run. For the first 60 percent of a cycle the crest travels in from 1.3 screen heights out, slowing as it nears shore and breaking inside about half a screen height; for the rest its swash runs up the sand along a sine and drains back. The water's edge is the furthest any swash has reached. The sim measures how fast that edge is moving and traces each texel back along it, so glow is carried up and down the beach. Surf glow decays in a third of a second on sand and under a second in water, which keeps breakers reading as lines; the pointer's trail sits in its own channel and lasts about twice as long. Breaking fronts add glow in clumps along their length, and the pointer adds a Gaussian around the segment it moved along this frame, stronger when it moves faster and only where there is water or wet sand. The picture draws the breaking lip analytically so it stays crisp, adds it to the sim's glow, and turns the total into a soft haze plus sparks: each cell of two rotated grids, about 3 and 5 pixels across, holds a plankton with a random threshold and twinkle rate.",
+      source: "src/effects/noctiluca",
+    },
+    accent: "#3ad4ff",
+    controls: [
+      ctl("surf", "Surf", 0, 2, 0.01, 1),
+      ctl("glow", "Glow", 0.3, 2, 0.01, 1),
+      ctl("linger", "Linger", 0.4, 3, 0.01, 1),
+    ],
+    create: (setup) => createNoctiluca(setup, { sim: noctilucaSim, present: noctilucaPresent }),
   },
 ]
 
