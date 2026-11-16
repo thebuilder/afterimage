@@ -71,7 +71,7 @@ with `strictPort`, so a busy port fails loudly instead of moving; `shots.sh` and
 | 26 | **Survey** | drifting five-octave terrain plus a hand-raised ping-pong layer read through a cubic B-spline, derivative-antialiased contours, index contours and depth-spaced water-lines, hill shading | detail, lift, wear |
 | 27 | **Vigil** | bent teardrop flame on an underdamped spring driven by pointer air, flame-lit wall, wax and table, gutter and smoke ribbon, filmic tonemap | breath, warmth |
 | 28 | **Meadow** | six hashed rows of backlit grass blades bent by travelling wind and a 384 by 6 spring strip the hand drags and parts, gold rims, haze, pollen | wind, glow, brush |
-| 29 | **Noctiluca** | night shore from above: analytic swash, a ping-pong glow field advected by the swash and excited by breakers and the pointer, rendered as haze plus thresholded sparks on two rotated grids | surf, glow, linger |
+| 29 | **Noctiluca** | night shore from the beach: ground-plane projection, continuous crest-to-swash waves with standing faces, a glow field advected by the swash and excited by breakers and the pointer, haze plus thresholded sparks on two rotated grids | surf, glow, linger |
 
 ## Copy
 

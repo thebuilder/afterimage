@@ -1,19 +1,20 @@
-// The plankton's memory: how brightly the water glows at each point (r) and
-// how wet the sand is (g), and the pointer's own trail (b). Glow fades over a couple of seconds, rides up and
-// down the beach with the swash, and is set off again wherever a wave breaks
-// or the pointer stirs the water.
-import { WAVES, shore, edge, front } from "./shore.wgsl";
+// The plankton's memory, kept per screen texel: how brightly the water glows
+// on the surface there (r), how wet the sand is (g), and the pointer's own
+// trail (b). Everything is worked out on the ground, in world units, so a
+// trail is wide up close and thin out at sea. Glow fades, rides up and down
+// the beach with the swash, and is set off wherever a wave breaks or the
+// pointer stirs the water.
+import { WAVES, ground, toScreen, shoreS, edge, wave } from "./shore.wgsl";
 
 struct Sim {
-  a: vec2f,        // pointer segment this frame, screen heights, y up
+  a: vec2f,        // pointer segment this frame, on the ground (x, z)
   b: vec2f,
-  sea: vec2f,      // unit direction out to sea
-  origin: vec2f,   // a point on the waterline
   aspect: f32,
+  horizon: f32,
   time: f32,
   dt: f32,
   touch: f32,      // 0..1 how much the pointer is stirring
-  speed: f32,      // pointer speed, screen heights per second
+  speed: f32,      // pointer speed on the ground, units per second
   surf: f32,
   linger: f32,
   glow: f32,
@@ -28,60 +29,61 @@ fn segDist(p: vec2f, a: vec2f, b: vec2f) -> f32 {
   return length(p - a - ab * h);
 }
 
-fn n2(p: vec2f) -> f32 {
-  let i = floor(p);
-  let f = fract(p);
-  let w = f * f * (3.0 - 2.0 * f);
-  let h = vec4f(dot(i, vec2f(127.1, 311.7)), dot(i + vec2f(1.0, 0.0), vec2f(127.1, 311.7)),
-                dot(i + vec2f(0.0, 1.0), vec2f(127.1, 311.7)), dot(i + vec2f(1.0, 1.0), vec2f(127.1, 311.7)));
-  let r = fract(sin(h) * 43758.5453);
-  return mix(mix(r.x, r.y, w.x), mix(r.z, r.w, w.x), w.y);
+fn n1(x: f32) -> f32 {
+  let i = floor(x);
+  let f = fract(x);
+  let a = fract(sin(i * 127.1) * 43758.5453);
+  let b = fract(sin((i + 1.0) * 127.1) * 43758.5453);
+  return mix(a, b, f * f * (3.0 - 2.0 * f));
 }
 
 @fragment fn fs_main(@location(0) uv: vec2f) -> @location(0) vec4f {
   let p = vec2f(uv.x * sim.aspect, 1.0 - uv.y);
+  let g0 = ground(p, sim.horizon, sim.aspect);
+  if (g0.z < 0.5) { return vec4f(0.0, 0.0, 0.0, 1.0); }
+  let w = g0.xy;
   let t = sim.time;
-  let su = shore(p, sim.sea, sim.origin);
-  let s = su.x;
-  let u = su.y;
+  let u = w.x;
+  let s = shoreS(w.x, w.y);
 
-  // The swash carries the glow up the beach and drags it back.
+  // The swash carries the glow up the sand and drags it back.
   let e = edge(u, t, sim.surf);
   let ePrev = edge(u, t - 0.03, sim.surf);
   let swash = (e - ePrev) / 0.03;
-  let water = smoothstep(e - 0.004, e + 0.006, s);
-  var v = sim.sea * swash * (1.0 - smoothstep(-0.02, 0.28, s)) * water;
+  let water = smoothstep(e - 0.03, e + 0.05, s);
+  var v = vec2f(0.0, swash * (1.0 - smoothstep(-0.2, 2.5, s)) * water);
   // The pointer drags a little water along with it.
-  let dHand = segDist(p, sim.a, sim.b);
-  let dir = sim.b - sim.a;
-  v += dir / max(sim.dt, 1e-3) * 0.35 * exp(-dHand * dHand / 0.003) * sim.touch * water;
-  let back = p - v * sim.dt;
+  let dHand = segDist(w, sim.a, sim.b);
+  let reach = 0.045 + 0.012 * w.y;
+  v += (sim.b - sim.a) / max(sim.dt, 1e-3) * 0.35 * exp(-dHand * dHand / (reach * reach * 4.0)) * sim.touch * water;
+  let back = toScreen(w.x - v.x * sim.dt, w.y - v.y * sim.dt, 0.0, sim.horizon, sim.aspect);
   let prev = textureSampleLevel(state, samp, vec2f(back.x / sim.aspect, 1.0 - back.y), 0.0);
   let here = textureSampleLevel(state, samp, uv, 0.0);
 
-  // Glow fades; stranded on wet sand it flashes out faster.
   // Surf glow (r) flashes and fades fast so breakers stay lines; the
   // pointer's trail (b) lingers longer so you can see what you drew.
-  var g = prev.r * exp(-sim.dt / (sim.linger * mix(0.35, 0.8, water)));
+  var g = prev.r * exp(-sim.dt / (sim.linger * mix(0.35, 0.9, water)));
   var h = prev.b * exp(-sim.dt / (sim.linger * mix(0.8, 2.0, water)));
 
-  // Breaking fronts set the plankton off, in patches along the wave.
+  // Whitewater behind a breaking crest and at the swash's leading edge sets
+  // the plankton off, in clumps along the wave.
   for (var i = 0; i < WAVES; i++) {
-    let f = front(i, u, t, sim.surf);
+    let f = wave(i, u, t, sim.surf);
     if (f.y > 0.001) {
-      let w = 0.005 + 0.012 * smoothstep(0.0, 0.3, f.x);
-      let z = (s - f.x) / w;
-      let clump = 0.45 + 0.55 * smoothstep(0.2, 0.8, n2(vec2f(u * 4.0 + f32(i) * 13.0, t * 0.3)) * 0.6 + n2(vec2f(u * 11.0 - f32(i) * 7.0, t * 0.5)) * 0.4);
-      g += f.y * clump * exp(-z * z) * sim.dt * 20.0 * sim.glow;
+      let back = s - f.x;
+      let width = 0.08 + 0.05 * clamp(f.x, 0.0, 6.0);
+      // Most of the light trails seaward of the front, where the foam is.
+      let z = select(back / width, back / (width * 3.0), back > 0.0);
+      let clump = 0.45 + 0.55 * smoothstep(0.2, 0.8, n1(u * 1.3 + f32(i) * 13.0 + t * 0.2) * 0.6 + n1(u * 3.7 - f32(i) * 7.0) * 0.4);
+      g += f.y * clump * exp(-z * z) * sim.dt * 16.0 * sim.glow;
     }
   }
 
   // The pointer stirs the water, and presses the glow out of wet sand.
-  let wet = here.g;
-  let medium = max(water, 0.75 * smoothstep(0.15, 0.6, wet));
-  let stir = 0.45 + min(sim.speed, 3.0) * 0.9;
-  let r = 0.022 + 0.008 * min(sim.speed, 2.0);
-  h += exp(-dHand * dHand / (r * r)) * sim.touch * medium * stir * sim.dt * 14.0 * sim.glow;
+  let medium = max(water, 0.8 * smoothstep(0.15, 0.6, here.g));
+  let stir = 0.45 + min(sim.speed / reach * 0.1, 3.0) * 0.9;
+  let r = reach * (1.0 + 0.3 * min(sim.speed / reach * 0.05, 1.5));
+  h += exp(-dHand * dHand / (r * r)) * sim.touch * medium * stir * sim.dt * 11.0 * sim.glow;
 
   let wetNow = max(here.g * exp(-sim.dt / 7.0), water);
   return vec4f(min(g, 3.0), wetNow, min(h, 3.0), 1.0);

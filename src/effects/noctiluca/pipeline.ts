@@ -11,17 +11,17 @@ export interface NoctilucaSources {
 /** The glow field is soft, so it lives at a fraction of the screen. */
 const MAX_EDGE = 560
 
-/**
- * Where the sea is. On wide screens the beach takes the left third, the sea
- * comes in from the right; on tall ones the sea is below and comes up.
- */
-export function shoreFor(aspect: number): { sea: [number, number]; origin: [number, number]; moon: [number, number] } {
-  if (aspect >= 1) {
-    const l = Math.hypot(1, 0.32)
-    return { sea: [1 / l, 0.32 / l], origin: [0.4 * aspect, 0.5], moon: [0.86 * aspect, 1.25] }
-  }
-  const l = Math.hypot(0.22, 1)
-  return { sea: [0.22 / l, -1 / l], origin: [0.5 * aspect, 0.56], moon: [0.75 * aspect, 1.15] }
+/** Where the horizon sits: a little higher on tall screens. */
+export function horizonFor(aspect: number): number {
+  return aspect >= 1 ? 0.62 : 0.66
+}
+
+/** The ground point under a screen point (screen heights, y up), or null in the sky. */
+function groundAt(p: [number, number], horizon: number, aspect: number): [number, number] | null {
+  const dy = horizon - p[1]
+  if (dy < 0.004) return null
+  const z = 1 / dy
+  return [(p[0] - 0.5 * aspect) * z, z]
 }
 
 export function createNoctiluca(setup: EffectSetup, src: NoctilucaSources): EffectInstance {
@@ -51,27 +51,28 @@ export function createNoctiluca(setup: EffectSetup, src: NoctilucaSources): Effe
   function render(frame: Frame, tgt: Target, inputs: FrameInputs) {
     const aspect = tgt.size[0] / Math.max(tgt.size[1], 1)
     const dt = Math.min(Math.max(inputs.dt, 1 / 240), 1 / 20)
-    const live = inputs.pointer > 0.05
-    const hand: [number, number] = [inputs.mouse[0] * aspect, 1 - inputs.mouse[1]]
+    const horizon = horizonFor(aspect)
+    const screen: [number, number] = [inputs.mouse[0] * aspect, 1 - inputs.mouse[1]]
+    const hand = groundAt(screen, horizon, aspect)
+    const live = inputs.pointer > 0.05 && hand !== null
     const gesture = inputs.gesture ?? 0
-    const jump = !prev || gesture !== lastGesture || Math.hypot(hand[0] - prev[0], hand[1] - prev[1]) > 0.3
-    const a: [number, number] = jump || !prev ? hand : prev
-    const raw = live ? Math.hypot(hand[0] - a[0], hand[1] - a[1]) / dt : 0
+    const jump = !prev || !hand || gesture !== lastGesture || Math.hypot(hand[0] - prev[0], hand[1] - prev[1]) > 0.6 * hand[1]
+    const b: [number, number] = hand ?? [0, -100]
+    const a: [number, number] = jump || !prev ? b : prev
+    const raw = live ? Math.hypot(b[0] - a[0], b[1] - a[1]) / dt : 0
     speed += (raw - speed) * (1 - Math.exp(-dt * 12))
     prev = hand
     lastGesture = gesture
 
-    const shore = shoreFor(aspect)
     const surf = inputs.controls.surf ?? 1
     const glow = inputs.controls.glow ?? 1
     step.set({
       state: state.read.color,
       sim: {
         a,
-        b: hand,
-        sea: shore.sea,
-        origin: shore.origin,
+        b,
         aspect,
+        horizon,
         time: inputs.time,
         dt,
         touch: live ? Math.min(1, inputs.pointer * 1.5) : 0,
@@ -88,11 +89,9 @@ export function createNoctiluca(setup: EffectSetup, src: NoctilucaSources): Effe
       state: state.read.color,
       view: {
         res: tgt.size,
-        sea: shore.sea,
-        origin: shore.origin,
-        moon: shore.moon,
         time: inputs.time,
         aspect,
+        horizon,
         surf,
         glow,
       },
