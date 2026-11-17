@@ -73,6 +73,13 @@ export function multipassSpecs(gpu, tgt, { fluxCount = 60_000 } = {}) {
       const { createFerro } = await import(path.join(root, "src/effects/ferro/pipeline.ts"))
       return createFerro({ gpu, target: tgt, quality: 1 }, await load("src/effects/ferro/ferro.wgsl"))
     },
+    kintsugi: async () => {
+      const { createKintsugi } = await import(path.join(root, "src/effects/kintsugi/pipeline.ts"))
+      return createKintsugi({ gpu, target: tgt, quality: 1 }, {
+        flow: await load("src/effects/kintsugi/flow.wgsl"),
+        present: await load("src/effects/kintsugi/present.wgsl"),
+      })
+    },
     noctiluca: async () => {
       const { createNoctiluca } = await import(path.join(root, "src/effects/noctiluca/pipeline.ts"))
       return createNoctiluca({ gpu, target: tgt, quality: 1 }, {

@@ -80,6 +80,9 @@ import meadowPresent from "./meadow/present.wgsl"
 import { createNoctiluca } from "./noctiluca/pipeline"
 import noctilucaSim from "./noctiluca/sim.wgsl"
 import noctilucaPresent from "./noctiluca/present.wgsl"
+import { createKintsugi } from "./kintsugi/pipeline"
+import kintsugiFlow from "./kintsugi/flow.wgsl"
+import kintsugiPresent from "./kintsugi/present.wgsl"
 
 /** Terse control literal. `key` has to match the WGSL `Params` member for single-pass effects. */
 const ctl = (
@@ -1447,6 +1450,55 @@ const ENTRIES: readonly Entry[] = [
       ctl("linger", "Linger", 0.4, 3, 0.01, 1),
     ],
     create: (setup) => createNoctiluca(setup, { sim: noctilucaSim, present: noctilucaPresent }),
+  },
+  {
+    id: "kintsugi",
+    name: "Kintsugi",
+    published: "2026-11-17",
+    category: "Ceramics",
+    tagline: "A broken black bowl you mend with liquid gold.",
+    summary:
+      "A close look into a glossy black tenmoku bowl, crazed and broken along wandering fractures. Gold runs into the breaks: it arrives molten and orange, flows along the fracture and into its branches, cools to a raised polished bead, and after half a minute slowly sinks back so the bowl never fills for good. The bowl pours a little on its own; touch near any crack and gold pours from your fingertip into the network, while the pointer also carries a small lamp whose glint slides along the gold and across the glaze. Reach sets how far a pour runs, Pour how wide the pointer pours, and Shine how bright the studio light is.",
+    explanation: [
+      { title: "Break the bowl", body: "The fractures are the edges of a warped Voronoi pattern, with about a third of the edges left whole, so the breaks wander, branch and dead-end like a real break. A finer, fainter crazing pattern sits in the glaze but never carries gold." },
+      { title: "Let the gold run", body: "A texture marks which texels lie on a fracture. Each step, gold moves one texel along the fracture from its richest neighbour, losing a little, so a pour runs a fair way and then stops. Steps are uneven on purpose, so the front creeps rather than marches." },
+      { title: "Cool and fade", body: "Gold arrives hot: a heat value starts high where gold has just arrived and fades over a second or two, shading the bead from molten orange to polished gold. Set gold slowly sinks back over about half a minute." },
+      { title: "Light it like a product shot", body: "The bowl's curve reflects a long strip light as a band of gloss; the gold bead's normal comes from the slope of the distance to the fracture, so it reflects the strip and the pointer's lamp as a bright line along its crest." },
+    ],
+    rationale: {
+      idea: "A broken black bowl you mend with liquid gold.",
+      firstSeconds: "A glossy black glaze with a band of studio light across it, and molten gold already running out along a fracture, branching as it goes and cooling from orange to polished gold.",
+      interaction: "Touch near any crack and gold pours from your fingertip and runs off along the network, into branches you cannot see until the gold finds them. The pointer also holds a small lamp, so its glint slides along the gold and across the glaze as you move.",
+      headline: "The lower left: deep black glaze, where the bowl never pours on its own and only faint crazing and open cracks show.",
+      nearest: "Prism, the other Voronoi surface. Prism lights every cell as a faceted crystal; here only the cell edges matter, as fractures, and the subject is gold flowing through them over time.",
+      risks: "A plain Voronoi grid reads as tiles or cells, so the pattern is warped and a third of its edges are left unbroken. Gold that only ever accumulates would end in a fully gilded bowl, so it fades back slowly. The gold flow is three cheap one-texel steps a frame on a grid at most 960 across, and the fractures are worked out once and stored.",
+    },
+    technical: {
+      insight: "Gold only has to move one texel at a time along a precomputed one-texel line, which turns a flowing liquid into a cheap max over eight neighbours.",
+      pipeline: [
+        "fragment, once after each resize · fracture mask: texels within about one texel of a warped Voronoi edge",
+        "fragment × 3 · gold flow, up to 960 px on the long edge, rgba16float ping-pong: gold taken from the richest fracture neighbour minus a loss per texel, heat for fresh gold, pours from the pointer and the bowl's own drip, slow fade",
+        "fragment · tenmoku glaze with pooled colour, iron specks and crazing, strip-light gloss on the bowl's curve, open grooves, raised gold bead from the fracture distance field shaded by the strip light and the pointer lamp, molten heat, filmic tonemap",
+      ],
+      techniques: [
+        "Voronoi edge distance",
+        "domain warping",
+        "cellular flow",
+        "ping-pong simulation",
+        "environment reflection",
+        "distance-field bevel",
+      ],
+      notes:
+        "Fracture distance uses the exact two-pass Voronoi edge distance on a domain-warped grid of 3.6 cells per screen height; for each candidate edge a symmetric hash of the two cells decides whether that boundary broke, and unbroken ones are skipped, which leaves dead ends and long runs. The sim stores, per texel, the gold level, whether a fracture runs through it, and heat. The mask is computed only on the first step after a resize. Each of three steps a frame, a fracture texel takes the largest gold level among its fracture neighbours minus a fixed loss, on about four steps in five, so a full pour runs roughly half a screen height before it stops. Newly fed texels get heat that decays over 1.4 seconds; once cool, gold loses 1/45 of its level per second. The pointer pours wherever it is within a small radius, and when nobody touches the bowl it drips at a random spot away from the lower left every few seconds, three times quickly at the start. The picture reads the gold from the five by five texels around each pixel, so thin lines are not halved by filtering, and draws a bead whose height is a circle profile across the fracture distance and whose normal comes from that distance's slope.",
+      source: "src/effects/kintsugi",
+    },
+    accent: "#e0a64a",
+    controls: [
+      ctl("reach", "Reach", 0.4, 2, 0.01, 1),
+      ctl("pour", "Pour", 0.5, 2, 0.01, 1),
+      ctl("shine", "Shine", 0.3, 2, 0.01, 1),
+    ],
+    create: (setup) => createKintsugi(setup, { flow: kintsugiFlow, present: kintsugiPresent }),
   },
 ]
 
