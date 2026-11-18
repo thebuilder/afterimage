@@ -43,6 +43,7 @@ interface Entry {
   time: number
   pointer: number
   gesture: number
+  pressed: boolean
   mouse: [number, number]
   lastDraw: number
   hasDrawn: boolean
@@ -93,6 +94,7 @@ function tick(now: number) {
       mouse: e.mouse,
       pointer: e.pointer,
       gesture: e.gesture,
+      pressed: e.pressed,
       controls: e.controls,
     }
     try {
@@ -188,6 +190,7 @@ export async function mountStage(
     time: Math.random() * 40, // stagger, so a grid of cards is not in lockstep
     pointer: 0,
     gesture: 0,
+    pressed: false,
     mouse: [0.5, 0.45],
     // Stagger the first draw across the cap window so 20 tiles capped at the
     // same fps do not all land on the same rAF tick and arrive as a burst.
@@ -214,15 +217,22 @@ export async function mountStage(
     // tap a poke instead of a no-op.
     canvas.setPointerCapture(ev.pointerId)
     entry.gesture++
+    entry.pressed = true
     updateFromEvent(ev)
   }
   const onPointerUp = (ev: PointerEvent) => {
+    entry.pressed = false
     if (canvas.hasPointerCapture(ev.pointerId)) canvas.releasePointerCapture(ev.pointerId)
   }
   canvas.addEventListener("pointerdown", onPointerDown, { passive: true })
   canvas.addEventListener("pointermove", updateFromEvent, { passive: true })
   canvas.addEventListener("pointerup", onPointerUp, { passive: true })
   canvas.addEventListener("pointercancel", onPointerUp, { passive: true })
+  // A capture lost any other way (the window losing focus mid-drag) is a release too.
+  const onLostCapture = () => {
+    entry.pressed = false
+  }
+  canvas.addEventListener("lostpointercapture", onLostCapture, { passive: true })
   // Leaving ends the gesture, so coming back somewhere else starts a new one.
   const onPointerLeave = () => {
     entry.gesture++
@@ -234,6 +244,7 @@ export async function mountStage(
     canvas.removeEventListener("pointermove", updateFromEvent)
     canvas.removeEventListener("pointerup", onPointerUp)
     canvas.removeEventListener("pointercancel", onPointerUp)
+    canvas.removeEventListener("lostpointercapture", onLostCapture)
   }
 
   // Coalesce the resize storm a window drag produces: a simulation treats a

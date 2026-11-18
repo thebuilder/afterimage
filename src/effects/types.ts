@@ -18,6 +18,13 @@ export interface FrameInputs {
    */
   readonly gesture?: number
   /**
+   * True while a mouse button, finger or pen is down on this canvas. The
+   * canvas captures the pointer on press, so it stays true while a drag
+   * crosses the interface or leaves the window. Optional because headless
+   * harnesses have no pointer.
+   */
+  readonly pressed?: boolean
+  /**
    * Current value of every control the effect declared, keyed by `Control.key`.
    * For a single-pass effect the key is also the WGSL `Params` member name.
    */
