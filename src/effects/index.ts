@@ -85,6 +85,8 @@ import kintsugiFlow from "./kintsugi/flow.wgsl"
 import kintsugiPresent from "./kintsugi/present.wgsl"
 import { createFolio } from "./folio/pipeline"
 import folioWgsl from "./folio/folio.wgsl"
+import { createCalibre } from "./calibre/pipeline"
+import calibreWgsl from "./calibre/calibre.wgsl"
 
 /** Terse control literal. `key` has to match the WGSL `Params` member for single-pass effects. */
 const ctl = (
@@ -1547,6 +1549,54 @@ const ENTRIES: readonly Entry[] = [
       ctl("curl", "Curl", 0.5, 2, 0.01, 1),
     ],
     create: (setup) => createFolio(setup, folioWgsl),
+  },
+  {
+    id: "calibre",
+    // Many layered shapes per pixel; capped so laptop GPUs stay calm.
+    maxDpr: 1.25,
+    name: "Calibre",
+    published: "2026-11-19",
+    category: "Horology",
+    tagline: "A watch movement ticking under a lamp you hold.",
+    summary:
+      "A close look through the caseback of a mechanical watch. The round main plate is grained in overlapping circles, the bridges carry Geneva stripes and polished bevels, and the gilt wheels, blued screws and rubies sit between them. The balance swings back and forth, its hairspring breathing, and each swing lets the escape wheel go by half a tooth, so the train moves in ticks. The pointer carries a small lamp, so every finish lights up in its own way as you pass over it. Press and drag to wind the mainspring: the ratchet wheel turns and the balance swings wider, then slowly runs down. Lamp sets the brightness and Rate the speed of the beat.",
+    explanation: [
+      { title: "Build it in layers", body: "Everything is a 2D distance field, drawn from the plate up: barrel, three gilt wheels, the steel escape wheel and lever, the balance and hairspring, then the bridges, ratchet wheel and balance cock. Each layer first darkens what is below it with a shadow offset toward the lamp by its height." },
+      { title: "Cut real teeth", body: "A wheel's teeth come from folding the angle into one tooth's sector and measuring a tapered tooth there, so a wheel of 143 teeth costs the same as one of 15. The escape wheel's teeth lean and widen into clubs, and the ratchet wheel's sawtooth measures its steep faces across, not radially, so they stay sharp." },
+      { title: "Brush the metal", body: "Brushed finishes use an anisotropic highlight that runs across the grain. Perlage spots are grained in circles, Geneva stripes in shallow arcs along each band, and the ratchet wheel in rays, so each throws the lamp's light into a different shape: streaks, bands and a ring." },
+      { title: "Let it tick", body: "The balance swings on a sine. Each time it passes through the middle, the escape wheel turns half a tooth with a quick ease and the lever flicks to the other side, and the wheels further up the train turn by their gear ratios. The balance's arms are blurred over the angle they cover in one frame." },
+    ],
+    rationale: {
+      idea: "A watch movement seen through the caseback, ticking under a small lamp you hold.",
+      firstSeconds: "A round movement fills the right of the screen against black velvet: gilt wheels between striped steel bridges, blue screws and red jewels, a balance wheel swinging with its blue hairspring breathing, and the train moving on in small ticks while a lamp drifts slowly across and wakes each finish in turn.",
+      interaction: "The pointer is the lamp, so moving it sweeps light across the bridges, flares the grained plate into streaks and lights the jewels from the side, the way you would tilt a watch under a light. Press and drag to wind it: the ratchet wheel turns under your hand and the balance swings wider.",
+      headline: "The lower left: black velvet outside the movement's round plate, which never has anything on it.",
+      nearest: "Raking Light, where the pointer is also a light over a relief. There it is one stone surface under the sun; here it is a working machine with many finishes that each answer the light differently, and it keeps moving on its own.",
+      risks: "Too many parts could read as clutter, so the movement keeps to one train, one escapement and three bridges, with the plate's finish quieter than the bridges. Fast parts would strobe at 60 frames a second, so the balance beats slowly and its arms are blurred over each frame. It is one pass of cheap 2D shapes, capped at 1.25x pixel density.",
+    },
+    technical: {
+      insight: "A gear with any number of teeth is one tooth: fold the angle into a single sector and measure the distance to that tooth.",
+      pipeline: [
+        "fragment · perlage plate, layered distance-field wheels, escapement, balance and hairspring, bridges with Geneva stripes and finite-difference bevel normals, rubies and blued screws, per-layer lamp shadows, anisotropic and polished shading, filmic tonemap",
+      ],
+      techniques: [
+        "distance fields",
+        "angular domain folding",
+        "anisotropic highlights",
+        "layered shadows",
+        "rotational motion blur",
+        "escapement timing",
+      ],
+      notes:
+        "All shapes are in movement units with the plate's centre fixed; the view places and scales the movement for the screen. Perlage is a grid of jittered spots; a pixel takes the latest-placed spot that covers it among the nine around it, and its grain runs in circles round that spot's centre. The anisotropic term uses the sine of the angle between the grain and the half vector, raised to a high power, plus a broad version for sheen. A fixed key light from the upper left keeps every part readable when the lamp is far away; the lamp's own light falls off with distance. Bridge bevels take their normal from a finite-difference gradient of the bridge distance and are polished. Each layer's shadow samples its own shape at the pixel offset toward the lamp by the layer's height above what is already drawn. The balance runs at 1.2 swings a second times the Rate control; winding adds to a store that sets its amplitude between about 130 and 250 degrees and runs down over a few minutes. The escape wheel's ease takes the first eighth of each beat, and the fourth, third and centre wheels follow through eight-leaf pinions.",
+      source: "src/effects/calibre",
+    },
+    accent: "#c9a45c",
+    controls: [
+      ctl("lamp", "Lamp", 0.3, 2, 0.01, 1),
+      ctl("rate", "Rate", 0.5, 2, 0.01, 1),
+    ],
+    create: (setup) => createCalibre(setup, calibreWgsl),
   },
 ]
 
