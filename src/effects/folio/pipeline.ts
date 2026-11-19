@@ -47,13 +47,14 @@ export function createFolio(setup: EffectSetup, wgsl: Wgsl): EffectInstance {
   let autoStart = 0
   let autoFrom: V2 = [0, 0]
   let lastActive = -10
+  let lastAspect = 1
   // Start with a page already turning, so the first seconds move.
   let nextAuto = 0.6
 
   function far(c: V2, a: number): V2 {
     return [c[0] > a / 2 ? -a * 1.05 : a * 2.05, c[1]]
   }
-  const same = (p: V2, q: V2) => p[0] === q[0] && p[1] === q[1]
+  const same = (p: V2, q: V2) => Math.abs(p[0] - q[0]) < 1e-6 && Math.abs(p[1] - q[1]) < 1e-6
 
   return {
     render(frame: Frame, tgt: Target, inputs: FrameInputs) {
@@ -68,6 +69,17 @@ export function createFolio(setup: EffectSetup, wgsl: Wgsl): EffectInstance {
         corner = [a, 0]
         pull = [a, 0]
         want = corner
+        lastAspect = a
+      }
+      if (a !== lastAspect) {
+        // A resize stretches the stack sideways; carry the page with it
+        // rather than snapping it flat mid-turn.
+        const k = a / lastAspect
+        corner = [corner[0] * k, corner[1]]
+        pull = [pull[0] * k, pull[1]]
+        want = [want[0] * k, want[1]]
+        autoFrom = [autoFrom[0] * k, autoFrom[1]]
+        lastAspect = a
       }
       if (live || pressed) lastActive = t
 
@@ -85,8 +97,13 @@ export function createFolio(setup: EffectSetup, wgsl: Wgsl): EffectInstance {
         const across = (pull[0] - corner[0]) * toward
         const flick = vel[0] * toward
         mode = same(want, corner) && (across > a * 0.45 || (across > a * 0.12 && flick > 1.2)) ? "turn" : "rest"
-      } else if (mode === "rest" && live && Math.hypot(nearest[0] - hand[0], nearest[1] - hand[1]) < 0.5) {
-        want = nearest
+      } else if (mode === "rest" && live && !same(nearest, want)) {
+        // Hovering moves the lift to another corner only when the hand is
+        // clearly nearer that one, so a hand halfway between two corners
+        // does not make the lift flick back and forth.
+        const dn = Math.hypot(nearest[0] - hand[0], nearest[1] - hand[1])
+        const dw = Math.hypot(want[0] - hand[0], want[1] - hand[1])
+        if (dn < 0.4 && dn < dw - 0.15) want = nearest
       }
 
       if (mode === "rest" && t - lastActive > IDLE_TURN && t > nextAuto) nextAuto = t
@@ -157,7 +174,9 @@ export function createFolio(setup: EffectSetup, wgsl: Wgsl): EffectInstance {
       }
 
       const span = Math.hypot(corner[0] - pull[0], corner[1] - pull[1])
-      const radius = (0.035 + 0.05 * Math.min(1, span / 0.8)) * (inputs.controls.curl ?? 1)
+      // The roll shrinks to nothing as the corner lies down, so a flat corner
+      // shows no curl at all and its direction can never flick.
+      const radius = Math.min((0.035 + 0.05 * Math.min(1, span / 0.8)) * (inputs.controls.curl ?? 1), span * 0.45)
       fx.set({
         params: {
           res: tgt.size,
@@ -174,8 +193,6 @@ export function createFolio(setup: EffectSetup, wgsl: Wgsl): EffectInstance {
     },
     resize(width, height) {
       fx.set({ params: { res: [width, height] } })
-      corner = null
-      pull = null
     },
   }
 }

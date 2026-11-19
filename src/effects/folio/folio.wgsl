@@ -163,7 +163,7 @@ fn inside(q: vec2f) -> f32 {
   let p = vec2f(uv.x * a, 1.0 - uv.y);
   let px = 1.0 / max(params.res.y, 1.0);
   PX = px;
-  let R = params.radius;
+  let R = max(params.radius, 1e-5);
   let top = i32(params.sheet) % SHEETS;
   let under = (top + 1) % SHEETS;
 
