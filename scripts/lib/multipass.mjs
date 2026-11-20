@@ -73,6 +73,10 @@ export function multipassSpecs(gpu, tgt, { fluxCount = 60_000 } = {}) {
       const { createFerro } = await import(path.join(root, "src/effects/ferro/pipeline.ts"))
       return createFerro({ gpu, target: tgt, quality: 1 }, await load("src/effects/ferro/ferro.wgsl"))
     },
+    enso: async () => {
+      const { createEnso } = await import(path.join(root, "src/effects/enso/pipeline.ts"))
+      return createEnso({ gpu, target: tgt, quality: 1 }, { ink: await load("src/effects/enso/ink.wgsl"), present: await load("src/effects/enso/present.wgsl") })
+    },
     calibre: async () => {
       const { createCalibre } = await import(path.join(root, "src/effects/calibre/pipeline.ts"))
       return createCalibre({ gpu, target: tgt, quality: 1 }, await load("src/effects/calibre/calibre.wgsl"))

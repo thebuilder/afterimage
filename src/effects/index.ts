@@ -87,6 +87,9 @@ import { createFolio } from "./folio/pipeline"
 import folioWgsl from "./folio/folio.wgsl"
 import { createCalibre } from "./calibre/pipeline"
 import calibreWgsl from "./calibre/calibre.wgsl"
+import { createEnso } from "./enso/pipeline"
+import ensoInk from "./enso/ink.wgsl"
+import ensoPresent from "./enso/present.wgsl"
 
 /** Terse control literal. `key` has to match the WGSL `Params` member for single-pass effects. */
 const ctl = (
@@ -1597,6 +1600,53 @@ const ENTRIES: readonly Entry[] = [
       ctl("rate", "Rate", 0.5, 2, 0.01, 1),
     ],
     create: (setup) => createCalibre(setup, calibreWgsl),
+  },
+  {
+    id: "enso",
+    name: "Ensō",
+    published: "2026-11-20",
+    category: "Calligraphy",
+    tagline: "A brush, a sheet of washi, and one circle of ink.",
+    summary:
+      "A sheet of warm washi paper with long fibres in it. An unseen hand paints an ensō, the Zen circle made in one stroke: heavy and wet where the brush first presses down, thinning as it travels, and running out of ink at the end so the last of it splits into dry bristle marks. A vermilion seal goes on beside it, and after a while the sheet is lifted and a new circle begins. Press and drag to paint yourself. A slow hand presses the brush harder and lays a wide, wet line; a quick one lifts it to the tip, and as the ink runs out along a stroke the bristles split. Ink sets how dark the ink is, and Brush the size of the brush.",
+    explanation: [
+      { title: "Model a brush", body: "Each frame the brush stamps one segment from where it was to where it is. Across the segment, the brush is split into 38 bristles, and each one keeps painting only while the brush still holds more ink than that bristle's own threshold, so a running-dry brush leaves streaks that follow the stroke." },
+      { title: "Let the ink soak", body: "The sheet keeps wet pigment, settled pigment and water per texel. Water spreads a little and dries; wet pigment moves only between wet texels, faster along the paper's fibres, and settles as the water goes, a little more at the drying edge." },
+      { title: "Press and speed", body: "Pressure comes from how slowly the hand moves: slow strokes press the brush down, wide and wet; quick ones lift it to a thin, drier tip. The ink load drops with the distance travelled, so long strokes end dry." },
+      { title: "Paint the circle", body: "The unseen hand follows one turn of a slightly uneven circle with an ease in and out, pressing hard at the start and lifting toward the end, which leaves the gap and dry tail an ensō is known for." },
+    ],
+    rationale: {
+      idea: "A brush paints an ensō in sumi ink on washi, and then you can paint too.",
+      firstSeconds: "Warm washi paper fills the screen, and within half a second a brush begins a circle in black ink: a heavy, wet start that sweeps round, thins, and breaks into dry bristle streaks at the end, before a red seal is pressed beside it.",
+      interaction: "Press and drag to paint with the brush. How you move is how it paints: slow and the brush presses down into a wide wet line, fast and it skims on its tip, and as the ink runs out the stroke splits into dry streaks, so every stroke carries your gesture.",
+      headline: "The lower left: bare paper, since the circle and its seal sit to the right and only your own strokes ever reach there.",
+      nearest: "Ink, the fluid one, where dragging stirs coloured dye in water. Here the ink soaks into paper and stays, and the subject is the mark itself: pressure, speed and a brush running dry.",
+      risks: "A plain round line would look like a marker, so the brush has bristles that run dry, pressure from speed and a tip that settles at the start. A sheet that only fills up would end in a mess, so idle sheets are lifted and repainted. It is one cheap step on a grid no larger than 1100 across and one picture pass.",
+    },
+    technical: {
+      insight: "Dry brush is just a threshold per bristle: give every bristle its own ink threshold and let the brush's load fall along the stroke, and the streaks appear by themselves.",
+      pipeline: [
+        "fragment · ink step, up to 1100 px on the long edge, rgba16float ping-pong: water spread and drying, wet pigment moving along paper permeability, settling with a drying-edge boost, and the brush segment stamped with per-bristle ink",
+        "fragment · washi with fibres and grain, ink from grey wash to black, wet sheen, vermilion seal, brush-tip shadow under the hover",
+      ],
+      techniques: [
+        "ping-pong simulation",
+        "pigment diffusion",
+        "per-bristle dry brush",
+        "pressure from speed",
+        "shared WGSL module",
+        "procedural paper",
+      ],
+      notes:
+        "Each texel holds wet pigment, settled pigment and water. Water moves between neighbours in proportion to their difference, scaled by the paper's permeability, and evaporates by about 40 percent a second. Wet pigment moves the same way but only between texels that are both wet, so it stops at the water's edge, and permeability is higher along the fibres; one module shares the fibre pattern between the sim and the picture. Pigment settles at a slow rate while wet, quickly once dry, and faster where the water's gradient is steep, which leaves a darker rim on a bloom. The brush is a capsule from last frame's point to this frame's; a pixel's signed distance across it picks one of 38 bristles, and a bristle inks while the load minus its hashed threshold, plus low-frequency noise along the stroke, stays above zero. Width follows pressure, which eases toward a value set by hand speed, and grows over the first part of a stroke from the tip. The load falls with distance. Idle, the hand paints an ensō 2.6 seconds long, waits nine seconds, fades the sheet in about a second and a half and starts another.",
+      source: "src/effects/enso",
+    },
+    accent: "#c7402a",
+    controls: [
+      ctl("ink", "Ink", 0.5, 1.6, 0.01, 1),
+      ctl("brush", "Brush", 0.5, 2, 0.01, 1),
+    ],
+    create: (setup) => createEnso(setup, { ink: ensoInk, present: ensoPresent }),
   },
 ]
 
