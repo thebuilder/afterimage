@@ -202,17 +202,82 @@ export async function mountStage(
     detachPointer: () => {},
   }
 
-  // Vertical swipes stay the browser's so the page remains scrollable on touch;
-  // horizontal and diagonal drags become pointer events that drive the effect.
-  canvas.style.touchAction = "pan-y"
+  // Touch. For most effects vertical swipes stay the browser's, so the feed
+  // scrolls, and horizontal or diagonal drags drive the effect. An effect that
+  // is painted or grabbed (`touch: "drag"`) needs drags in every direction, so
+  // its canvas keeps them all, and the first moments of a touch decide what it
+  // was: a quick vertical flick moves the feed a screen, anything else presses.
+  const applyTouchAction = () => {
+    canvas.style.touchAction = entry.effect.touch === "drag" ? "none" : "pan-y"
+  }
+  applyTouchAction()
+
+  /** A flick has to cover this many CSS pixels, mostly vertically... */
+  const FLICK_PX = 28
+  /** ...within this long. Later than that, or sideways, the touch presses. */
+  const DECIDE_MS = 100
+  let tapping = false
+  let touch: { id: number; x0: number; y0: number; t0: number; mode: "pending" | "press" | "swipe"; timer: number } | null = null
 
   const updateFromEvent = (ev: PointerEvent) => {
+    // A second finger on a drag effect would teleport the brush.
+    if (touch && ev.pointerType === "touch" && ev.pointerId !== touch.id) return
+    if (touch?.mode === "swipe") return
     const r = canvas.getBoundingClientRect()
     if (r.width === 0 || r.height === 0) return
     entry.mouse = [(ev.clientX - r.left) / r.width, (ev.clientY - r.top) / r.height]
     entry.pointer = 1
   }
+  const beginPress = () => {
+    if (!touch || touch.mode !== "pending") return
+    window.clearTimeout(touch.timer)
+    touch.mode = "press"
+    entry.pressed = true
+  }
+  const scroller = (): HTMLElement | null => {
+    for (let p = canvas.parentElement; p; p = p.parentElement) {
+      const o = getComputedStyle(p).overflowY
+      if ((o === "auto" || o === "scroll") && p.scrollHeight > p.clientHeight) return p
+    }
+    return null
+  }
+  const swipe = (dy: number) => {
+    if (!touch) return
+    window.clearTimeout(touch.timer)
+    touch.mode = "swipe"
+    entry.gesture++
+    const s = scroller()
+    // Snap points do the rest: one screen up or down, the way a swipe would.
+    s?.scrollBy({ top: (dy < 0 ? 1 : -1) * s.clientHeight, behavior: "smooth" })
+  }
+  const endTouch = (tap: boolean) => {
+    if (!touch) return
+    window.clearTimeout(touch.timer)
+    const wasPending = touch.mode === "pending"
+    touch = null
+    if (tap && wasPending) {
+      // A tap shorter than the decision window still touches the paper once.
+      entry.pressed = true
+      tapping = true
+      window.setTimeout(() => {
+        tapping = false
+        if (!touch) entry.pressed = false
+      }, 50)
+    } else {
+      entry.pressed = false
+    }
+  }
+
   const onPointerDown = (ev: PointerEvent) => {
+    if (ev.pointerType === "touch" && entry.effect.touch === "drag") {
+      if (touch) return
+      canvas.setPointerCapture(ev.pointerId)
+      entry.gesture++
+      touch = { id: ev.pointerId, x0: ev.clientX, y0: ev.clientY, t0: performance.now(), mode: "pending", timer: 0 }
+      touch.timer = window.setTimeout(beginPress, DECIDE_MS)
+      updateFromEvent(ev)
+      return
+    }
     // Capture keeps the stream when a drag leaves the canvas, and makes a bare
     // tap a poke instead of a no-op.
     canvas.setPointerCapture(ev.pointerId)
@@ -220,17 +285,36 @@ export async function mountStage(
     entry.pressed = true
     updateFromEvent(ev)
   }
+  const onPointerMove = (ev: PointerEvent) => {
+    if (touch && ev.pointerId === touch.id && touch.mode === "pending") {
+      const dx = ev.clientX - touch.x0
+      const dy = ev.clientY - touch.y0
+      const vertical = Math.abs(dy) > 1.5 * Math.abs(dx)
+      if (vertical && Math.abs(dy) > FLICK_PX) {
+        if (performance.now() - touch.t0 < DECIDE_MS) swipe(dy)
+        else beginPress()
+      } else if (!vertical && Math.hypot(dx, dy) > 10) {
+        beginPress()
+      }
+    }
+    updateFromEvent(ev)
+  }
   const onPointerUp = (ev: PointerEvent) => {
-    entry.pressed = false
+    if (touch && ev.pointerId === touch.id) endTouch(ev.type === "pointerup")
+    else if (!touch) entry.pressed = false
     if (canvas.hasPointerCapture(ev.pointerId)) canvas.releasePointerCapture(ev.pointerId)
   }
   canvas.addEventListener("pointerdown", onPointerDown, { passive: true })
-  canvas.addEventListener("pointermove", updateFromEvent, { passive: true })
+  canvas.addEventListener("pointermove", onPointerMove, { passive: true })
   canvas.addEventListener("pointerup", onPointerUp, { passive: true })
   canvas.addEventListener("pointercancel", onPointerUp, { passive: true })
   // A capture lost any other way (the window losing focus mid-drag) is a release too.
-  const onLostCapture = () => {
-    entry.pressed = false
+  const onLostCapture = (ev: PointerEvent) => {
+    if (touch) {
+      if (ev.pointerId === touch.id) endTouch(false)
+      return
+    }
+    if (!tapping) entry.pressed = false
   }
   canvas.addEventListener("lostpointercapture", onLostCapture, { passive: true })
   // Leaving ends the gesture, so coming back somewhere else starts a new one.
@@ -239,9 +323,10 @@ export async function mountStage(
   }
   canvas.addEventListener("pointerleave", onPointerLeave, { passive: true })
   entry.detachPointer = () => {
+    if (touch) window.clearTimeout(touch.timer)
     canvas.removeEventListener("pointerleave", onPointerLeave)
     canvas.removeEventListener("pointerdown", onPointerDown)
-    canvas.removeEventListener("pointermove", updateFromEvent)
+    canvas.removeEventListener("pointermove", onPointerMove)
     canvas.removeEventListener("pointerup", onPointerUp)
     canvas.removeEventListener("pointercancel", onPointerUp)
     canvas.removeEventListener("lostpointercapture", onLostCapture)
@@ -274,6 +359,7 @@ export async function mountStage(
       if (next.id === entry.effect.id) return
       entry.instance.dispose?.()
       entry.effect = next
+      applyTouchAction()
       entry.instance = next.create({ gpu, target: surf, quality: opts.quality })
       entry.instance.resize?.(surf.size[0], surf.size[1])
       entry.controls = Object.fromEntries(next.controls.map((c) => [c.key, c.value]))

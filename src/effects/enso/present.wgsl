@@ -53,15 +53,16 @@ fn sealMark(q: vec2f) -> f32 {
   var paper = vec3f(0.95, 0.92, 0.85) * (0.965 + 0.05 * grain) + vec3f(0.035, 0.03, 0.02) * fib;
   paper *= 0.9 + 0.1 * smoothstep(1.4, 0.2, length(p - vec2f(a * 0.35, 0.95)));
 
-  // Ink: pale washes read grey-blue, heavy ink near black.
-  let P = (s.g + s.r * 0.9) * view.ink;
-  let dark = 1.0 - exp(-P * 1.9);
-  let wash = vec3f(0.42, 0.43, 0.47);
-  let deep = vec3f(0.035, 0.035, 0.045);
-  let inkCol = mix(wash, deep, smoothstep(0.15, 0.85, dark));
-  var col = mix(paper, inkCol, smoothstep(0.0, 1.0, dark * 1.08));
-  // Fibres show through thin ink.
-  col += vec3f(0.03) * fib * (1.0 - dark) * dark * 2.0;
+  // Ink: sumi absorbs light the way a stain does, so thin ink is a cool
+  // grey wash and only ink laid over itself, or a loaded stroke, reaches
+  // black. Pigment collects in the valleys of the grain and along fibres.
+  let P = (s.g + s.r * 0.85) * view.ink;
+  let tooth = pnoise(p * 380.0) * 0.6 + pnoise(p * 1100.0) * 0.4;
+  let thin = 1.0 - smoothstep(0.2, 0.9, P);
+  let Pg = P * (1.0 + thin * (0.35 * (0.5 - tooth) + 0.25 * fib));
+  let absorb = vec3f(2.65, 2.6, 2.4);
+  var col = paper * max(exp(-Pg * absorb), vec3f(0.035, 0.035, 0.042));
+  let dark = 1.0 - exp(-P * 2.0);
   // Wet ink: darker, with a faint sheen.
   let wet = smoothstep(0.05, 0.5, s.b);
   col *= 1.0 - 0.06 * wet;

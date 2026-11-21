@@ -311,6 +311,7 @@ const ENTRIES: readonly Entry[] = [
   },
   {
     id: "ink",
+    touch: "drag",
     name: "Ink",
     category: "Fluid",
     tagline: "Drag through the fluid and watch colour curl behind you.",
@@ -884,6 +885,7 @@ const ENTRIES: readonly Entry[] = [
   },
   {
     id: "misted",
+    touch: "drag",
     // Heavy per pixel on a retina screen; capped so laptop GPUs stay calm.
     maxDpr: 1.25,
     name: "Misted",
@@ -1077,6 +1079,7 @@ const ENTRIES: readonly Entry[] = [
   },
   {
     id: "thermo",
+    touch: "drag",
     name: "Thermochrome",
     published: "2026-11-09",
     category: "Heat",
@@ -1218,6 +1221,7 @@ const ENTRIES: readonly Entry[] = [
   },
   {
     id: "lido",
+    touch: "drag",
     name: "Lido",
     published: "2026-11-12",
     category: "Caustics",
@@ -1267,6 +1271,7 @@ const ENTRIES: readonly Entry[] = [
   },
   {
     id: "survey",
+    touch: "drag",
     name: "Survey",
     published: "2026-11-13",
     category: "Cartography",
@@ -1511,6 +1516,7 @@ const ENTRIES: readonly Entry[] = [
   },
   {
     id: "folio",
+    touch: "drag",
     name: "Folio",
     published: "2026-11-18",
     category: "Paper",
@@ -1557,6 +1563,7 @@ const ENTRIES: readonly Entry[] = [
   },
   {
     id: "calibre",
+    touch: "drag",
     // Many layered shapes per pixel; capped so laptop GPUs stay calm.
     maxDpr: 1.25,
     name: "Calibre",
@@ -1605,6 +1612,7 @@ const ENTRIES: readonly Entry[] = [
   },
   {
     id: "enso",
+    touch: "drag",
     name: "Ensō",
     published: "2026-11-20",
     category: "Calligraphy",
@@ -1613,7 +1621,7 @@ const ENTRIES: readonly Entry[] = [
       "A sheet of warm washi paper with long fibres in it. An unseen hand paints an ensō, the Zen circle made in one stroke: heavy and wet where the brush first presses down, thinning as it travels, and running out of ink at the end so the last of it splits into dry bristle marks. A vermilion seal goes on beside it, and after a while the sheet is lifted and a new circle begins. Press and drag to paint yourself. A slow hand presses the brush harder and lays a wide, wet line; a quick one lifts it to the tip, and as the ink runs out along a stroke the bristles split. Ink sets how dark the ink is, and Brush the size of the brush.",
     explanation: [
       { title: "Model a brush", body: "Each frame the brush stamps one segment from where it was to where it is. Across the segment, the brush is split into 38 bristles, and each one keeps painting only while the brush still holds more ink than that bristle's own threshold, so a running-dry brush leaves streaks that follow the stroke." },
-      { title: "Let the ink soak", body: "The sheet keeps wet pigment, settled pigment and water per texel. Water spreads a little and dries; wet pigment moves only between wet texels, faster along the paper's fibres, and settles as the water goes, a little more at the drying edge." },
+      { title: "Let the ink soak", body: "The sheet keeps suspended pigment, settled pigment and water per texel. Water wicks from wet paper into dry, faster along the fibres, and carries pigment with it while the fibres filter some out, so every wet stroke bleeds into a pale grey feather. Pigment settles as the water goes, a little more at the drying edge." },
       { title: "Press and speed", body: "Pressure comes from how slowly the hand moves: slow strokes press the brush down, wide and wet; quick ones lift it to a thin, drier tip. The ink load drops with the distance travelled, so long strokes end dry." },
       { title: "Paint the circle", body: "The unseen hand follows one turn of a slightly uneven circle with an ease in and out, pressing hard at the start and lifting toward the end, which leaves the gap and dry tail an ensō is known for." },
     ],
@@ -1628,8 +1636,8 @@ const ENTRIES: readonly Entry[] = [
     technical: {
       insight: "Dry brush is just a threshold per bristle: give every bristle its own ink threshold and let the brush's load fall along the stroke, and the streaks appear by themselves.",
       pipeline: [
-        "fragment · ink step, up to 1100 px on the long edge, rgba16float ping-pong: water spread and drying, wet pigment moving along paper permeability, settling with a drying-edge boost, and the brush segment stamped with per-bristle ink",
-        "fragment · washi with fibres and grain, ink from grey wash to black, wet sheen, vermilion seal, brush-tip shadow under the hover",
+        "fragment · ink step, up to 1100 px on the long edge, rgba16float ping-pong: water wicking over eight neighbours under the stability limit, pigment carried and filtered by the flow, settling with a drying-edge boost, and the brush segment stamped with per-bristle ink",
+        "fragment · washi with fibres and grain, ink as a stain from grey wash to black, wet sheen, vermilion seal, brush-tip shadow under the hover",
       ],
       techniques: [
         "ping-pong simulation",
@@ -1640,7 +1648,7 @@ const ENTRIES: readonly Entry[] = [
         "procedural paper",
       ],
       notes:
-        "Each texel holds wet pigment, settled pigment and water. Water moves between neighbours in proportion to their difference, scaled by the paper's permeability, and evaporates by about 40 percent a second. Wet pigment moves the same way but only between texels that are both wet, so it stops at the water's edge, and permeability is higher along the fibres; one module shares the fibre pattern between the sim and the picture. Pigment settles at a slow rate while wet, quickly once dry, and faster where the water's gradient is steep, which leaves a darker rim on a bloom. The brush is a capsule from last frame's point to this frame's; a pixel's signed distance across it picks one of 38 bristles, and a bristle inks while the load minus its hashed threshold, plus low-frequency noise along the stroke, stays above zero. Width follows pressure, which eases toward a value set by hand speed, and grows over the first part of a stroke from the tip. The load falls with distance. Idle, the hand paints an ensō 2.6 seconds long, waits nine seconds, fades the sheet in about a second and a half and starts another.",
+        "Each texel holds suspended pigment, settled pigment, water and the paper's wicking rate, which is worked out once when the sheet is laid. Water flows between each texel and eight others, its four neighbours and four more two texels out on the diagonals, so a bleed travels far and spreads round rather than square, in proportion to the difference, scaled by both texels' wicking, and every pairwise rate is held under the explicit diffusion limit, so the sheet cannot blow up into a growing black block. Pigment rides the flow at the concentration of the side it leaves, and the sheet filters most of it out except along the fibres, so a bleed feathers into fine grey hairs instead of blurring. Pigment settles slowly while wet, at once when dry, and faster at the drying front, which leaves a faint darker rim. The brush tops ink up rather than adding it, discounting what the paper already holds, so going over a stroke deepens it toward black without flooding. The picture treats ink as a stain, so light falls off exponentially with pigment: thin ink is a cool grey wash and only loaded or layered ink is black, and thin washes gather in the paper's grain. The brush is a capsule from last frame's point to this frame's; a pixel's signed distance across it picks one of 38 bristles, and a bristle inks while the load minus its hashed threshold, plus low-frequency noise along the stroke, stays above zero. As the load falls the brush only touches the tops of the paper's tooth, which breaks the dry end into specks of bare paper. Width follows pressure, which eases toward a value set by hand speed. On touch the canvas keeps drags in every direction, and a quick vertical flick moves the feed instead. Idle, the hand paints an ensō 2.6 seconds long, waits nine seconds, fades the sheet in about a second and a half and starts another; a sheet you painted on is left for eighteen seconds.",
       source: "src/effects/enso",
     },
     accent: "#c7402a",

@@ -1,7 +1,13 @@
-// The ink on the sheet. Per texel: r = pigment still wet and moving, g =
-// pigment settled into the fibres, b = water. The brush lays down ink and
-// water; wet ink soaks sideways along the fibres while the water lasts, and
-// settles, a little more at the drying edge, so blooms get a darker rim.
+// The ink on the sheet. Per texel: r = pigment still suspended in water,
+// g = pigment settled into the fibres, b = water, a = how readily this bit of
+// paper wicks (worked out once, when the sheet is laid).
+//
+// Water flows from wetter to drier texels, faster along the fibres, and
+// carries suspended pigment with it, but the fibres filter some of it out on
+// the way, so a bleed fades from the stroke into a pale grey feather. Pigment
+// settles as the water goes, faster at the drying front, which leaves the
+// faint darker rim of a real bloom. Every exchange is pairwise and below the
+// explicit-diffusion limit, so nothing can grow without bound.
 import { permeability, phash, pnoise } from "./paper.wgsl";
 
 struct Sim {
@@ -29,36 +35,53 @@ fn at(ip: vec2i, size: vec2i) -> vec4f {
   let ip = vec2i(uv * vec2f(size));
   let p = vec2f(uv.x * sim.aspect, 1.0 - uv.y);
   if (sim.init > 0.5) {
-    return vec4f(0.0);
+    return vec4f(0.0, 0.0, 0.0, permeability(p));
   }
   let c = at(ip, size);
-  let n0 = at(ip + vec2i(1, 0), size);
-  let n1 = at(ip - vec2i(1, 0), size);
-  let n2 = at(ip + vec2i(0, 1), size);
-  let n3 = at(ip - vec2i(0, 1), size);
-  let perm = permeability(p);
 
-  // Water spreads a little into the sheet and dries.
-  let wetHere = smoothstep(0.02, 0.25, c.b);
+  // Per frame rates, from per second ones, held under the stability limit:
+  // eight exchanges of at most 0.11 each keep the total under 1. The far ring
+  // (two texels out on the diagonals, which with the near ring spreads evenly
+  // instead of in a square) lets a bleed travel far enough to read as a feather in
+  // a second or two without needing several steps a frame.
+  let step = sim.dt * 60.0;
+  let kWater = 0.1 * step;
+  let concC = min(c.r / max(c.b, 0.04), 3.0);
+
   var b = c.b;
   var r = c.r;
-  var g = c.g;
-  let nb = array<vec4f, 4>(n0, n1, n2, n3);
-  for (var i = 0; i < 4; i++) {
-    let o = nb[i];
-    let kb = 0.22 * perm * smoothstep(0.03, 0.3, max(o.b, c.b));
-    b += kb * (o.b - c.b);
-    // Wet pigment moves only where both sides are wet.
-    let kr = 0.24 * perm * min(wetHere, smoothstep(0.02, 0.25, o.b));
-    r += kr * (o.r - c.r);
+  var grad = vec2f(0.0);
+  let offs = array<vec2i, 8>(
+    vec2i(1, 0), vec2i(-1, 0), vec2i(0, 1), vec2i(0, -1),
+    vec2i(2, 2), vec2i(-2, 2), vec2i(2, -2), vec2i(-2, -2)
+  );
+  for (var i = 0; i < 8; i++) {
+    let off = offs[i];
+    let wgt = 1.0;
+    let o = at(ip + off, size);
+    // Water only wicks where at least one side is already damp.
+    let damp = smoothstep(0.01, 0.12, max(o.b, c.b));
+    let k = min(kWater * 0.5 * (c.a + o.a), 0.11) * wgt * damp;
+    if (i < 4) {
+      grad += vec2f(off) * o.b;
+    }
+    let flow = k * (o.b - c.b); // > 0 flows in
+    b += flow;
+    // Suspended pigment rides the water, but the sheet filters most of it
+    // out except along the fibres, so a bleed feathers out in fine hairs
+    // instead of blurring.
+    let concO = min(o.r / max(o.b, 0.04), 3.0);
+    let carry = 0.08 + 0.4 * smoothstep(0.75, 1.25, 0.5 * (c.a + o.a));
+    r += carry * flow * select(concC, concO, flow > 0.0);
   }
-  b *= exp(-sim.dt * 0.5);
+  // The sheet drinks and the air dries it, with a linear tail so it ends.
+  b = max(0.0, b * exp(-sim.dt * 0.32) - sim.dt * 0.01);
 
-  // Pigment settles: slowly while wet, all of it once dry, more at the
-  // drying front where the water thins out.
-  let edge = clamp(length(vec2f(n0.b - n1.b, n2.b - n3.b)) * 6.0, 0.0, 1.0);
-  let settle = clamp(sim.dt * (0.5 + 6.0 * (1.0 - wetHere) + 5.0 * edge), 0.0, 1.0);
-  g += r * settle;
+  // Settling: slow while wet, everything once dry, faster at the drying front.
+  let wetHere = smoothstep(0.02, 0.2, b);
+  let front = clamp(length(grad) * 2.0, 0.0, 1.0) * (1.0 - smoothstep(0.15, 0.4, b));
+  let settle = clamp(sim.dt * (1.0 + 7.0 * (1.0 - wetHere) + 3.0 * front), 0.0, 1.0);
+  var g = c.g + r * settle;
   r -= r * settle;
 
   // The brush.
@@ -73,8 +96,14 @@ fn at(ip: vec2i, size: vec2i) -> vec4f {
     let pa = p - a;
     let h = clamp(dot(pa, dir), 0.0, L);
     let dist = length(pa - dir * h);
-    if (dist < w + sim.texel) {
-      let inside = 1.0 - smoothstep(w - sim.texel, w + sim.texel, dist);
+    if (dist < w * 1.4 + 2.0 * sim.texel) {
+      // The hairs at the edge of a brush are uneven, so the outline is too.
+      let u0 = sim.stroke.z + h;
+      let side = select(0.0, 5.0, dir.x * pa.y - dir.y * pa.x > 0.0);
+      let rag = 1.0 + 0.1 * (pnoise(vec2f(u0 * 60.0, side + sim.stroke.w)) - 0.5) + 0.05 * (pnoise(vec2f(u0 * 260.0, side + 2.0)) - 0.5);
+      let inside = 1.0 - smoothstep(w * rag - 1.5 * sim.texel, w * rag + 1.5 * sim.texel, dist);
+      // The brush wets a little beyond its ink, and the bleed runs into that.
+      let damp = 1.0 - smoothstep(w * 0.95, w * 1.3, dist);
       // Across the brush: which bristle this is, and whether it still has ink.
       let v = (dir.x * pa.y - dir.y * pa.x) / w;
       let id = floor((v * 0.5 + 0.5) * 38.0);
@@ -82,13 +111,29 @@ fn at(ip: vec2i, size: vec2i) -> vec4f {
       let u = sim.stroke.z + h;
       let skip = pnoise(vec2f(u * 9.0, id * 3.7 + sim.stroke.w)) - 0.5;
       let ink = smoothstep(-0.06, 0.06, load * 1.25 - 0.12 + skip * 0.5 - hb);
+      // A drying brush only touches the tops of the paper's tooth, so its
+      // marks break up into specks of bare paper (kasure, flying white).
+      let tooth = pnoise(p * 380.0) * 0.6 + pnoise(p * 1100.0) * 0.4;
+      let full = smoothstep(0.3, 0.75, load);
+      let catchTooth = smoothstep(0.62 - 0.5 * load, 0.72 - 0.5 * load, tooth);
+      let bite = mix(catchTooth, 1.0, full);
       // The belly of the brush carries more than its edge.
       let belly = 1.0 - 0.35 * v * v;
-      let amount = inside * ink * belly * (0.55 + 0.6 * load) * (0.7 + 0.3 * phash(vec2f(id, 7.0)));
-      r = max(r, amount * 1.3);
-      b = max(b, inside * (0.08 + sim.wet * (0.35 + 0.65 * ink)));
+      // A loaded brush lays near black; the ink thins to grey as it runs out.
+      let streak = 0.82 + 0.18 * pnoise(vec2f(u * 40.0, id * 1.3)) ;
+      let dep = inside * ink * bite * belly * (0.15 + 1.05 * load * load) * streak * (0.7 + 0.3 * phash(vec2f(id, 7.0)));
+      // Topping up, not adding: ink already in the paper takes the place of
+      // fresh ink, so going over a stroke darkens it a little, never floods.
+      r = max(r, dep - 0.4 * g);
+      b = max(b, max(inside * bite * (0.05 + sim.wet * (0.3 + 0.6 * ink)), damp * sim.wet * 0.45 * load));
     }
   }
 
-  return vec4f(r * sim.fade, g * sim.fade, b, 1.0);
+  // Clamp everything: a sheet can always recover from one bad texel.
+  return vec4f(
+    clamp(r * sim.fade, 0.0, 2.0),
+    clamp(g * sim.fade, 0.0, 2.5),
+    clamp(b, 0.0, 1.0),
+    clamp(c.a, 0.0, 2.0)
+  );
 }

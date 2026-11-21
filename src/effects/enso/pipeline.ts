@@ -68,6 +68,8 @@ export function createEnso(setup: EffectSetup, src: EnsoSources): EffectInstance
 
   // The unseen hand.
   let lastActive = -10
+  /** Someone painted on this sheet, so it is left up longer before lifting. */
+  let painted = false
   let autoStart = 0.35
   let autoSeed = 0
   let clearing = -1
@@ -97,6 +99,7 @@ export function createEnso(setup: EffectSetup, src: EnsoSources): EffectInstance
     let press = pressure
 
     if (pressed) {
+      painted = true
       autoStart = -1
       clearing = -1
       down = true
@@ -133,16 +136,21 @@ export function createEnso(setup: EffectSetup, src: EnsoSources): EffectInstance
         clearing = t + 9
       }
     }
-    if (!down && autoStart < 0 && clearing < 0 && t - lastActive > 7) clearing = t + 2
+    if (!down && autoStart < 0 && clearing < 0 && t - lastActive > (painted ? 18 : 7)) clearing = t + 2
 
+    // Dry ink does not fade; the sheet is lifted instead. Any multiplier just
+    // under 1 would be worse than useless: a half-float target can round each
+    // write down by one step, and at 60 frames a second that greys a black
+    // stroke within twenty seconds.
+    let fade = 1
     // Lifting the sheet: the ink fades out quickly, then the hand paints again.
-    let fade = Math.exp(-dt / 90)
     if (clearing >= 0 && t >= clearing) {
       fade = Math.exp(-dt / 0.35)
       if (t >= clearing + 1.6) {
         clearing = -1
         autoStart = t + 0.4
         needInit = true
+        painted = false
       }
     }
 
@@ -203,6 +211,11 @@ export function createEnso(setup: EffectSetup, src: EnsoSources): EffectInstance
     resize(width, height) {
       const [w, h] = dims(width, height)
       if (w === lastDims[0] && h === lastDims[1]) return
+      // A phone's address bar showing or hiding changes the height a little.
+      // Starting the sheet over for that wiped whatever was painted, so small
+      // changes keep the grid and let it stretch a few percent instead.
+      const near = (x: number, y: number) => Math.abs(x - y) / Math.max(y, 1) < 0.2
+      if (near(w, lastDims[0]) && near(h, lastDims[1]) && !needInit) return
       lastDims = [w, h]
       state.read.resize([w, h])
       state.write.resize([w, h])

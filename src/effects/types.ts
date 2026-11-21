@@ -140,5 +140,13 @@ export interface HeroEffect {
    * where a full retina buffer costs far more than it shows.
    */
   readonly maxDpr?: number
+  /**
+   * `"drag"` for an effect whose interaction is pressing and dragging in any
+   * direction (painting, grabbing a corner, winding). On touch, the canvas
+   * then keeps every drag for itself instead of leaving vertical ones to the
+   * feed, and a quick vertical flick still moves to the next screen. Leave it
+   * out for hover effects: there a vertical swipe simply scrolls.
+   */
+  readonly touch?: "drag"
   create(setup: EffectSetup): EffectInstance
 }
