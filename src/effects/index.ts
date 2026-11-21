@@ -90,6 +90,8 @@ import calibreWgsl from "./calibre/calibre.wgsl"
 import { createEnso } from "./enso/pipeline"
 import ensoInk from "./enso/ink.wgsl"
 import ensoPresent from "./enso/present.wgsl"
+import { createLanterns } from "./lanterns/pipeline"
+import lanternsWgsl from "./lanterns/lanterns.wgsl"
 
 /** Terse control literal. `key` has to match the WGSL `Params` member for single-pass effects. */
 const ctl = (
@@ -1647,6 +1649,54 @@ const ENTRIES: readonly Entry[] = [
       ctl("brush", "Brush", 0.5, 2, 0.01, 1),
     ],
     create: (setup) => createEnso(setup, { ink: ensoInk, present: ensoPresent }),
+  },
+  {
+    id: "lanterns",
+    // Many lanterns tested per pixel, twice over the lake; capped so laptop GPUs stay calm.
+    maxDpr: 1.25,
+    name: "Lantern Night",
+    published: "2026-11-21",
+    category: "Festival",
+    tagline: "Paper lanterns rising from a still lake, and your hand is the warm air.",
+    summary:
+      "A night lake under a dark sky. Paper sky lanterns rise from boats across the water, each lit from the flame inside, swaying as they climb and slowly drifting away, while hundreds more rise as tiny sparks above the far hills. The lake mirrors all of it, broken into long streaks by slow ripples. Moving the pointer is a breath of warm air: lanterns near your hand are pushed along its path and lifted. Press to let a lantern go from under your hand, and hold to release more. Glow sets how much light the lanterns throw into the night, and Lanterns how many are released.",
+    explanation: [
+      { title: "Move the near lanterns on the CPU", body: "Up to 44 near lanterns are kept in a list. Each rises at a pace set by its size, sways on two slow sines, drifts away as it climbs so it shrinks, and is pushed by the air the pointer stirs. They are sorted far to near and sent to the shader as a uniform array." },
+      { title: "Draw a paper lantern", body: "A lantern is a small distance field: a bag wider at the top and open at the bottom. Inside it is lit by the flame, brightest at the mouth and dimmer toward the top, with faint ribs, a darker wire ring at the mouth, a flame point and a halo in the air." },
+      { title: "Fill the far sky cheaply", body: "The far lanterns are three layers of hashed cells scrolling upward, a few cells in each holding a twinkling spark. There are more just above the hills and fewer higher up, which gives the sense of a whole festival without moving a single one." },
+      { title: "Mirror it in the lake", body: "Below the shore line the sky is read again at the mirrored height, shifted sideways by ripples that grow toward the viewer. Each near lantern is reflected about the water directly under it and stretched downward, so its reflection sits where it should." },
+    ],
+    rationale: {
+      idea: "Paper sky lanterns rising from a night lake, and your hand is the warm air that carries them.",
+      firstSeconds: "A dark lake under a deep blue sky, lanterns already in the air and new ones lifting off the water across the lake, glowing amber and swaying, with a haze of tiny far lanterns over the hills and every one of them mirrored in the water.",
+      interaction: "Moving the pointer stirs the air, so lanterns near your hand are pushed along its path and lifted, and you can herd them. Press to release a lantern of your own from under your hand and watch it catch and climb; hold to release a stream of them.",
+      headline: "The lower left: dark open water, since lanterns are released across the rest of the lake and rise away from it.",
+      nearest: "Vigil, the candle, where the pointer is also air moving a flame. Vigil is one flame indoors; this is a sky full of small lights outdoors, and the pointer can add to it as well as move it.",
+      risks: "Too many lights would turn into noise, so the far field is sparse and fades with height, and the near list is capped at 44. Testing every lantern for every pixel could be slow, so each lantern is skipped outside a small box around it and the effect is capped at 1.25x pixel density. A lake that only reflects specks would look busy, so the ripples are gentle and the reflection is dimmed.",
+    },
+    technical: {
+      insight: "A crowd needs only a few individuals: 44 real lanterns in front of a hashed field of sparks reads as thousands.",
+      pipeline: [
+        "cpu · up to 44 lanterns: rise, sway, drift, pointer air and releases, sorted far to near into a uniform array",
+        "fragment · sky with stars and hills, three hashed layers of far sparks, near lanterns as distance fields with flame and halo, lake reflection of sky and lanterns with ripples",
+      ],
+      techniques: [
+        "uniform arrays",
+        "distance fields",
+        "hashed particle layers",
+        "planar reflection",
+        "pointer as air",
+      ],
+      notes:
+        "Each lantern stores its position, size, the height of the water under it and a flicker phase. Its rise speed is 0.018 plus 0.9 times its size per second, its sideways velocity relaxes toward a sway of two sines, and its size shrinks by about 3.5 percent a second as it drifts off. The pointer's velocity is applied with a gaussian falloff around the hand, plus a small outward and upward push. A new lantern brightens over 0.8 seconds. Lanterns released lower on the lake are nearer, so they start larger. The far field uses cells of 70, 48 and 26 per screen height; a cell holds a spark with a probability that falls with height. In the lake, the sky is read at the mirrored height with a sideways ripple from stretched value noise, and each near lantern is reflected about its own water line and stretched 1.8 times downward.",
+      source: "src/effects/lanterns",
+    },
+    accent: "#ff9a3c",
+    controls: [
+      ctl("glow", "Glow", 0.4, 2, 0.01, 1),
+      ctl("count", "Lanterns", 0.3, 2, 0.01, 1),
+    ],
+    create: (setup) => createLanterns(setup, lanternsWgsl),
   },
 ]
 

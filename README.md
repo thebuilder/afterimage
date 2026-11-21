@@ -76,6 +76,7 @@ with `strictPort`, so a busy port fails loudly instead of moving; `shots.sh` and
 | 31 | **Folio** | page curl as a fold reflection plus a cylinder mapped back to the flat sheet in closed form, three layers tested top down, distance-field papers with bump-mapped embossing and foil, one soft shadow sample | foil, curl |
 | 32 | **Calibre** | watch movement from layered distance fields, gear teeth by folding the angle into one sector, anisotropic highlights for perlage, Geneva stripes and soleil, per-layer lamp shadows, escapement-timed ticks, rotational motion blur on the balance | lamp, rate |
 | 33 | **Ensō** | ink on paper as a ping-pong of wet pigment, settled pigment and water, soaking along fibre permeability with a drying-edge rim, brush stamped per frame with 38 bristles that each run dry at their own threshold, pressure from hand speed | ink, brush |
+| 34 | **Lantern Night** | up to 44 CPU-driven lanterns in a uniform array drawn as distance fields with flame and halo, hashed layers of far sparks, planar lake reflection with ripples, pointer as warm air and press to release | glow, lanterns |
 
 ## Copy
 
@@ -179,7 +180,7 @@ These five are the gate, and the first four need nothing but Node:
 npm run typecheck           # tsc -b --noEmit
 npm run lint                # oxlint
 npm run build               # tsc -b && vite build
-npm run check:registry      # registry invariants: "33 effects checked, 0 problems"
+npm run check:registry      # registry invariants: "34 effects checked, 0 problems"
 npm run check:wgsl          # every .wgsl file: "27 shaders checked, 0 failing"
 ```
 
