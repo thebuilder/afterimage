@@ -73,6 +73,10 @@ export function multipassSpecs(gpu, tgt, { fluxCount = 60_000 } = {}) {
       const { createFerro } = await import(path.join(root, "src/effects/ferro/pipeline.ts"))
       return createFerro({ gpu, target: tgt, quality: 1 }, await load("src/effects/ferro/ferro.wgsl"))
     },
+    ebru: async () => {
+      const { createEbru } = await import(path.join(root, "src/effects/ebru/pipeline.ts"))
+      return createEbru({ gpu, target: tgt, quality: 1 }, { marble: await load("src/effects/ebru/marble.wgsl"), present: await load("src/effects/ebru/present.wgsl") })
+    },
     lanterns: async () => {
       const { createLanterns } = await import(path.join(root, "src/effects/lanterns/pipeline.ts"))
       return createLanterns({ gpu, target: tgt, quality: 1 }, await load("src/effects/lanterns/lanterns.wgsl"))

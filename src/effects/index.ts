@@ -92,6 +92,9 @@ import ensoInk from "./enso/ink.wgsl"
 import ensoPresent from "./enso/present.wgsl"
 import { createLanterns } from "./lanterns/pipeline"
 import lanternsWgsl from "./lanterns/lanterns.wgsl"
+import { createEbru } from "./ebru/pipeline"
+import ebruMarble from "./ebru/marble.wgsl"
+import ebruPresent from "./ebru/present.wgsl"
 
 /** Terse control literal. `key` has to match the WGSL `Params` member for single-pass effects. */
 const ctl = (
@@ -1705,6 +1708,54 @@ const ENTRIES: readonly Entry[] = [
       ctl("count", "Lanterns", 0.3, 2, 0.01, 1),
     ],
     create: (setup) => createLanterns(setup, lanternsWgsl),
+  },
+  {
+    id: "ebru",
+    touch: "drag",
+    name: "Ebru",
+    published: "2026-11-22",
+    category: "Marbling",
+    tagline: "Drop paint on water, pull a stylus through it, and watch it marble.",
+    summary:
+      "A tray of dark size with paint floating on it, the way Turkish ebru paper is marbled. Drops of cream, oxblood, ochre, indigo and verdigris spread into rings, combs pull them into stripes and back again, and wide waves bend the stripes into chevrons, all with edges that stay razor sharp however thin they are drawn. Little flowers appear where a drop is laid inside another and a stylus is drawn up through them. Press to drop paint and hold to let it spread; drag to pull a stylus through the paint. Left alone, the tray is skimmed clean with a strip of paper and a new pattern begins. Drop size sets how much paint each drop carries, and Stylus how wide a line the stylus pulls.",
+    explanation: [
+      { title: "Every move is a map", body: "A drop of paint pushes everything around it outward without changing its area, and a stylus or comb slides the paint near it along its line. Both are exact formulas, so the tray is kept as a list of moves rather than a grid of paint." },
+      { title: "Walk the list backwards", body: "For each pixel the moves are undone from newest to oldest. If the point lands inside a drop, that is its colour; otherwise it carries on, and past the oldest move it reads the tray as it was last baked." },
+      { title: "Sharp at any stretch", body: "While undoing the moves, the pixel also keeps track of how much each move stretched and squeezed the space around it. That tells it exactly how many pixels wide a drop's edge is where it lands, so even edges combed hair thin are smooth." },
+      { title: "Keep the list short", body: "Moves that have stopped changing are baked into a texture now and then, and the tray is only drawn again when something moves. When the pattern is still, each frame just shows it with the light on the size." },
+    ],
+    rationale: {
+      idea: "Turkish paper marbling: drop paint on water and pull a stylus through it, with edges that stay crisp however far you comb.",
+      firstSeconds: "A dark tray already marbled into rings and fine stripes of cream, oxblood, ochre and indigo, and a wide comb is being drawn down through it, bending the stripes into waves, before three small flowers are laid and pulled into tulips.",
+      interaction: "Press and a drop of paint lands under your hand, pushing every ring around it outward; hold and it keeps spreading. Drag and you pull a stylus through the paint, dragging the rings into feathers and teardrops behind it. Nothing you do blurs, because every move is exact.",
+      headline: "The lower left: the unseen hand drops its paint away from it so the dark size shows there, and the tray darkens toward that corner.",
+      nearest: "Ink, where you drag through a fluid and colour curls. Ink is a soft, diffusing fluid simulation; Ebru never diffuses, it folds crisp flat colours into patterns, and pressing adds paint as well as moving it.",
+      risks: "Replaying many moves for every pixel could be slow, so finished moves are baked into a texture, the list is capped at 40, and the tray is only redrawn while something is moving. A bake resamples the paint once, which could soften it, so only moves that have stopped are baked, and squeezed areas average over the pixel's footprint. A drag with too long a stylus step could fold the paint over itself, so each stroke's push ramps in and out over at least its own length.",
+    },
+    technical: {
+      insight: "Marbling moves are invertible formulas, so the paint never has to be simulated: undo the moves per pixel and the pattern is exact at any resolution.",
+      pipeline: [
+        "fragment · bake, when the list is long: replay the oldest finished moves over the last bake into an rgba8 texture",
+        "fragment · tray, only when a move changes: undo up to 40 moves per pixel, carrying the 2x2 Jacobian for antialiased drop edges and footprint-averaged reads of the bake",
+        "fragment · picture: the tray with a soft reflection on the size, darker rim, stylus shadow and ring, and the paper strip that skims it",
+      ],
+      techniques: [
+        "inverse mapping",
+        "analytic Jacobians",
+        "exact antialiasing",
+        "baking",
+        "redraw on change",
+      ],
+      notes:
+        "A drop of radius r at c maps a point at offset v to c + v sqrt(1 - r²/|v|²) when undone, which keeps area, so a drop dropped into rings squeezes them into fine bands. A stroke from a to b slides points along its direction by 0.85 of its length times exp(-d/w) across it and a ramp along it that rises and falls over at least the stroke's length, so the push never folds the paint. A comb is a row of tines across the whole tray, shaped by a raised cosine, with a front that moves along it. A pixel whose edge coverage is partial blends the drop's colour with whatever lies beyond it. Moves are baked sixteen at a time once 28 are kept.",
+      source: "src/effects/ebru",
+    },
+    accent: "#d89a36",
+    controls: [
+      ctl("drop", "Drop size", 0.5, 1.8, 0.01, 1),
+      ctl("stylus", "Stylus", 0.5, 2, 0.01, 1),
+    ],
+    create: (setup) => createEbru(setup, { marble: ebruMarble, present: ebruPresent }),
   },
 ]
 
