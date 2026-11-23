@@ -75,7 +75,7 @@ export function multipassSpecs(gpu, tgt, { fluxCount = 60_000 } = {}) {
     },
     focus: async () => {
       const { createFocus } = await import(path.join(root, "src/effects/focus/pipeline.ts"))
-      return createFocus({ gpu, target: tgt, quality: 1 }, await load("src/effects/focus/lens.wgsl"))
+      return createFocus({ gpu, target: tgt, quality: 1 }, { still: await load("src/effects/focus/still.wgsl"), lens: await load("src/effects/focus/lens.wgsl") })
     },
     ebru: async () => {
       const { createEbru } = await import(path.join(root, "src/effects/ebru/pipeline.ts"))

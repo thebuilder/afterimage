@@ -78,7 +78,7 @@ with `strictPort`, so a busy port fails loudly instead of moving; `shots.sh` and
 | 33 | **Ensō** | ink on paper as a ping-pong of wet pigment, settled pigment and water, soaking along fibre permeability with a drying-edge rim, brush stamped per frame with 38 bristles that each run dry at their own threshold, pressure from hand speed | ink, brush |
 | 34 | **Lantern Night** | up to 44 CPU-driven lanterns in a uniform array drawn as distance fields with flame and halo, hashed layers of far sparks, planar lake reflection with ripples, pointer as warm air and press to release | glow, lanterns |
 | 35 | **Ebru** | paper marbling as a list of exact area-preserving moves (drops, stylus strokes, combs) replayed backwards per pixel with a carried Jacobian for antialiased edges, finished moves baked into a texture, tray redrawn only when a move changes; press to drop paint, drag to pull a stylus | drop size, stylus |
-| 36 | **Rack Focus** | gathered bokeh: every light at a known depth drawn as its circle of confusion with blade shape, rim, cat's eye and chromatic fringes, only the lights within the current disc radius visited per pixel, focus on a critically damped spring toward the depth under the pointer | aperture, exposure |
+| 36 | **Rack Focus** | gathered bokeh on a perspective night avenue: every window, lamp and car at a real distance drawn as its circle of confusion with blade shape, rim, cat's eye and chromatic fringes, lights found per pixel along their rows in 1/z, still street cached until focus moves, wet road reflections, focus on a critically damped spring toward the depth under the pointer | aperture, exposure |
 
 ## Copy
 
