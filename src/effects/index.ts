@@ -95,6 +95,8 @@ import lanternsWgsl from "./lanterns/lanterns.wgsl"
 import { createEbru } from "./ebru/pipeline"
 import ebruMarble from "./ebru/marble.wgsl"
 import ebruPresent from "./ebru/present.wgsl"
+import { createFocus } from "./focus/pipeline"
+import focusWgsl from "./focus/lens.wgsl"
 
 /** Terse control literal. `key` has to match the WGSL `Params` member for single-pass effects. */
 const ctl = (
@@ -1756,6 +1758,54 @@ const ENTRIES: readonly Entry[] = [
       ctl("stylus", "Stylus", 0.5, 2, 0.01, 1),
     ],
     create: (setup) => createEbru(setup, { marble: ebruMarble, present: ebruPresent }),
+  },
+  {
+    id: "focus",
+    // Many lights tested per pixel; capped so laptop GPUs stay calm.
+    maxDpr: 1.25,
+    name: "Rack Focus",
+    published: "2026-11-23",
+    category: "Photography",
+    tagline: "A night city through a fast lens, and focus follows your hand.",
+    summary:
+      "A city at night seen from a balcony through a fast lens. String lights hang across the top, a street of sodium lamps and traffic runs below, and lit windows fill the towers beyond. Only one depth is ever sharp: everything else spreads into bokeh, hexagonal from the aperture blades, brighter at the rim, squeezed into cat's eyes toward the corners and fringed magenta in front of focus and green behind it. Point at anything and the lens pulls focus to it, melting the rest. Left alone, it racks slowly between the bulbs, the street and the skyline. Aperture sets how shallow the focus is, and Exposure how bright the lights.",
+    explanation: [
+      { title: "Every light has a depth", body: "The scene is only lights: bulbs on two strings near the camera, lamps and cars on the street, windows in the towers. Each sits at a known distance, and the lens is focused at one distance, both kept in diopters, one over the distance." },
+      { title: "The circle of confusion", body: "A point that is out of focus spreads into a disc whose radius is the aperture times how many diopters it is off. The same light spread over a bigger disc is dimmer, so the bulbs melt into large soft discs while the in-focus ones are sharp points with a glow." },
+      { title: "What a real lens adds", body: "The disc is rounded into a hexagon by six blades, brighter at its rim with faint onion rings, clipped by a second offset disc toward the corners into a cat's eye, and fringed magenta in front of focus and green behind it. The picture scales slightly as focus moves, the breathing of a real lens." },
+      { title: "Only test what can reach", body: "Each light can only reach as far as its own disc, which is the same for every light at a depth. So each pixel only visits the window cells, street slots and bulbs within that reach, and nothing further." },
+    ],
+    rationale: {
+      idea: "A night city through a fast lens where focus follows your hand, and everything else melts into bokeh.",
+      firstSeconds: "The string lights across the top are sharp, a row of warm bulbs, with the whole city behind them melted into big soft discs; then the lens racks focus and the bulbs swell into glowing hexagons while the towers' windows and the traffic snap sharp.",
+      interaction: "Point at anything, a bulb, the traffic or a tower, and the lens pulls focus to its depth with a focus puller's ease, so you choose what is sharp and watch the rest dissolve. On touch, tap where you want it.",
+      headline: "The lower left: the dark balcony wall below the street, which the lights never reach.",
+      nearest: "Lantern Night, also warm lights in the dark. Lantern Night moves its lights and the pointer is air; here the lights stay put and the pointer moves the focus, so the whole picture is about the lens.",
+      risks: "Bokeh can look like a filter if every disc is a perfect circle, so the discs carry blade shape, rim, cat's eye and colour fringes. Testing every light for every pixel would be slow, so each pixel only visits lights within the current disc radius of its depth, and the effect is capped at 1.25x pixel density. A rack that jumps would feel cheap, so focus moves on a critically damped spring.",
+    },
+    technical: {
+      insight: "Depth of field for points is exact and cheap if you gather rather than blur: every light knows its depth, so its disc radius is known before you draw it.",
+      pipeline: [
+        "cpu · focus on a critically damped spring toward the depth under the pointer, or a slow cycle when idle",
+        "fragment · sky and skyline blurred by the city's disc radius, hashed window cells, street lamps and traffic, two catenary strings of bulbs, each light a shaped bokeh disc, parapet, tone curve and vignette",
+      ],
+      techniques: [
+        "circle of confusion",
+        "gathered bokeh",
+        "cat's eye vignetting",
+        "chromatic aberration",
+        "focus breathing",
+      ],
+      notes:
+        "Depths in diopters: near string 0.91, far string 0.59, parapet 1.3, street 0.25, city 0.07. Disc radius is 0.07 screen heights per diopter of defocus at the default aperture. Brightness falls as radius to the power 1.3 rather than 2, so large discs stay visible. The cat's eye clips each disc with a second one offset toward the centre by 0.55 of the radius times the light's distance from the centre. Windows sit in a hashed grid of 0.032 by 0.034 cells, 40 percent lit, only inside the stepped skyline. Cars are hashed slots in two lanes moving at different speeds, each a pair of lights.",
+      source: "src/effects/focus",
+    },
+    accent: "#ffb15c",
+    controls: [
+      ctl("aperture", "Aperture", 0.3, 1.6, 0.01, 1),
+      ctl("exposure", "Exposure", 0.4, 2, 0.01, 1),
+    ],
+    create: (setup) => createFocus(setup, focusWgsl),
   },
 ]
 
