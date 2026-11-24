@@ -41,16 +41,127 @@ export fn project(l: Lens, w: vec3f) -> vec2f {
   return l.centre + F * vec2f(w.x, w.y - CAM_H) / w.z;
 }
 
-/// Is there a building at depth z on this side, and how tall.
-export fn buildingHeight(side: f32, z: f32) -> f32 {
-  if (z < 8.0 || z > Z_END) { return 0.0; }
+/// Buildings stand fifteen metres wide, five to a block.
+export const SEG = 15.0;
+/// Window columns per building, and the storey height above the shops.
+export const COLS = 4.0;
+export const STOREY = 3.4;
+export const SHOP_H = 4.5;
+
+/// The stretch of street the depth z falls in: a whole cross street, or one
+/// building's frontage. Returns its near and far ends.
+export fn segment(z: f32) -> vec2f {
+  let b = floor(z / BLOCK);
+  let inBlock = z - b * BLOCK;
+  if (inBlock < GAP) { return vec2f(b * BLOCK, b * BLOCK + GAP); }
+  let s = min(floor((inBlock - GAP) / SEG), 4.0);
+  let z0 = b * BLOCK + GAP + s * SEG;
+  return vec2f(z0, z0 + SEG);
+}
+
+/// The building on this side whose frontage holds depth z: its height (0 for
+/// none), how far its facade is set back from the building line, its
+/// material (0 brick, 1 pale stone, 2 glass curtain wall, 3 concrete) and a
+/// seed.
+export fn building(side: f32, z: f32) -> vec4f {
+  if (z < 8.0 || z > Z_END) { return vec4f(0.0); }
   let b = z / BLOCK;
   let inBlock = fract(b) * BLOCK;
-  if (inBlock < GAP) { return 0.0; }
-  let seg = floor((inBlock - GAP) / 15.0);
-  let h = hash21(vec2f(floor(b) * 7.0 + seg, side * 13.0 + 5.0));
+  if (inBlock < GAP) { return vec4f(0.0); }
+  let seg = min(floor((inBlock - GAP) / SEG), 4.0);
+  let id = vec2f(floor(b) * 7.0 + seg, side * 13.0 + 5.0);
+  let h = hash21(id);
   let tower = step(0.86, hash21(vec2f(floor(b) * 3.0 + seg, side * 29.0)));
-  return 16.0 + 30.0 * h * h + tower * 45.0;
+  let height = 16.0 + 30.0 * h * h + tower * 45.0;
+  var sb = floor(hash21(id + 3.1) * 3.0 + 1.0) * 0.8 * step(0.55, hash21(id + 5.7));
+  var mat = floor(hash21(id + 9.3) * 3.99);
+  if (mat == 2.0 && tower < 0.5 && h < 0.5) { mat = 0.0; }
+  if (tower > 0.5) { mat = 2.0; sb = 2.4; }
+  return vec4f(height, sb, mat, hash21(id + 1.7));
+}
+
+export fn buildingHeight(side: f32, z: f32) -> f32 {
+  return building(side, z).x;
+}
+
+/// The building line on each side, as a distance from the camera's axis.
+export fn lineOf(s: i32) -> f32 {
+  return select(X_RIGHT, -X_LEFT, s == 0);
+}
+
+/// Follows the ray through pixel offset q (from the vanishing point) past the
+/// frontages on one side until it meets a building. Returns the depth z, the
+/// face (0 the facade, 1 a side wall facing the camera, where the nearer
+/// neighbour is lower or set further back), the distance from the axis, and
+/// the height. z is negative when the ray reaches the road or the sky first.
+export fn traceSide(q: vec2f, s: i32) -> vec4f {
+  let xs = select(1.0, -1.0, s == 0);
+  let W = lineOf(s);
+  let a = q.x * xs / F;
+  if (a <= 1e-5) { return vec4f(-1.0); }
+  let sy = q.y / F;
+  var z = max(W / a, 8.0);
+  for (var i = 0; i < 28; i++) {
+    if (z > Z_END) { break; }
+    let y0 = CAM_H + sy * z;
+    if (y0 < 0.0 || (sy > 0.0 && y0 > 92.0)) { break; }
+    let sg = segment(z);
+    let bd = building(f32(s), sg.x + 1.0);
+    if (bd.x > 0.0) {
+      let zf = (W + bd.y) / a;
+      let ze = max(z, zf);
+      if (ze < sg.y) {
+        let y = CAM_H + sy * ze;
+        if (y < 0.0) { break; }
+        if (y < bd.x) {
+          return vec4f(ze, select(0.0, 1.0, zf < z - 1e-4), a * ze, y);
+        }
+      }
+    }
+    z = sg.y + 1e-3;
+  }
+  return vec4f(-1.0);
+}
+
+/// Whether a point on a set-back facade is hidden from the camera by the
+/// nearer buildings on its side that stand further forward.
+export fn hiddenOnSide(s: i32, xa: f32, y: f32, z: f32) -> bool {
+  let W = lineOf(s);
+  let a = xa / z;
+  let sy = (y - CAM_H) / z;
+  var zb = segment(z).x;
+  for (var i = 0; i < 3; i++) {
+    let sg = segment(zb - 0.5);
+    let bd = building(f32(s), sg.x + 1.0);
+    if (bd.x > 0.0) {
+      let ze = max(sg.x, (W + bd.y) / a);
+      if (ze < sg.y && CAM_H + sy * ze < bd.x) { return true; }
+    }
+    zb = sg.x;
+  }
+  return false;
+}
+
+/// Lamp light on the road at (x, z).
+export fn pools(x: f32, z: f32) -> f32 {
+  let k = round((z - 14.0) / 32.0);
+  let zk = 14.0 + k * 32.0;
+  let dz = z - zk;
+  let l = exp(-(dz * dz + (x - (KERB_L - 0.8)) * (x - (KERB_L - 0.8))) / 70.0)
+        + exp(-(dz * dz + (x - (KERB_R + 0.8)) * (x - (KERB_R + 0.8))) / 70.0);
+  return l;
+}
+
+/// Box-filtered periodic pulse: the share of [u - w/2, u + w/2] (in periods)
+/// where fract(u) lies between lo and hi. Stays clean however fine the
+/// pattern gets on screen, which is what keeps far facades from striping.
+export fn pulse(u: f32, lo: f32, hi: f32, w: f32) -> f32 {
+  let ww = max(w, 1e-4);
+  let a = u - 0.5 * ww;
+  let b = u + 0.5 * ww;
+  let ia = floor(a) * (hi - lo) + clamp(fract(a), lo, hi) - lo;
+  let ib = floor(b) * (hi - lo) + clamp(fract(b), lo, hi) - lo;
+  return clamp((ib - ia) / ww, 0.0, 1.0);
 }
 
 /// The light a point light spreads over the pixel at offset o, in screen
@@ -123,14 +234,5 @@ export fn aboveParapet(l: Lens, p: vec2f) -> f32 {
 export fn onRoad(l: Lens, p: vec2f) -> bool {
   let q = p - l.centre;
   if (q.y >= 0.0 || p.y < PARAPET_Y) { return false; }
-  let tr = -q.y / (F * CAM_H);
-  for (var s = 0; s < 2; s++) {
-    let xf = select(X_RIGHT, X_LEFT, s == 0);
-    let t = q.x / (F * xf);
-    if (t > tr) {
-      let y = CAM_H + q.y / (F * t);
-      if (y > 0.0 && y < buildingHeight(f32(s), 1.0 / t)) { return false; }
-    }
-  }
-  return true;
+  return traceSide(q, 0).x < 0.0 && traceSide(q, 1).x < 0.0;
 }
