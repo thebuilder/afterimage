@@ -98,6 +98,9 @@ import ebruPresent from "./ebru/present.wgsl"
 import { createFocus } from "./focus/pipeline"
 import focusLens from "./focus/lens.wgsl"
 import focusStill from "./focus/still.wgsl"
+import { createKoi } from "./koi/pipeline"
+import koiPond from "./koi/pond.wgsl"
+import koiWater from "./koi/water.wgsl"
 
 /** Terse control literal. `key` has to match the WGSL `Params` member for single-pass effects. */
 const ctl = (
@@ -1809,6 +1812,56 @@ const ENTRIES: readonly Entry[] = [
       ctl("exposure", "Exposure", 0.4, 2, 0.01, 1),
     ],
     create: (setup) => createFocus(setup, { still: focusStill, lens: focusLens }),
+  },
+  {
+    id: "koi",
+    // A full pond picture with ten fish per pixel; capped so laptop GPUs stay calm.
+    maxDpr: 1.25,
+    name: "Koi",
+    published: "2026-11-24",
+    category: "Pond",
+    tagline: "A garden pond seen from above, and the koi come to your hand.",
+    summary:
+      "Looking straight down into a shallow garden pond on a bright day. Koi of several varieties, red and white kohaku, three coloured sanke and showa, gold ogon, platinum, brown chagoi, tancho with its single red crown and blue asagi, swim over a bed of river stones and weed, their fins trailing and their bodies flexing with every stroke. Sunlight breaks into caustics on the stones, the sky and the trees overhead reflect off the surface, lily pads float in one corner and ginkgo leaves drift across. Hold still over the water and the nearest fish come to look; move fast and they scatter. Press to scatter food, and they race to it and gulp at the surface. Sunlight sets the brightness of the day and Ripples how much the water moves.",
+    explanation: [
+      { title: "A head and a spine", body: "Each koi is a head that steers and ten points that follow it at fixed spacing, so the body bends along the path it swam. A travelling wave added on top, growing toward the tail and faster when the fish hurries, makes it swim rather than slide." },
+      { title: "Simple wants, added up", body: "Every fish adds up a few pulls: a slow wander, the nearest food, a quiet hand to look at, a quick hand to flee, room from the others and the pond's edges. Turning is limited, so they arc rather than snap." },
+      { title: "Ripples on a grid", body: "The water height lives on a small grid that runs the wave equation every frame. Your hand, landing food, a gulping fish and shallow swimmers all push dents into it, and the rings spread, reflect and fade." },
+      { title: "Seen through moving water", body: "The slope of the ripples bends the view of the stones and fish below, focuses sunlight into caustics, and tilts the reflection of sky and trees, which grows stronger at a glancing angle." },
+    ],
+    rationale: {
+      idea: "A sunny koi pond seen from above, where the fish come to a still hand, flee a quick one and race for food.",
+      firstSeconds: "Bright water over pale stones with sunlight dancing on them, and a handful of red, white, gold and black koi gliding in slow arcs, bodies flexing; a few seconds in a pinch of food lands, rings spread and the fish swing round to gulp at it.",
+      interaction: "The fish read your hand the way real koi read a person at the edge: hold still and the nearest drift over to look, move fast and they bolt, press and food lands where you pressed and they all race for it. Every move leaves ripples that bend the whole picture.",
+      headline: "The lower left: the fish steer away from it on wide screens and the water there is calm stones and shade.",
+      nearest: "Lido, also water seen from above with ripples and caustics. Lido is an empty pool about light; here the water is a stage for living fish that respond to you.",
+      risks: "Fish drawn as ovals would look cheap, so they have tapered bodies with heads, forked tails, trailing fins, real variety patterns, scales and a sheen, and they bend along a spine. Flocks can look mechanical, so each fish has its own wander, speed and depth. Ten detailed fish per pixel could be slow, so each fish is skipped outside its bounds and the effect is capped at 1.25x pixel density.",
+    },
+    technical: {
+      insight: "A believable fish is mostly in the spine: a head that steers plus points that follow at fixed spacing gives bending for free, and a travelling wave on top turns gliding into swimming.",
+      pipeline: [
+        "fragment · ripple height on a rgba16float grid of 480 on its long edge, the wave equation with damping, dents from the hand, food, gulps and shallow fish",
+        "fragment · pond: refracted stones, weed and caustics, shadows of fish and leaves, koi with fins, tail, variety patterns, scales and depth tint, sky and canopy reflection with fresnel, glints, floating lily pads, ginkgo leaves and food",
+        "cpu · ten-point spines, steering from wander, food, the hand, separation and the edges; food, gulps and drifting leaves",
+      ],
+      techniques: [
+        "follow-the-leader spines",
+        "steering behaviours",
+        "wave equation ripples",
+        "refraction",
+        "caustics",
+        "fresnel reflection",
+      ],
+      notes:
+        "Nine fish on wide screens and six on phones, each with ten spine points; turn rate limited and speeds between slow cruise and a dash. The ripple step is twice the height minus the last, plus 0.24 times the Laplacian, times 0.986. Food lands four pellets at a time, auto-fed every 16 to 24 seconds when nobody is there. Fish deeper down are bluer, softer and fainter.",
+      source: "src/effects/koi",
+    },
+    accent: "#e8552a",
+    controls: [
+      ctl("light", "Sunlight", 0.3, 1.6, 0.01, 1),
+      ctl("ripples", "Ripples", 0.3, 2, 0.01, 1),
+    ],
+    create: (setup) => createKoi(setup, { water: koiWater, pond: koiPond }),
   },
 ]
 

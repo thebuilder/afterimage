@@ -73,6 +73,10 @@ export function multipassSpecs(gpu, tgt, { fluxCount = 60_000 } = {}) {
       const { createFerro } = await import(path.join(root, "src/effects/ferro/pipeline.ts"))
       return createFerro({ gpu, target: tgt, quality: 1 }, await load("src/effects/ferro/ferro.wgsl"))
     },
+    koi: async () => {
+      const { createKoi } = await import(path.join(root, "src/effects/koi/pipeline.ts"))
+      return createKoi({ gpu, target: tgt, quality: 1 }, { water: await load("src/effects/koi/water.wgsl"), pond: await load("src/effects/koi/pond.wgsl") })
+    },
     focus: async () => {
       const { createFocus } = await import(path.join(root, "src/effects/focus/pipeline.ts"))
       return createFocus({ gpu, target: tgt, quality: 1 }, { still: await load("src/effects/focus/still.wgsl"), lens: await load("src/effects/focus/lens.wgsl") })
