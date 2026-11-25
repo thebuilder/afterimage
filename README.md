@@ -80,6 +80,7 @@ with `strictPort`, so a busy port fails loudly instead of moving; `shots.sh` and
 | 35 | **Ebru** | paper marbling as a list of exact area-preserving moves (drops, stylus strokes, combs) replayed backwards per pixel with a carried Jacobian for antialiased edges, finished moves baked into a texture, tray redrawn only when a move changes; press to drop paint, drag to pull a stylus | drop size, stylus |
 | 36 | **Rack Focus** | gathered bokeh on a perspective night avenue: every window, lamp and car at a real distance drawn as its circle of confusion with blade shape, rim, cat's eye and chromatic fringes, lights found per pixel along their rows in 1/z, still street cached until focus moves, wet road reflections, focus on a critically damped spring toward the depth under the pointer | aperture, exposure |
 | 37 | **Koi** | a garden pond from above: koi with ten-point follow-the-leader spines and a swimming wave, steering from wander, food, a quiet or quick hand, separation and edges; wave-equation ripples from the hand, food and gulps refracting stones, caustics and fish; fresnel sky and canopy reflection, lily pads and drifting ginkgo leaves | light, ripples |
+| 38 | **Side A** | a record deck from above under a lamp you hold: anisotropic groove reflection from dot(T, H) with diffraction fringes per wavelength, dust and scratches that glint as they turn, printed label, tonearm of capsules and rounded boxes with projected soft shadows, walnut plinth; press to hold and scratch the record, motor torque brings it back | rpm, lamp |
 
 ## Copy
 
@@ -183,7 +184,7 @@ These five are the gate, and the first four need nothing but Node:
 npm run typecheck           # tsc -b --noEmit
 npm run lint                # oxlint
 npm run build               # tsc -b && vite build
-npm run check:registry      # registry invariants: "37 effects checked, 0 problems"
+npm run check:registry      # registry invariants: "38 effects checked, 0 problems"
 npm run check:wgsl          # every .wgsl file: "27 shaders checked, 0 failing"
 ```
 

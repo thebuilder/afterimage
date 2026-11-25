@@ -101,6 +101,8 @@ import focusStill from "./focus/still.wgsl"
 import { createKoi } from "./koi/pipeline"
 import koiPond from "./koi/pond.wgsl"
 import koiWater from "./koi/water.wgsl"
+import { createVinyl } from "./vinyl/pipeline"
+import vinylDeck from "./vinyl/deck.wgsl"
 
 /** Terse control literal. `key` has to match the WGSL `Params` member for single-pass effects. */
 const ctl = (
@@ -1863,6 +1865,55 @@ const ENTRIES: readonly Entry[] = [
       ctl("ripples", "Ripples", 0.3, 2, 0.01, 1),
     ],
     create: (setup) => createKoi(setup, { water: koiWater, pond: koiPond }),
+  },
+  {
+    id: "vinyl",
+    touch: "drag",
+    // Every part of the deck is shaded per pixel; capped so laptop GPUs stay calm.
+    maxDpr: 1.25,
+    name: "Side A",
+    published: "2026-11-25",
+    category: "Hi-fi",
+    tagline: "A record turning under a lamp you hold, and a hand on the vinyl.",
+    summary:
+      "A record deck seen from straight above on a walnut plinth, under one warm lamp. The record turns at thirty-three and a third, its grooves throwing the lamp back as a bow tie of light through the spindle, fringed with the faint rainbow a groove makes as a grating. Track gaps, the run-out loop and a scratched matrix number show in the vinyl, dust and fine scratches turn with it and flash as they cross the light, and the cream label carries its print around. The tonearm rests in the groove with its counterweight, headshell and cartridge, swaying a hair with the record's eccentricity and casting a soft shadow. Move and the lamp follows your hand, so the light swings across the grooves; press on the record to hold it, drag to scratch it back and forth, and let go for the motor to bring it back up to speed. Speed sets the turntable's rpm, and Lamp how bright the light.",
+    explanation: [
+      { title: "Light off the grooves", body: "The grooves are tiny concentric ridges, so they only reflect the lamp where the direction halfway between the lamp and your eye is square to them. That happens along the line through the spindle toward the lamp, which is why a record shows a bow tie of light that stays put while the record turns under it." },
+      { title: "A rainbow from a grating", body: "Grooves a tenth of a millimetre apart split light by wavelength, like a CD. Either side of the white streak each colour peaks at a slightly different angle, so the light fringes into faint red, green and blue." },
+      { title: "What turns, and what does not", body: "The light is fixed to the lamp, so the turning shows in what the record carries: the label's print, dust that glints as it passes, and fine scratches that flash only when they cross square to the light." },
+      { title: "A hand on the record", body: "While you press, the record turns exactly as far as your hand goes around the spindle, so you can hold it still or drag it back. Let go and the motor pulls it back up to speed in about half a second." },
+    ],
+    rationale: {
+      idea: "A record turning under a lamp you hold, where the grooves light up in a bow tie and a press puts your hand on the vinyl.",
+      firstSeconds: "A walnut deck from above with a black record turning, a white bow tie of light across its grooves fringed with faint colour, the label turning, dust glinting, and the lamp drifting slowly so the bow tie swings round.",
+      interaction: "The lamp follows your hand, so moving swings the light across the grooves and shows how a record really catches light; pressing on the record grabs it, and dragging scratches it back and forth until you let go and it spins back up.",
+      headline: "The lower left: bare walnut plinth beside the platter, lit only softly.",
+      nearest: "Calibre, also a precise machine where the pointer is a lamp. Calibre is a watch movement of gears; here the light is the subject, the groove reflection and its rainbow, and the hand can stop and throw the record.",
+      risks: "A record drawn as a flat black disc would look cheap, so it carries grooves, track gaps, run-out, matrix number, rolled lip, label print, dust and scratches, and the deck has a platter rim with strobe dots, buttons, pitch slider and a full tonearm with shadow. The rainbow could look like a filter, so it is faint and tied to the white streak. All of it is one pass with no textures, capped at 1.25x pixel density.",
+    },
+    technical: {
+      insight: "A record's sheen is anisotropic: grooves reflect only where the half vector is perpendicular to the circumferential tangent, so dot(T, H) alone draws the bow tie, and offsetting it per wavelength draws the diffraction.",
+      pipeline: [
+        "fragment · one pass: lacquered walnut plinth with grain and pores, keys, pitch slider, turned platter rim with strobe dots, the record (anisotropic groove light with diffraction fringes, glossy smooth bands, dust and scratches turning with it, printed label), and the tonearm parts as capsules and rounded boxes with metal shading and soft shadows from the lamp",
+        "cpu · record angle under motor torque or the hand, the lamp following the pointer or an idle path, and the tonearm solved from the needle's radius",
+      ],
+      techniques: [
+        "anisotropic reflection",
+        "diffraction grating colour",
+        "signed distance parts",
+        "projected soft shadows",
+        "procedural wood grain",
+      ],
+      notes:
+        "The groove term is exp(-dot(T, H)^2 / w) with a narrow core and a broad skirt; the rainbow puts red, green and blue peaks at |dot(T, H)| of 0.105, 0.085 and 0.066, with a second order at twice those. A second, dimmer bow tie comes from a fixed window. The lamp sits 2.4 record radii up, so the streak keeps its width on every screen. The needle radius is 0.74 of the record's, swaying by 0.004 with the angle; the tonearm is 1.15 radii from pivot to stylus and the headshell turns 0.4 radians in toward the spindle. The motor pulls the speed back with a rate of 4.5 per second.",
+      source: "src/effects/vinyl",
+    },
+    accent: "#c8442a",
+    controls: [
+      ctl("rpm", "Speed", 0, 78, 0.1, 33.3),
+      ctl("lamp", "Lamp", 0.4, 1.8, 0.01, 1),
+    ],
+    create: (setup) => createVinyl(setup, { deck: vinylDeck }),
   },
 ]
 
