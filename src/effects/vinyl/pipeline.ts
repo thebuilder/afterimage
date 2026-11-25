@@ -11,7 +11,8 @@ export interface VinylSources {
  * speed, clockwise, and a hand pressed on the record takes it over, turning
  * it exactly as far as the hand goes around the spindle, so it can be held,
  * dragged back and thrown. Let go and the motor brings it back up to speed.
- * The lamp follows the pointer, or wanders slowly around the deck when no
+ * The lamp stands still; the pointer moves the viewer's head over the deck,
+ * which swings the light on the grooves, and the head sways a little when no
  * one is there. The tonearm's geometry is solved here from the needle's
  * radius, which sways a little with the record's eccentricity.
  */
@@ -37,7 +38,7 @@ export function createVinyl(setup: EffectSetup, src: VinylSources): EffectInstan
   let held = false
   let wasPressed = false
   let handAngle = 0
-  let lamp: V2 | null = null
+  let gaze: V2 | null = null // the viewer's head offset, in record radii
   let started = false
 
   function render(frame: Frame, tgt: Target, inputs: FrameInputs) {
@@ -80,13 +81,21 @@ export function createVinyl(setup: EffectSetup, src: VinylSources): EffectInstan
     handAngle = a
     if (angle > 1e4 || angle < -1e4) angle %= 2 * Math.PI
 
-    // The lamp follows the hand, or wanders slowly around the deck.
-    const ph = t * 0.21 + 2.0
-    const idle: V2 = [C[0] + Math.cos(ph) * R * 1.0, C[1] + Math.sin(ph) * R * 0.75]
-    const want = live ? hand : idle
-    if (!lamp) lamp = idle
-    const k = 1 - Math.exp(-dt * (live ? 7 : 1.5))
-    lamp = [lamp[0] + (want[0] - lamp[0]) * k, lamp[1] + (want[1] - lamp[1]) * k]
+    // The lamp stands still. Your hand moves your head over the deck, so the
+    // light on the grooves swings the way it does when you lean in to look;
+    // left alone, the head sways a little, as anyone's does.
+    const idle: V2 = [Math.sin(t * 0.23) * 0.5 + Math.sin(t * 0.11 + 1) * 0.25, Math.sin(t * 0.17 + 2) * 0.35]
+    let want = idle
+    if (live) {
+      const tx = (hand[0] - C[0]) / R
+      const ty = (hand[1] - C[1]) / R
+      const m = Math.hypot(tx, ty)
+      const s = m > 1.4 ? 1.4 / m : 1
+      want = [tx * s, ty * s]
+    }
+    if (!gaze) gaze = idle
+    const k = 1 - Math.exp(-dt * (live ? 5 : 1.5))
+    gaze = [gaze[0] + (want[0] - gaze[0]) * k, gaze[1] + (want[1] - gaze[1]) * k]
 
     // The tonearm: the needle sits on a circle around the pivot, where it
     // meets its groove; the groove sways with the record's eccentricity.
@@ -124,10 +133,11 @@ export function createVinyl(setup: EffectSetup, src: VinylSources): EffectInstan
         lampOn: rpm > 0.5 ? 1 : 0,
         _p0: 0,
         _p1: 0,
-        lamp: [lamp[0], lamp[1], R * 2.4, inputs.controls.lamp ?? 1],
+        lamp: [C[0] - R * 0.95, C[1] + R * 1.05, R * 2.8, inputs.controls.lamp ?? 1],
         rec: [C[0], C[1], R, rn],
         arm: [P[0], P[1], J[0], J[1]],
         head: [N[0], N[1], hd[0], hd[1]],
+        eye: [C[0] + gaze[0] * R * 1.3, C[1] + gaze[1] * R * 1.3, R * 5, 0],
       },
     })
     frame.pass(tgt, fx)
