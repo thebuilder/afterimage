@@ -1869,6 +1869,7 @@ const ENTRIES: readonly Entry[] = [
   {
     id: "vinyl",
     touch: "drag",
+    sound: true,
     // Every part of the deck is shaded per pixel; capped so laptop GPUs stay calm.
     maxDpr: 1.25,
     name: "Side A",
@@ -1876,7 +1877,7 @@ const ENTRIES: readonly Entry[] = [
     category: "Hi-fi",
     tagline: "A record turning under a still lamp; lean in and the light swings across the grooves.",
     summary:
-      "A record deck seen from straight above on a walnut veneer plinth, under one warm lamp and a window. The record turns at thirty-three and a third, its grooves throwing the lamp back as a bow tie of light through the spindle, fringed with the faint rainbow a groove makes as a grating. Track gaps, the run-out loop and a scratched matrix number show in the vinyl, dust and fine scratches turn with it and flash as they cross the light, and the cream label carries its print around. The deck is machined: chamfered black keys with their legends and speed light, a brushed pitch plate with its scale and ridged fader, a turned pivot housing and anti-skate knob, a chrome arm tube, a steel counterweight, and the headshell and cartridge, all casting soft shadows from the lamp. Move and you move your head over the deck, so the bow tie swings as it does when you lean in to look; press on the record to hold it, drag to scratch it back and forth, and let go for the motor to bring it back up to speed. The deck works: START stops and starts the platter, 33 and 45 pick the speed, and the pitch fader trims it by up to 8%. Turn up Volume to hear it: surface crackle that follows the platter's speed, a whistle of noise under a dragging hand, and the clicks of the keys. Lamp sets how bright the light is.",
+      "A record deck seen from straight above on a walnut veneer plinth, under one warm lamp and a window. The record turns at thirty-three and a third, its grooves throwing the lamp back as a bow tie of light through the spindle, fringed with the faint rainbow a groove makes as a grating. Track gaps, the run-out loop and a scratched matrix number show in the vinyl, dust and fine scratches turn with it and flash as they cross the light, and the cream label carries its print around. The deck is machined: chamfered black keys with their legends and speed light, a brushed pitch plate with its scale and ridged fader, a turned pivot housing and anti-skate knob, a chrome arm tube, a steel counterweight, and the headshell and cartridge, all casting soft shadows from the lamp. Move and you move your head over the deck, so the bow tie swings as it does when you lean in to look; press on the record to hold it, drag to scratch it back and forth, and let go for the motor to bring it back up to speed. The deck works: START stops and starts the platter, 33 and 45 pick the speed, and the pitch fader trims it by up to 8%. Touch the deck and it starts to sound, with a speaker button to mute it and Volume for the level: surface crackle that follows the platter's speed, a whistle of noise under a dragging hand, and the clicks of the keys. Lamp sets how bright the light is.",
     explanation: [
       { title: "Light off the grooves", body: "The grooves are tiny concentric ridges, so they only reflect the lamp where the direction halfway between the lamp and your eye is square to them. That happens along the line through the spindle toward the lamp, which is why a record shows a bow tie of light that stays put while the record turns under it." },
       { title: "A rainbow from a grating", body: "Grooves a tenth of a millimetre apart split light by wavelength, like a CD. Either side of the white streak each colour peaks at a slightly different angle, so the light fringes into faint red, green and blue." },
@@ -1887,7 +1888,7 @@ const ENTRIES: readonly Entry[] = [
     rationale: {
       idea: "A record turning under a still lamp, where the grooves light up in a bow tie that swings as you lean in, and a press puts your hand on the vinyl.",
       firstSeconds: "A walnut deck from above with a black record turning, a white bow tie of light across its grooves fringed with faint colour, the label turning, dust glinting, and the light shifting gently as if someone were standing over it.",
-      interaction: "Your hand is your head over the deck: move and the bow tie swings across the grooves exactly as it does when you lean over a real record; pressing on the record grabs it, and dragging scratches it back and forth until you let go and it spins back up. The keys and pitch fader work as on a real deck, and with Volume up you hear every change of speed.",
+      interaction: "Your hand is your head over the deck: move and the bow tie swings across the grooves exactly as it does when you lean over a real record; pressing on the record grabs it, and dragging scratches it back and forth until you let go and it spins back up. The keys and pitch fader work as on a real deck, and once you touch it you hear every change of speed.",
       headline: "The lower left: bare walnut plinth beside the platter, lit only softly.",
       nearest: "Calibre, also a precise machine under a lamp. Calibre is a watch movement where the pointer is the lamp; here the lamp stays put and the pointer is your viewpoint, the light on the grooves is the subject, and the hand can stop and throw the record.",
       risks: "A record drawn as a flat black disc would look cheap, so it carries grooves, track gaps, run-out, matrix number, rolled lip, label print, dust and scratches, and the deck hardware is shaded as machined metal and plastic: chamfered keys, a brushed pitch plate, turned and knurled knobs, chrome reflecting the room. The rainbow could look like a filter, so it is faint and tied to the white streak. All of it is one pass with no textures, capped at 1.25x pixel density.",
@@ -1908,12 +1909,12 @@ const ENTRIES: readonly Entry[] = [
         "environment reflections",
       ],
       notes:
-        "The groove term is exp(-dot(T, H)^2 / w) with a narrow core and a broad skirt; the rainbow puts red, green and blue peaks at |dot(T, H)| of 0.105, 0.085 and 0.066, with a second order at twice those. A second, dimmer bow tie comes from a fixed window. The lamp sits 2.8 record radii up and to the upper left; the eye is 5 radii up and moves up to 1.8 radii sideways with the pointer, and every half vector uses the true direction to the eye. The needle radius is 0.74 of the record's, swaying by 0.004 with the angle; the tonearm is 1.15 radii from pivot to stylus and the headshell turns 0.4 radians in toward the spindle. The motor pulls the speed back with a rate of 4.5 per second and the brake with 3; pitch is plus or minus 8% with a centre detent. Sound starts only once Volume is above zero, and its level is the square of Volume.",
+        "The groove term is exp(-dot(T, H)^2 / w) with a narrow core and a broad skirt; the rainbow puts red, green and blue peaks at |dot(T, H)| of 0.105, 0.085 and 0.066, with a second order at twice those. A second, dimmer bow tie comes from a fixed window. The lamp sits 2.8 record radii up and to the upper left; the eye is 5 radii up and moves up to 1.8 radii sideways with the pointer, and every half vector uses the true direction to the eye. The needle radius is 0.74 of the record's, swaying by 0.004 with the angle; the tonearm is 1.15 radii from pivot to stylus and the headshell turns 0.4 radians in toward the spindle. The motor pulls the speed back with a rate of 4.5 per second and the brake with 3; pitch is plus or minus 8% with a centre detent. Sound starts only on the first press on the deck or on turning the sound toggle on, and its level is the square of Volume.",
       source: "src/effects/vinyl",
     },
     accent: "#c8442a",
     controls: [
-      ctl("volume", "Volume", 0, 1, 0.01, 0),
+      ctl("volume", "Volume", 0, 1, 0.01, 0.6),
       ctl("lamp", "Lamp", 0.4, 1.8, 0.01, 1),
     ],
     create: (setup) => createVinyl(setup, { deck: vinylDeck }),

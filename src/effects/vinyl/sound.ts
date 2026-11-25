@@ -80,17 +80,20 @@ export function createDeckSound(): DeckSound {
   let band: BiquadFilterNode | null = null
   let clickBuf: AudioBuffer | null = null
   let dead = false
-  // Some browsers only let sound start inside an input event, so every press
-  // or key nudges the context awake.
+  // Some browsers (Safari) only let sound start inside an input event, so the
+  // context is made, silent, on the page's first press or key, and every later
+  // one nudges it awake.
   const nudge = () => {
+    if (!ctx) start()
     if (ctx && ctx.state === "suspended") void ctx.resume()
   }
+  const EVENTS = ["pointerdown", "pointerup", "keydown"] as const
+  if (typeof document !== "undefined") for (const ev of EVENTS) document.addEventListener(ev, nudge, true)
 
   function start(): boolean {
     if (ctx) return true
     if (dead || typeof AudioContext === "undefined") return false
     ctx = new AudioContext({ latencyHint: "interactive" })
-    for (const ev of ["pointerdown", "pointerup", "keydown"]) document.addEventListener(ev, nudge, true)
     master = ctx.createGain()
     master.gain.value = 0
     master.connect(ctx.destination)
@@ -164,7 +167,7 @@ export function createDeckSound(): DeckSound {
     },
     dispose() {
       dead = true
-      for (const ev of ["pointerdown", "pointerup", "keydown"]) document.removeEventListener(ev, nudge, true)
+      if (typeof document !== "undefined") for (const ev of EVENTS) document.removeEventListener(ev, nudge, true)
       void ctx?.close()
       ctx = null
     },

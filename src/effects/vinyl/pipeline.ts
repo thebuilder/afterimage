@@ -60,6 +60,9 @@ export function createVinyl(setup: EffectSetup, src: VinylSources): EffectInstan
   let onFader = false
   let pressedKey = -1
   const sound = createDeckSound()
+  // Sound waits for a press on the deck or the sound toggle turned on.
+  let armed = false
+  let wasMuted: boolean | null = null
 
   function render(frame: Frame, tgt: Target, inputs: FrameInputs) {
     const t = inputs.time
@@ -84,6 +87,7 @@ export function createVinyl(setup: EffectSetup, src: VinylSources): EffectInstan
 
     // A press lands on a key, the fader, or the record.
     if (pressed && !wasPressed) {
+      armed = true
       sound.wake()
       pressedKey = keys.findIndex(
         (k) => Math.abs(hand[0] - k.at[0]) < k.sz[0] + R * 0.02 && Math.abs(hand[1] - k.at[1]) < k.sz[1] + R * 0.02
@@ -186,7 +190,11 @@ export function createVinyl(setup: EffectSetup, src: VinylSources): EffectInstan
     })
     frame.pass(tgt, fx)
 
-    sound.update(inputs.controls.volume ?? 0, omega / ((-100 / 3) * 2 * Math.PI / 60), drag)
+    const muted = (inputs.controls.muted ?? 0) > 0.5
+    // Turning the toggle on is a press too, so it may start the sound.
+    if (wasMuted === true && !muted) armed = true
+    wasMuted = muted
+    sound.update(armed && !muted ? (inputs.controls.volume ?? 0.6) : 0, omega / ((-100 / 3) * 2 * Math.PI / 60), drag)
   }
 
   return { render, dispose: () => sound.dispose() }

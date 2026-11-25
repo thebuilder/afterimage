@@ -148,5 +148,11 @@ export interface HeroEffect {
    * out for hover effects: there a vertical swipe simply scrolls.
    */
   readonly touch?: "drag"
+  /**
+   * The effect makes sound. The page then shows a sound toggle while it is on
+   * screen and passes `muted` (0 or 1) in its controls. Sound may only start
+   * after a press on the scene or turning the toggle on, never by itself.
+   */
+  readonly sound?: true
   create(setup: EffectSetup): EffectInstance
 }

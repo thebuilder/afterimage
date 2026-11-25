@@ -104,6 +104,7 @@ export default function App() {
   // Control values are kept per effect, so scrolling away and back does not
   // reset the knobs, and every effect starts from its own declared defaults.
   const [tweaks, setTweaks] = useState<Record<string, Record<string, number>>>({})
+  const [muted, setMuted] = useState(false)
   const [running, setRunning] = useState(true)
   const [chrome, setChrome] = useState(true)
   const [tuneOpen, setTuneOpen] = useState(false)
@@ -251,8 +252,9 @@ export default function App() {
   const controls = useMemo(() => {
     const base: Record<string, number> = {}
     for (const c of effect.controls) base[c.key] = c.value
+    if (effect.sound) base.muted = muted ? 1 : 0
     return { ...base, ...(tweaks[effect.id] ?? {}) }
-  }, [effect, tweaks])
+  }, [effect, tweaks, muted])
 
   const setControl = useCallback(
     (id: string, key: string, value: number) =>
@@ -282,6 +284,7 @@ export default function App() {
         setRunning((r) => !r)
       } else if (key === "h") setChrome((v) => !v)
       else if (key === "t") setTuneOpen((v) => !v)
+      else if (key === "m") setMuted((v) => !v)
       else if (key === "a" || ev.key === "/") {
         ev.preventDefault()
         openArchive()
@@ -381,6 +384,16 @@ export default function App() {
               Tune
             </PillButton>
             <PillButton onClick={() => setHow(true)}>How it works</PillButton>
+            {effect.sound ? (
+              <PillButton
+                aria-label={muted ? "Sound off" : "Sound on"}
+                aria-pressed={!muted}
+                onClick={() => setMuted((v) => !v)}
+                title={muted ? "Sound off (M)" : "Sound on (M)"}
+              >
+                {muted ? <MutedIcon /> : <SoundIcon />}
+              </PillButton>
+            ) : null}
             <PillButton
               aria-label={running ? "Pause" : "Play"}
               onClick={() => setRunning((r) => !r)}
@@ -1012,6 +1025,7 @@ function InlineLink({ href, children }: { href: string; children: React.ReactNod
 const KEYS: ReadonlyArray<readonly [string, string]> = [
   ["Next / previous", "↓ ↑  or  J K"],
   ["Tune", "T"],
+  ["Sound on / off", "M"],
   ["Archive and search", "A  or  /"],
   ["Pause", "Space"],
   ["Hide interface", "H"],
@@ -1073,6 +1087,20 @@ const PauseIcon = () => (
 const PlayIcon = () => (
   <svg aria-hidden className="size-3" fill="currentColor" viewBox="0 0 12 12">
     <path d="M2.5 1v10l8.5-5z" />
+  </svg>
+)
+
+const SoundIcon = () => (
+  <svg aria-hidden className="size-3.5" fill="none" stroke="currentColor" viewBox="0 0 14 14">
+    <path d="M1.5 5h2.5l3.5-3v10l-3.5-3H1.5z" fill="currentColor" stroke="none" />
+    <path d="M9.5 4.5a3.5 3.5 0 0 1 0 5M11 2.5a6 6 0 0 1 0 9" />
+  </svg>
+)
+
+const MutedIcon = () => (
+  <svg aria-hidden className="size-3.5" fill="none" stroke="currentColor" viewBox="0 0 14 14">
+    <path d="M1.5 5h2.5l3.5-3v10l-3.5-3H1.5z" fill="currentColor" stroke="none" />
+    <path d="M9.5 5l3.5 4M13 5l-3.5 4" />
   </svg>
 )
 
