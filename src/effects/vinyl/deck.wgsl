@@ -15,9 +15,9 @@ struct View {
   aspect: f32,
   time: f32,
   angle: f32,     // record rotation, radians
-  lampOn: f32,
-  _p0: f32,
-  _p1: f32,
+  running: f32,
+  is45: f32,
+  pitch: f32,
   lamp: vec4f,    // x, y, height, intensity
   rec: vec4f,     // centre x, y, record radius, needle radius
   arm: vec4f,     // pivot x, y, arm tube end x, y
@@ -165,20 +165,69 @@ fn walnut(p: vec2f) -> vec3f {
   return c;
 }
 
-/// A line of small print centred at c, width w and letter height h, in a
-/// three by five dot font with random letters: reads as type at this size.
-fn print(q: vec2f, c: vec2f, w: f32, h: f32, seed: f32) -> f32 {
+/// A five by seven pixel font, one row per entry, for the few words printed
+/// on the deck and the label: A D E F G I M P R S T 3 4 5 8 + -.
+var<private> FONT: array<u32, 119> = array<u32, 119>(14u, 17u, 17u, 31u, 17u, 17u, 17u, 30u, 17u, 17u, 17u, 17u, 17u, 30u, 31u, 16u, 16u, 30u, 16u, 16u, 31u, 31u, 16u, 16u, 30u, 16u, 16u, 16u, 14u, 17u, 16u, 23u, 17u, 17u, 15u, 14u, 4u, 4u, 4u, 4u, 4u, 14u, 17u, 27u, 21u, 21u, 17u, 17u, 17u, 30u, 17u, 17u, 30u, 16u, 16u, 16u, 30u, 17u, 17u, 30u, 20u, 18u, 17u, 15u, 16u, 16u, 14u, 1u, 1u, 30u, 31u, 4u, 4u, 4u, 4u, 4u, 4u, 30u, 1u, 1u, 14u, 1u, 1u, 30u, 2u, 6u, 10u, 18u, 31u, 2u, 2u, 31u, 16u, 30u, 1u, 1u, 17u, 14u, 14u, 17u, 17u, 14u, 17u, 17u, 14u, 0u, 4u, 4u, 31u, 4u, 4u, 0u, 0u, 0u, 0u, 31u, 0u, 0u, 0u);
+
+/// The strings: 'SIDE A', 'AFTERIMAGE', '33 RPM', 'START', '33', '45', '+8', '-8'.
+fn strLen(s: i32) -> i32 {
+  return array<i32, 8>(6,10,6,5,2,2,2,2)[s];
+}
+
+fn strChar(s: i32, i: i32) -> i32 {
+  switch s {
+    case 0: { return array<i32, 6>(9,5,1,2,-1,0)[min(i, 5)]; }
+    case 1: { return array<i32, 10>(0,3,10,2,8,5,6,0,4,2)[min(i, 9)]; }
+    case 2: { return array<i32, 6>(11,11,-1,8,7,6)[min(i, 5)]; }
+    case 3: { return array<i32, 5>(9,10,0,8,10)[min(i, 4)]; }
+    case 4: { return array<i32, 2>(11,11)[min(i, 1)]; }
+    case 5: { return array<i32, 2>(12,13)[min(i, 1)]; }
+    case 6: { return array<i32, 2>(15,14)[min(i, 1)]; }
+    case 7: { return array<i32, 2>(16,14)[min(i, 1)]; }
+    default: { return -1; }
+  }
+}
+
+fn fontBit(ch: i32, col: i32, row: i32) -> bool {
+  if (ch < 0 || col < 0 || col > 4 || row < 0 || row > 6) { return false; }
+  return ((FONT[ch * 7 + row] >> u32(4 - col)) & 1u) == 1u;
+}
+
+/// Coverage of string s set at cap height h, centred at c, in a space where
+/// one unit is unit screen heights. Each pixel of the font is a slightly
+/// rounded square, found among the nine around the point, so edges are
+/// smooth at any size.
+fn textCover(q: vec2f, c: vec2f, h: f32, s: i32, unit: f32) -> f32 {
+  let n = strLen(s);
+  let cell = h / 7.0;
+  let adv = cell * 6.0;
+  let width = f32(n) * adv - cell;
+  let o = q - c + vec2f(width * 0.5, h * 0.5);
+  if (o.x < -cell || o.x > width + cell || o.y < -cell || o.y > h + cell) { return 0.0; }
+  let gi = i32(floor(o.x / adv));
+  let ch = strChar(s, clamp(gi, 0, n - 1));
+  let lx = (o.x - f32(gi) * adv) / cell;
+  let ly = (h - o.y) / cell;
+  var d = 9.0;
+  for (var j = -1; j <= 1; j++) {
+    for (var i = -1; i <= 1; i++) {
+      let col = i32(floor(lx)) + i;
+      let row = i32(floor(ly)) + j;
+      if (gi < 0 || gi >= n || !fontBit(ch, col, row)) { continue; }
+      let e = abs(vec2f(lx, ly) - vec2f(f32(col) + 0.5, f32(row) + 0.5)) - 0.46;
+      d = min(d, length(max(e, vec2f(0.0))) + min(max(e.x, e.y), 0.0) - 0.04);
+    }
+  }
+  return cover(d * cell * unit);
+}
+
+/// A line of print too small to read: a soft grey bar with breaks for words.
+fn fineLine(q: vec2f, c: vec2f, w: f32, h: f32, seed: f32, unit: f32) -> f32 {
   let o = q - c;
-  if (abs(o.x) > w || abs(o.y) > h * 0.5) { return 0.0; }
-  let gw = h * 0.72;
-  let g = floor((o.x + w) / gw);
-  let f = vec2f(fract((o.x + w) / gw), (o.y + h * 0.5) / h);
-  if (hash21(vec2f(g, seed)) < 0.16) { return 0.0; }
-  let cellx = floor(f.x * 4.0);
-  if (cellx > 2.0) { return 0.0; }
-  let celly = floor(f.y * 5.0);
-  let bit = step(0.42, hash21(vec2f(g * 7.0 + cellx, seed * 13.0 + celly)));
-  return bit * 0.85;
+  let inBar = cover((abs(o.y) - h * 0.5) * unit) * cover((abs(o.x) - w) * unit);
+  // Print too small to read blurs to a soft grey line, a little uneven.
+  let ink = 0.7 + 0.3 * vnoise(vec2f(o.x / h * 1.5, seed));
+  return inBar * ink * 0.3;
 }
 
 /// The record's surface at local position q (not rotated) and radius r.
@@ -257,23 +306,22 @@ fn record(p: vec2f, q: vec2f, r: f32) -> vec3f {
     // A red band and a thin ring near the rim.
     c = mix(c, vec3f(0.62, 0.11, 0.07), smoothstep(0.83, 0.835, lu) * smoothstep(0.935, 0.93, lu));
     c = mix(c, vec3f(0.08), smoothstep(0.012, 0.0, abs(lu - 0.79)) * 0.8);
-    // Small type running around inside the band.
+    // Type running around the bottom of the band, its feet toward the rim.
     let ra = atan2(qr.y, qr.x);
-    let glyph = step(0.3, fract(ra * 70.0)) * step(0.25, hash21(vec2f(floor(ra * 70.0), 7.0))) * step(abs(ra + 1.57), 1.2);
-    c = mix(c, vec3f(0.96, 0.9, 0.8), glyph * smoothstep(0.865, 0.87, lu) * smoothstep(0.9, 0.895, lu));
+    let rq = vec2f((ra + 1.5708) * 0.8825, 0.8825 - lu);
+    c = mix(c, vec3f(0.96, 0.9, 0.8), textCover(rq, vec2f(0.0, 0.035), 0.05, 1, R * 0.333) * step(abs(ra + 1.5708), 1.4));
     // A maker's mark at the top, a title, and small print below the spindle.
     let mq = qr / (R * 0.333);
     let LR = R * 0.333;
     let sunD = max(length(mq - vec2f(0.0, 0.47)) - 0.13, 0.47 - mq.y);
     let bar = boxDist(mq, vec2f(0.0, 0.43), vec2f(1.0, 0.0), vec2f(0.17, 0.013), 0.0);
     c = mix(c, vec3f(0.62, 0.11, 0.07), cover(min(sunD, bar) * LR));
-    c = mix(c, vec3f(0.1), print(mq, vec2f(0.0, 0.24), 0.42, 0.06, 3.0) * 0.9);
-    c = mix(c, vec3f(0.62, 0.11, 0.07), print(mq, vec2f(0.0, 0.15), 0.26, 0.035, 5.0) * 0.9);
-    c = mix(c, vec3f(0.1), print(mq, vec2f(0.0, -0.26), 0.5, 0.034, 6.0) * 0.85);
-    c = mix(c, vec3f(0.1), print(mq, vec2f(0.0, -0.34), 0.44, 0.034, 7.0) * 0.85);
-    c = mix(c, vec3f(0.1), print(mq, vec2f(0.0, -0.42), 0.36, 0.034, 8.0) * 0.85);
-    c = mix(c, vec3f(0.1), print(mq, vec2f(-0.42, 0.0), 0.06, 0.07, 9.0) * 0.9);
-    c = mix(c, vec3f(0.1), print(mq, vec2f(0.42, 0.0), 0.08, 0.045, 10.0) * 0.9);
+    c = mix(c, vec3f(0.1), textCover(mq, vec2f(0.0, 0.22), 0.12, 0, LR) * 0.92);
+    c = mix(c, vec3f(0.62, 0.11, 0.07), textCover(mq, vec2f(0.0, 0.07), 0.06, 1, LR) * 0.9);
+    c = mix(c, vec3f(0.1), fineLine(mq, vec2f(0.0, -0.22), 0.42, 0.018, 6.0, LR));
+    c = mix(c, vec3f(0.1), fineLine(mq, vec2f(0.0, -0.29), 0.36, 0.018, 7.0, LR));
+    c = mix(c, vec3f(0.1), fineLine(mq, vec2f(0.0, -0.36), 0.28, 0.018, 8.0, LR));
+    c = mix(c, vec3f(0.1), textCover(mq, vec2f(0.0, -0.52), 0.06, 2, LR) * 0.9);
     c *= 0.92 + 0.08 * vnoise(qr * 300.0);
     let n = vec3f(0.0, 0.0, 1.0);
     var lc = shade(c, n, p, Z_RECORD, 0.03, 30.0);
@@ -379,12 +427,14 @@ fn capNormal(p: vec2f, a: vec2f, b: vec2f, rad: f32) -> vec3f {
     var kc = plastic(vec3f(0.028, 0.028, 0.03) * (0.9 + 0.2 * vnoise(p * 900.0)), d, R * 0.012, grad, p, 0.012);
     // Legends: START on the big key, 33 and 45 on the others.
     let lq = (p - at) / R;
-    let leg = select(print(lq, vec2f(0.0, -0.004), 0.05, 0.018, 21.0), print(lq, vec2f(0.0, -0.004), 0.02, 0.018, 22.0 + f32(b)), b > 0);
+    let leg = textCover(lq, vec2f(0.0, 0.0), select(0.022, 0.026, b > 0), select(3, 3 + b, b > 0), R);
     kc = mix(kc, vec3f(0.55, 0.54, 0.5) * (0.3 + lampAt(p, 0.012).w), leg);
-    if (b == 1 && view.lampOn > 0.5) {
+    // The chosen speed's light: bright while the motor runs, a faint ember when stopped.
+    if (b > 0 && (b == 2) == (view.is45 > 0.5)) {
+      let glow = mix(0.12, 1.0, view.running);
       let led = length(p - at - vec2f(0.0, sz.y * 0.55)) / (R * 0.008);
-      kc = mix(kc, vec3f(1.0, 0.45, 0.1) * 1.6, smoothstep(1.0, 0.7, led));
-      col += vec3f(1.0, 0.4, 0.08) * 0.05 * exp(-led * 0.15);
+      kc = mix(kc, vec3f(1.0, 0.45, 0.1) * 1.6 * glow, smoothstep(1.0, 0.7, led));
+      col += vec3f(1.0, 0.4, 0.08) * 0.05 * glow * exp(-led * 0.15);
     }
     col = mix(col, kc, cover(d));
   }
@@ -409,20 +459,22 @@ fn capNormal(p: vec2f, a: vec2f, b: vec2f, rad: f32) -> vec3f {
     let len = mix(R * 0.022, R * 0.04, major);
     let side = step(R * 0.026, abs(po.x)) * step(abs(po.x), R * 0.026 + len);
     pc = mix(pc, vec3f(0.06), tick * side * 0.85);
-    pc = mix(pc, vec3f(0.06), print(po / R, vec2f(-0.055, 0.36), 0.012, 0.02, 31.0));
-    pc = mix(pc, vec3f(0.06), print(po / R, vec2f(-0.055, -0.36), 0.012, 0.02, 32.0));
+    pc = mix(pc, vec3f(0.06), textCover(po / R, vec2f(0.0, 0.36), 0.024, 6, R));
+    pc = mix(pc, vec3f(0.06), textCover(po / R, vec2f(0.0, -0.36), 0.024, 7, R));
     col *= 1.0 - 0.4 * smoothstep(0.006, -0.006, boxDist(p + vec2f(0.004, 0.004), fc, vec2f(0.0, 1.0), vec2f(R * 0.4, R * 0.075), R * 0.012));
     col = mix(col, pc, cover(plate));
     let slot = boxDist(p, fc, vec2f(0.0, 1.0), vec2f(R * 0.34, R * 0.011), R * 0.008);
     col = mix(col, vec3f(0.006) + vec3f(0.03) * smoothstep(R * 0.011, 0.0, abs(po.x + R * 0.004)) * 0.3, cover(slot));
-    // The cap, sitting at zero.
-    let cd = boxDist(p, fc, vec2f(0.0, 1.0), vec2f(R * 0.05, R * 0.042), R * 0.01);
+    // The cap, at the pitch you set.
+    let fk = fc + vec2f(0.0, view.pitch * R * 0.32);
+    let ko = p - fk;
+    let cd = boxDist(p, fk, vec2f(0.0, 1.0), vec2f(R * 0.05, R * 0.042), R * 0.01);
     col *= 1.0 - 0.55 * smoothstep(0.008, -0.008, cd - 0.004);
-    let co = (p - fc) / vec2f(R * 0.042, R * 0.05);
+    let co = (p - fk) / vec2f(R * 0.042, R * 0.05);
     let cgrad = select(vec2f(0.0, sign(co.y)), vec2f(sign(co.x), 0.0), abs(co.x) > abs(co.y));
     var capc = plastic(vec3f(0.03), cd, R * 0.012, cgrad, p, 0.02);
-    capc *= 1.0 - 0.45 * step(0.5, fract(po.y / (R * 0.012))) * step(abs(po.y), R * 0.03) * step(abs(po.x), R * 0.03);
-    capc = mix(capc, vec3f(0.85, 0.84, 0.8) * (0.3 + lampAt(p, 0.02).w), smoothstep(R * 0.003, R * 0.0015, abs(po.y)) * step(abs(po.x), R * 0.038));
+    capc *= 1.0 - 0.45 * step(0.5, fract(ko.y / (R * 0.012))) * step(abs(ko.y), R * 0.03) * step(abs(ko.x), R * 0.03);
+    capc = mix(capc, vec3f(0.85, 0.84, 0.8) * (0.3 + lampAt(p, 0.02).w), smoothstep(R * 0.003, R * 0.0015, abs(ko.y)) * step(abs(ko.x), R * 0.038));
     col = mix(col, capc, cover(cd));
   }
 

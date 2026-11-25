@@ -1,6 +1,7 @@
 import { effect } from "vgpu"
 import type { Frame, Target } from "vgpu"
 import type { EffectInstance, EffectSetup, FrameInputs, Wgsl } from "../types"
+import { createDeckSound } from "./sound.ts"
 
 export interface VinylSources {
   readonly deck: Wgsl
@@ -13,7 +14,9 @@ export interface VinylSources {
  * dragged back and thrown. Let go and the motor brings it back up to speed.
  * The lamp stands still; the pointer moves the viewer's head over the deck,
  * which swings the light on the grooves, and the head sways a little when no
- * one is there. The tonearm's geometry is solved here from the needle's
+ * one is there. The deck's own hardware works: START stops and starts the
+ * motor, 33 and 45 pick the speed, and the pitch fader trims it by up to 8%.
+ * The tonearm's geometry is solved here from the needle's
  * radius, which sways a little with the record's eccentricity.
  */
 type V2 = [number, number]
@@ -29,6 +32,17 @@ function layout(aspect: number): { C: V2; R: number; P: V2 } {
   return { C, R, P: [C[0] + R * 1.22, C[1] + R * 0.72] }
 }
 
+/** The keys and the fader, placed exactly where the shader draws them. */
+function hardware(aspect: number, C: V2, R: number, P: V2) {
+  const bc: V2 = aspect >= 1 ? [C[0] - R * 1.22, C[1] + R * 0.86] : [C[0] - R * 0.5, C[1] + R * 1.25]
+  const keys = [0, 1, 2].map((b) => ({
+    at: [bc[0] + b * R * 0.22 - (b === 0 ? R * 0.08 : 0), bc[1]] as V2,
+    sz: (b === 0 ? [R * 0.11, R * 0.065] : [R * 0.07, R * 0.045]) as V2,
+  }))
+  const fc: V2 = [P[0] + R * 0.32, P[1] - R * 0.75]
+  return { keys, fc }
+}
+
 export function createVinyl(setup: EffectSetup, src: VinylSources): EffectInstance {
   const { gpu } = setup
   const fx = effect(gpu, src.deck)
@@ -40,14 +54,20 @@ export function createVinyl(setup: EffectSetup, src: VinylSources): EffectInstan
   let handAngle = 0
   let gaze: V2 | null = null // the viewer's head offset, in record radii
   let started = false
+  let running = true
+  let is45 = false
+  let pitch = 0
+  let onFader = false
+  let pressedKey = -1
+  const sound = createDeckSound()
 
   function render(frame: Frame, tgt: Target, inputs: FrameInputs) {
     const t = inputs.time
     const dt = Math.min(Math.max(inputs.dt, 1 / 240), 1 / 20)
     const aspect = tgt.size[0] / Math.max(tgt.size[1], 1)
     const { C, R, P } = layout(aspect)
-    const rpm = inputs.controls.rpm ?? 33.3
-    const motor = (-rpm * 2 * Math.PI) / 60
+    const rpm = (is45 ? 45 : 100 / 3) * (1 + 0.08 * pitch)
+    const motor = running ? (-rpm * 2 * Math.PI) / 60 : 0
     if (!started) {
       started = true
       omega = motor
@@ -60,11 +80,33 @@ export function createVinyl(setup: EffectSetup, src: VinylSources): EffectInstan
     const hy = hand[1] - C[1]
     const onRecord = Math.hypot(hx, hy) < R * 1.03
     const a = Math.atan2(hy, hx)
+    const { keys, fc } = hardware(aspect, C, R, P)
 
-    // A hand on the record: it turns as far as the hand goes around the spindle.
-    if (pressed && !wasPressed && onRecord) held = true
-    if (!pressed) held = false
+    // A press lands on a key, the fader, or the record.
+    if (pressed && !wasPressed) {
+      sound.wake()
+      pressedKey = keys.findIndex(
+        (k) => Math.abs(hand[0] - k.at[0]) < k.sz[0] + R * 0.02 && Math.abs(hand[1] - k.at[1]) < k.sz[1] + R * 0.02
+      )
+      if (pressedKey === 0) running = !running
+      if (pressedKey === 1) is45 = false
+      if (pressedKey === 2) is45 = true
+      if (pressedKey >= 0) sound.click()
+      onFader = pressedKey < 0 && Math.abs(hand[0] - fc[0]) < R * 0.1 && Math.abs(hand[1] - fc[1]) < R * 0.42
+      held = pressedKey < 0 && !onFader && onRecord
+    }
+    if (!pressed) {
+      held = false
+      onFader = false
+      pressedKey = -1
+    }
     wasPressed = pressed
+    if (onFader) {
+      const v = Math.min(1, Math.max(-1, (hand[1] - fc[1]) / (R * 0.32)))
+      // It clicks into the centre detent.
+      pitch = Math.abs(v) < 0.06 ? 0 : v
+    }
+    let drag = 0
     if (held) {
       let d = a - handAngle
       while (d > Math.PI) d -= 2 * Math.PI
@@ -73,9 +115,11 @@ export function createVinyl(setup: EffectSetup, src: VinylSources): EffectInstan
       if (Math.hypot(hx, hy) < R * 0.12) d = 0
       angle += d
       omega += (d / dt - omega) * (1 - Math.exp(-dt * 20))
+      drag = 1
     } else {
-      // The motor's pull: firm, so it is back up to speed in about half a second.
-      omega += (motor - omega) * (1 - Math.exp(-dt * 4.5))
+      // The motor's pull: firm, so it is back up to speed in about half a
+      // second; stopped, the brake brings it to rest in about a second.
+      omega += (motor - omega) * (1 - Math.exp(-dt * (running ? 4.5 : 3)))
       angle += omega * dt
     }
     handAngle = a
@@ -130,9 +174,9 @@ export function createVinyl(setup: EffectSetup, src: VinylSources): EffectInstan
         aspect,
         time: t,
         angle,
-        lampOn: rpm > 0.5 ? 1 : 0,
-        _p0: 0,
-        _p1: 0,
+        running: running ? 1 : 0,
+        is45: is45 ? 1 : 0,
+        pitch,
         lamp: [C[0] - R * 0.95, C[1] + R * 1.05, R * 2.8, inputs.controls.lamp ?? 1],
         rec: [C[0], C[1], R, rn],
         arm: [P[0], P[1], J[0], J[1]],
@@ -141,7 +185,9 @@ export function createVinyl(setup: EffectSetup, src: VinylSources): EffectInstan
       },
     })
     frame.pass(tgt, fx)
+
+    sound.update(inputs.controls.volume ?? 0, omega / ((-100 / 3) * 2 * Math.PI / 60), drag)
   }
 
-  return { render }
+  return { render, dispose: () => sound.dispose() }
 }

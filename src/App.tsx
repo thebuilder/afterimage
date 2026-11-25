@@ -1,6 +1,7 @@
 import type * as React from "react"
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
 import { flushSync } from "react-dom"
+import { Slider, SliderControl, SliderIndicator, SliderThumb, SliderTrack } from "@ui-sdk/react/slider"
 
 import { ArchiveTrack, type TrackHandle, type TrackItem } from "@/components/archive-track"
 import { ShaderView } from "@/components/shader-view"
@@ -594,24 +595,30 @@ function TunePanel({
     <div className="pointer-events-auto grid w-[min(18rem,calc(100vw-2rem))] gap-3 rounded-2xl border border-line bg-glass p-4 backdrop-blur-md">
       {effect.controls.map((c) => {
         const value = controls[c.key]
-        const fill = ((value - c.min) / (c.max - c.min)) * 100
         return (
-          <label className="grid gap-1" key={c.key}>
+          <Slider
+            className="grid gap-1"
+            key={c.key}
+            max={c.max}
+            min={c.min}
+            onValueChange={(v) => onChange(c.key, v)}
+            step={c.step}
+            value={value}
+          >
             <span className="meta flex justify-between text-dim">
-              <span>{c.label}</span>
+              <span id={`tune-${c.key}`}>{c.label}</span>
               <span className="text-fg tabular-nums">{value.toFixed(c.step < 0.01 ? 3 : 2)}</span>
             </span>
-            <input
-              className="range"
-              max={c.max}
-              min={c.min}
-              onChange={(ev) => onChange(c.key, Number(ev.target.value))}
-              step={c.step}
-              style={{ "--fill": `${fill}%` } as React.CSSProperties}
-              type="range"
-              value={value}
-            />
-          </label>
+            <SliderControl className="flex h-[18px] cursor-pointer items-center">
+              <SliderTrack className="h-px w-full bg-line">
+                <SliderIndicator className="bg-fg" />
+                <SliderThumb
+                  aria-labelledby={`tune-${c.key}`}
+                  className="size-2.5 bg-fg outline-offset-2 has-[:focus-visible]:outline has-[:focus-visible]:outline-1 has-[:focus-visible]:outline-fg"
+                />
+              </SliderTrack>
+            </SliderControl>
+          </Slider>
         )
       })}
       <button

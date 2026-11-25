@@ -86,47 +86,6 @@
   line-height: 1.4;
 }
 
-/* A one-pixel track with a small square thumb. */
-@utility range {
-  appearance: none;
-  width: 100%;
-  height: 18px;
-  background: transparent;
-  cursor: pointer;
-  &::-webkit-slider-runnable-track {
-    height: 1px;
-    background: linear-gradient(
-      to right,
-      var(--color-fg) var(--fill, 50%),
-      var(--color-line) var(--fill, 50%)
-    );
-  }
-  &::-moz-range-track {
-    height: 1px;
-    background: var(--color-line);
-  }
-  &::-moz-range-progress {
-    height: 1px;
-    background: var(--color-fg);
-  }
-  &::-webkit-slider-thumb {
-    appearance: none;
-    width: 10px;
-    height: 10px;
-    margin-top: -4.5px;
-    background: var(--color-fg);
-    border: 0;
-    border-radius: 0;
-  }
-  &::-moz-range-thumb {
-    width: 10px;
-    height: 10px;
-    background: var(--color-fg);
-    border: 0;
-    border-radius: 0;
-  }
-}
-
 /* Native <dialog>: full-screen sheets over the picture. */
 @utility sheet {
   margin: 0;
