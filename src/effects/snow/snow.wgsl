@@ -18,12 +18,6 @@ struct Dig {
 @group(0) @binding(0) var state: texture_2d<f32>;
 @group(0) @binding(1) var<uniform> dig: Dig;
 
-fn segDist(p: vec2f, a: vec2f, b: vec2f) -> f32 {
-  let ab = b - a;
-  let t = clamp(dot(p - a, ab) / max(dot(ab, ab), 1e-10), 0.0, 1.0);
-  return length(p - a - ab * t);
-}
-
 @fragment fn fs_main(@location(0) uv: vec2f) -> @location(0) vec4f {
   let size = vec2i(textureDimensions(state));
   let ip = clamp(vec2i(uv * vec2f(size)), vec2i(0), size - 1);
@@ -35,28 +29,48 @@ fn segDist(p: vec2f, a: vec2f, b: vec2f) -> f32 {
   let old = textureLoad(state, ip, 0);
   let fresh = old.g;
   if (fresh <= 0.0) { return old; }
+  // Disturbed snow slumps: what sticks up or is dug out evens a little with
+  // its neighbours every frame, so overlapping strokes stay smooth instead of
+  // keeping every texel-sized step. Only the change from fresh snow slumps,
+  // so the wind drift and the rounded slat edges stay as they fell.
+  var dev = old.r - fresh;
+  var nsum = 0.0;
+  var nw = 0.0;
+  let offs = array<vec2i, 4>(vec2i(1, 0), vec2i(-1, 0), vec2i(0, 1), vec2i(0, -1));
+  for (var i = 0; i < 4; i++) {
+    let n = textureLoad(state, clamp(ip + offs[i], vec2i(0), size - 1), 0);
+    if (n.g > 0.0) {
+      nsum += n.r - n.g;
+      nw += 1.0;
+    }
+  }
+  if (nw > 0.0) { dev = mix(dev, nsum / nw, 0.12); }
   // New snow settles everywhere, and heaps sink back as they settle.
-  var d = old.r + (fresh - old.r) * dig.refill;
+  var d = fresh + dev * (1.0 - dig.refill);
   if (dig.touching > 0.5) {
-    let r = segDist(p, dig.seg.xy, dig.seg.zw);
     let rf = dig.radius;
-    let k = r / rf;
+    let a = dig.seg.xy;
+    let ab = dig.seg.zw - a;
+    let tt = clamp(dot(p - a, ab) / max(dot(ab, ab), 1e-10), 0.0, 1.0);
+    let off = p - a - ab * tt;
+    let k = length(off) / rf;
     if (k < 2.2) {
       // The trench: down to a thin film at the middle, round walls.
       let floorD = 0.04;
       let wall = smoothstep(0.25, 1.0, k);
       d = min(d, mix(floorD, max(fresh, 0.3), wall * wall));
-      // What was dug out is pushed to the sides as a soft ridge, more the
-      // further the finger moved this frame.
-      let moved = length(dig.seg.zw - dig.seg.xy) / rf;
-      // Only beside the stroke: heaping round the fingertip's rounded end
-      // every frame would leave ribs along the walls.
-      let ab = dig.seg.zw - dig.seg.xy;
-      let tt = dot(p - dig.seg.xy, ab) / max(dot(ab, ab), 1e-10);
-      let beside = step(0.0, tt) * step(tt, 1.0);
+      // What was dug out is pushed out to the sides as a soft ridge, more the
+      // further the finger moved this frame. Its strength turns smoothly with
+      // the angle to the stroke: full beside it, nothing straight ahead or
+      // behind, so neither the fingertip's rounded end nor the segment's
+      // ends leave steps or ribs.
+      let mlen = length(ab);
+      let moved = mlen / rf;
+      let side = select(0.0, 1.0 - pow(abs(dot(off / max(length(off), 1e-6), ab / max(mlen, 1e-6))), 2.0), mlen > 1e-6);
       let hk = (k - 1.35) / 0.35;
-      let heap = exp(-hk * hk) * min(moved, 1.5) * 0.09 * beside;
-      d = min(d + heap, fresh + 0.45);
+      // Heaps grow less readily the taller they already are.
+      let room = 1.0 - smoothstep(0.0, 0.4, d - fresh);
+      d += exp(-hk * hk) * min(moved, 1.5) * 0.08 * side * room;
     }
   }
   return vec4f(d, fresh, 0.0, 1.0);
