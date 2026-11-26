@@ -83,8 +83,6 @@ import noctilucaPresent from "./noctiluca/present.wgsl"
 import { createKintsugi } from "./kintsugi/pipeline"
 import kintsugiFlow from "./kintsugi/flow.wgsl"
 import kintsugiPresent from "./kintsugi/present.wgsl"
-import { createFolio } from "./folio/pipeline"
-import folioWgsl from "./folio/folio.wgsl"
 import { createCalibre } from "./calibre/pipeline"
 import calibreWgsl from "./calibre/calibre.wgsl"
 import { createEnso } from "./enso/pipeline"
@@ -1527,53 +1525,6 @@ const ENTRIES: readonly Entry[] = [
       ctl("shine", "Shine", 0.3, 2, 0.01, 1),
     ],
     create: (setup) => createKintsugi(setup, { flow: kintsugiFlow, present: kintsugiPresent }),
-  },
-  {
-    id: "folio",
-    touch: "drag",
-    name: "Folio",
-    published: "2026-11-18",
-    category: "Paper",
-    tagline: "A stack of fine papers you peel back and turn.",
-    summary:
-      "A stack of four fine printed papers filling the screen: indigo with gold seigaiha waves, vermilion blind-embossed with interlocking circles, cream washi with long fibres and torn gold leaf, and black with a silver pinstripe. The top sheet's corner rests a little lifted. Grab any corner and peel it back: the paper rolls over a soft cylinder, shows its plain reverse, throws a shadow on the sheet below and reveals it. Let go past halfway and the sheet turns away; let go early and it falls back. Left alone, a sheet turns itself every few seconds. Foil sets how bright the metallic inks are, and Curl how tight the paper rolls.",
-    explanation: [
-      { title: "Roll the paper over a cylinder", body: "The fold line sits halfway between the lifted corner and where it is pulled to. Paper beyond the line wraps over a cylinder and comes back flat on top, so each pixel can be under up to three layers: the returning flap, the top of the roll, and the bottom of the roll." },
-      { title: "Draw top down", body: "Each layer maps the pixel back to a point on the flat sheet and checks it is still on the paper. The first layer that lands on paper wins, its distance to the paper's edge gives a clean antialiased edge, and the next sheet shows through wherever nothing does." },
-      { title: "Print the papers", body: "Every design is a distance field, so the gold lines, embossed circles, gold-leaf flakes and pinstripes are all sharp at any size. Three samples of each give a bump normal, so embossing catches the light and foil reflects a soft studio sky." },
-      { title: "Shade the turn", body: "The roll darkens toward its underside, the reverse is the same paper unprinted and a little paler, and the lifted part casts one soft shadow on the sheet below." },
-    ],
-    rationale: {
-      idea: "A stack of fine printed papers that you peel back corner by corner to reveal the next.",
-      firstSeconds: "Indigo paper printed with gold waves fills the screen, its lower right corner gently lifted and breathing, and within a second it peels back on its own to show vermilion embossed paper underneath, then turns away.",
-      interaction: "Grab any corner and the paper follows your hand, rolling over itself with its reverse showing and a shadow beneath. Drag far enough and let go to turn the page; let go early and it settles back. It is the one gesture everyone already knows from a real page.",
-      headline: "The lower left: flat, calm paper. The resting curl and every self-turn start at the lower right corner, so the curl only passes the lower left in the last moment of a turn, when the next sheet is already showing.",
-      nearest: "Overprint, the other print effect. Overprint mixes inks on one flat sheet; here the paper itself is the subject, as a physical object that bends, casts shadows and stacks.",
-      risks: "A flat or rigid fold would read as a cut-out, so the paper rolls over a cylinder with shading and a soft shadow. Busy patterns at small scale look like noise, so every design is large and sharp. It is one pass of a few distance fields per pixel, light enough for phones.",
-    },
-    technical: {
-      insight: "A page curl is a reflection across a fold line plus a short cylinder, so every pixel can be mapped back to the flat sheet in closed form, with no mesh at all.",
-      pipeline: [
-        "fragment · page curl over a cylinder from the dragged corner, three layers tested top down with edge antialiasing, four distance-field paper designs with bump-mapped embossing and foil, one soft shadow sample on the sheet below, filmic tonemap",
-      ],
-      techniques: [
-        "page curl",
-        "cylinder mapping",
-        "distance fields",
-        "bump mapping",
-        "environment reflection",
-        "spring-driven interaction",
-      ],
-      notes:
-        "Let d be the unit direction from the pulled-to point back to the corner. The fold sits at the midpoint of the two minus half the roll's circumference along d, and s is a pixel's distance past it. Pixels with s at or below zero are flat paper or the returning flap, which is the sheet reflected across the fold and shifted by pi times the radius; pixels within one radius past the fold are on the roll, where asin gives the arc length to the bottom and pi minus that to the top. Layers are tested in order flap, roll top, roll bottom, flat sheet, and each one's coverage is its distance inside the paper divided by a pixel. The radius grows from 0.035 to 0.085 as the corner travels, so a small lift curls tightly. The corner follows the hand on a critically damped spring; on release it turns if it travelled more than half the width, otherwise it falls back. Self-turns follow an eased path with a sine lift and start after seven idle seconds.",
-      source: "src/effects/folio",
-    },
-    accent: "#d4a24a",
-    controls: [
-      ctl("foil", "Foil", 0.3, 2, 0.01, 1),
-      ctl("curl", "Curl", 0.5, 2, 0.01, 1),
-    ],
-    create: (setup) => createFolio(setup, folioWgsl),
   },
   {
     id: "calibre",
