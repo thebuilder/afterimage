@@ -1,7 +1,12 @@
 // The snow on the bench. Per texel: r = depth of snow (1 = as it fell),
-// g = the depth it fell to, kept to refill toward.
-// A fingertip dug through it leaves a rounded trench with the snow it pushed
-// aside heaped along both sides; new snow slowly fills every mark back in.
+// g = the depth it fell to, kept to refill toward, b = a blurred copy of how
+// much has been dug out round here.
+// A fingertip dug through it leaves a rounded trench; the snow it pushed
+// aside shows as a ridge wherever the blurred dug-out amount is more than
+// what was dug right here, which is just outside the trench's walls. That
+// ridge comes from a diffusion, never from per-frame stamps, so however the
+// strokes cross or double back it stays smooth. New snow slowly fills every
+// mark back in.
 import { laidSnow, slat } from "./bench.wgsl";
 
 struct Dig {
@@ -29,49 +34,38 @@ struct Dig {
   let old = textureLoad(state, ip, 0);
   let fresh = old.g;
   if (fresh <= 0.0) { return old; }
-  // Disturbed snow slumps: what sticks up or is dug out evens a little with
-  // its neighbours every frame, so overlapping strokes stay smooth instead of
-  // keeping every texel-sized step. Only the change from fresh snow slumps,
-  // so the wind drift and the rounded slat edges stay as they fell.
+  // Disturbed snow slumps a little toward its neighbours, and the dug-out
+  // amount spreads into the halo the ridge is drawn from. Only the change from
+  // fresh snow slumps, so wind drift and rounded slat edges stay as they fell.
   var dev = old.r - fresh;
   var nsum = 0.0;
   var nw = 0.0;
+  var hsum = 0.0;
   let offs = array<vec2i, 4>(vec2i(1, 0), vec2i(-1, 0), vec2i(0, 1), vec2i(0, -1));
   for (var i = 0; i < 4; i++) {
     let n = textureLoad(state, clamp(ip + offs[i], vec2i(0), size - 1), 0);
+    hsum += n.b;
     if (n.g > 0.0) {
       nsum += n.r - n.g;
       nw += 1.0;
     }
   }
-  if (nw > 0.0) { dev = mix(dev, nsum / nw, 0.12); }
-  // New snow settles everywhere, and heaps sink back as they settle.
+  if (nw > 0.0) { dev = mix(dev, nsum / nw, 0.05); }
+  // New snow settles everywhere.
   var d = fresh + dev * (1.0 - dig.refill);
   if (dig.touching > 0.5) {
     let rf = dig.radius;
     let a = dig.seg.xy;
     let ab = dig.seg.zw - a;
     let tt = clamp(dot(p - a, ab) / max(dot(ab, ab), 1e-10), 0.0, 1.0);
-    let off = p - a - ab * tt;
-    let k = length(off) / rf;
-    if (k < 2.2) {
+    let k = length(p - a - ab * tt) / rf;
+    if (k < 1.0) {
       // The trench: down to a thin film at the middle, round walls.
-      let floorD = 0.04;
       let wall = smoothstep(0.25, 1.0, k);
-      d = min(d, mix(floorD, max(fresh, 0.3), wall * wall));
-      // What was dug out is pushed out to the sides as a soft ridge, more the
-      // further the finger moved this frame. Its strength turns smoothly with
-      // the angle to the stroke: full beside it, nothing straight ahead or
-      // behind, so neither the fingertip's rounded end nor the segment's
-      // ends leave steps or ribs.
-      let mlen = length(ab);
-      let moved = mlen / rf;
-      let side = select(0.0, 1.0 - pow(abs(dot(off / max(length(off), 1e-6), ab / max(mlen, 1e-6))), 2.0), mlen > 1e-6);
-      let hk = (k - 1.35) / 0.35;
-      // Heaps grow less readily the taller they already are.
-      let room = 1.0 - smoothstep(0.0, 0.4, d - fresh);
-      d += exp(-hk * hk) * min(moved, 1.5) * 0.08 * side * room;
+      d = min(d, mix(0.04, max(fresh, 0.3), wall * wall));
     }
   }
-  return vec4f(d, fresh, 0.0, 1.0);
+  let dug = clamp(fresh - d, 0.0, 1.0);
+  let halo = mix(hsum * 0.25, dug, 0.035);
+  return vec4f(d, fresh, halo, 1.0);
 }

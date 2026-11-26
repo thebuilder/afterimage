@@ -1886,7 +1886,7 @@ const ENTRIES: readonly Entry[] = [
       "A teak garden bench seen from straight above under a fresh fall of snow, the snow cushioned over each slat and slumping round its edges, with dark gaps between. A low winter sun throws the long blue shadow of a bare tree across it, trunk first and then every limb and twig, softer the higher they are, swaying a little in the wind. Flakes still drift down past you, a few dry maple leaves lie dusted with snow, and here and there a crystal catches the sun. Press and drag to write: the fingertip digs a trench down to the wet wood, its walls lit on one side and blue on the other, the snow it moves heaped along both sides. New snow keeps settling, so whatever you write fills back in over a minute or two. Left alone, an unseen finger draws a heart. Finger sets how wide the fingertip is, Sun how high the sun stands, and Snowfall how many flakes are falling.",
     explanation: [
       { title: "A depth of snow", body: "The bench is a grid of numbers: how deep the snow lies at each point. It is laid once, a little uneven from the wind and rounded off over every slat's edge, and the picture is lit from it as a surface." },
-      { title: "A fingertip through it", body: "Each frame the fingertip sweeps a short stroke. Inside it the snow drops to a thin film with rounded walls; just beside it the snow pushed aside piles into a soft ridge. Every frame the whole grid also creeps back toward the depth it fell to, which is the new snow filling your marks in." },
+      { title: "A fingertip through it", body: "Each frame the fingertip sweeps a short stroke. Inside it the snow drops to a thin film with rounded walls. A blurred copy of how much has been dug out spreads outward, and wherever it is more than what was dug right there, just outside the walls, the snow stands up as a ridge, so crossing strokes stay smooth. Every frame the whole grid also creeps back toward the depth it fell to, which is the new snow filling your marks in." },
       { title: "Low winter light", body: "From every point the picture looks toward the sun across the snow, so trench walls, heaps and slat edges cast shadows. In shadow the snow takes the blue of the sky, and light scattered deep in a trench comes back out blue too." },
       { title: "A tree you never see", body: "A bare tree is grown once, sixty three limbs forking from a trunk, and each limb is cast onto the bench along the sun. The higher a branch, the wider its penumbra, so the trunk's shadow is crisp and the twigs blur into a lace." },
     ],
@@ -1901,7 +1901,7 @@ const ENTRIES: readonly Entry[] = [
     technical: {
       insight: "Snow depth is a height field, so one march toward the sun over it shades writing, heaps and slat edges alike; and a tree shadow is just its limbs projected along the sun, p - L.xy / L.z * z, with blur proportional to z.",
       pipeline: [
-        "fragment · snow: rgba16float depth per texel (r now, g as it fell); the fingertip's stroke this frame cuts a rounded trench to a thin film and heaps a ridge beside it, and every texel relaxes toward its fallen depth",
+        "fragment · snow: rgba16float per texel (r depth now, g as it fell, b the dug-out amount diffused outward); the fingertip's stroke this frame cuts a rounded trench to a thin film, the ridge is drawn where b exceeds what was dug locally, and every texel relaxes toward its fallen depth",
         "fragment · picture: slats and gaps, snow lit from finite-difference normals with wrapped diffuse, blue sky fill, a fourteen-step shadow march, cavity shading and glints; wet teak where the snow is thin; dry leaves; 63 tree-shadow capsules inside their bounding box; 40 falling flakes with their shadows",
         "cpu · the fingertip (or the unseen heart), the tree grown once and cast along the sun each frame with a little sway, and the falling flakes",
       ],
@@ -1914,7 +1914,7 @@ const ENTRIES: readonly Entry[] = [
         "ping-pong textures",
       ],
       notes:
-        "Snow lies 0.024 screen heights deep; the fingertip is 0.016 across its radius and digs to 4% of the depth, with walls on smoothstep(0.25, 1, r / radius) squared and a ridge exp(-((r / radius - 1.35) / 0.35)^2) scaled by how far it moved, only beside the stroke so the rounded end leaves no ribs. Refill is 1 - exp(-dt / 45) per frame. The sun sits 9 to 43 degrees up from the upper right; the tree stands 0.44 tall with its foot placed so the crown's shadow lands lower left, and a limb's penumbra is 0.0012 + 0.012 times its height.",
+        "Snow lies 0.024 screen heights deep; the fingertip is 0.016 across its radius and digs to 4% of the depth, with walls on smoothstep(0.25, 1, r / radius) squared. The ridge is 0.6 * max(halo - dug, 0), where the halo relaxes each frame to the four-neighbour mean mixed 3.5% toward the local dug amount, a smooth blur about five texels wide; building it from per-frame stamps left steps wherever strokes doubled back. Refill is 1 - exp(-dt / 45) per frame. The sun sits 9 to 43 degrees up from the upper right; the tree stands 0.44 tall with its foot placed so the crown's shadow lands lower left, and a limb's penumbra is 0.0012 + 0.012 times its height.",
       source: "src/effects/snow",
     },
     accent: "#6f8fc8",

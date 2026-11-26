@@ -30,8 +30,13 @@ fn toUv(p: vec2f) -> vec2f {
   return vec2f(p.x / view.aspect, 1.0 - p.y);
 }
 
+/// Snow depth as seen: what is left after digging, plus the ridge of pushed
+/// snow just outside a trench, where the blurred dug-out amount exceeds
+/// what was dug right there.
 fn snowD(p: vec2f) -> f32 {
-  return textureSampleLevel(state, samp, toUv(p), 0.0).r;
+  let v = textureSampleLevel(state, samp, toUv(p), 0.0);
+  let dug = max(v.g - v.r, 0.0);
+  return v.r + 0.6 * max(v.b - dug, 0.0);
 }
 
 fn heightAt(p: vec2f) -> f32 {
