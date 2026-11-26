@@ -73,6 +73,10 @@ export function multipassSpecs(gpu, tgt, { fluxCount = 60_000 } = {}) {
       const { createFerro } = await import(path.join(root, "src/effects/ferro/pipeline.ts"))
       return createFerro({ gpu, target: tgt, quality: 1 }, await load("src/effects/ferro/ferro.wgsl"))
     },
+    snow: async () => {
+      const { createSnow } = await import(path.join(root, "src/effects/snow/pipeline.ts"))
+      return createSnow({ gpu, target: tgt, quality: 1 }, { snow: await load("src/effects/snow/snow.wgsl"), scene: await load("src/effects/snow/scene.wgsl") })
+    },
     vinyl: async () => {
       const { createVinyl } = await import(path.join(root, "src/effects/vinyl/pipeline.ts"))
       return createVinyl({ gpu, target: tgt, quality: 1 }, { deck: await load("src/effects/vinyl/deck.wgsl") })

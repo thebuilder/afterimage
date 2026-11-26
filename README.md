@@ -81,6 +81,7 @@ with `strictPort`, so a busy port fails loudly instead of moving; `shots.sh` and
 | 36 | **Rack Focus** | gathered bokeh on a perspective night avenue: every window, lamp and car at a real distance drawn as its circle of confusion with blade shape, rim, cat's eye and chromatic fringes, lights found per pixel along their rows in 1/z, still street cached until focus moves, wet road reflections, focus on a critically damped spring toward the depth under the pointer | aperture, exposure |
 | 37 | **Koi** | a garden pond from above: koi with ten-point follow-the-leader spines and a swimming wave, steering from wander, food, a quiet or quick hand, separation and edges; wave-equation ripples from the hand, food and gulps refracting stones, caustics and fish; fresnel sky and canopy reflection, lily pads and drifting ginkgo leaves | light, ripples |
 | 38 | **Side A** | a record deck from above under a still lamp, the pointer moving your eye: anisotropic groove reflection from dot(T, H) with diffraction fringes per wavelength, dust and scratches that glint as they turn, printed label, machined keys, pitch fader and tonearm reflecting a room environment with projected soft shadows, straight-grained walnut veneer; press to hold and scratch the record, motor torque brings it back; working START, 33/45 keys and pitch fader, opt-in Web Audio surface noise played at platter speed | volume, lamp |
+| 39 | **First Snow** | fresh snow on a teak bench from above as a ping-pong depth field: the fingertip digs a rounded trench to the wet wood and heaps a ridge beside it, every texel refills toward its fallen depth; fourteen-step sun shadow march, blue sky fill and scattered light in hollows, glints, a grown 63-limb bare tree cast along the sun with height-scaled penumbra, falling flakes with shadows; an unseen finger draws a heart | tip, sun, snowfall |
 
 ## Copy
 
@@ -184,7 +185,7 @@ These five are the gate, and the first four need nothing but Node:
 npm run typecheck           # tsc -b --noEmit
 npm run lint                # oxlint
 npm run build               # tsc -b && vite build
-npm run check:registry      # registry invariants: "38 effects checked, 0 problems"
+npm run check:registry      # registry invariants: "39 effects checked, 0 problems"
 npm run check:wgsl          # every .wgsl file: "27 shaders checked, 0 failing"
 ```
 

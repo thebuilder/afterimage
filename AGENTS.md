@@ -16,9 +16,10 @@ The README explains the architecture. This file is only the traps.
 
 Tailwind v4 with our own small set of tokens in the `@theme` block of
 `src/index.css`, plus a handful of `@utility` classes (`feed`, `legible`, `meta`,
-`range`, `sheet`). There is no component library: dialogs are native
-`<dialog>`, sliders are native `<input type="range">`, icons are inline SVG.
-Keep it that way unless there is a reason a native element cannot carry.
+`sheet`). There is no styled component library: dialogs are native
+`<dialog>`, the Tune sliders are UI SDK's headless Slider
+(`@ui-sdk/react`, pinned beta) styled here, icons are inline SVG. Prefer a
+native element or a UI SDK behaviour over anything heavier.
 
 On a feed screen only the effect's name sits on the picture, with the
 `legible` text shadow and no gradient. Number, date, category and tagline live
@@ -109,7 +110,7 @@ something worth leaving on with the UI hidden. One to three controls.
 
 ```bash
 npm run check:wgsl        # 27 shaders checked, 0 failing
-npm run check:registry    # 38 effects checked, 0 problems
+npm run check:registry    # 39 effects checked, 0 problems
 npm run typecheck
 npm run lint
 npm run build

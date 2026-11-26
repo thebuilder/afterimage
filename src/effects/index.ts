@@ -103,6 +103,9 @@ import koiPond from "./koi/pond.wgsl"
 import koiWater from "./koi/water.wgsl"
 import { createVinyl } from "./vinyl/pipeline"
 import vinylDeck from "./vinyl/deck.wgsl"
+import { createSnow } from "./snow/pipeline"
+import snowScene from "./snow/scene.wgsl"
+import snowSnow from "./snow/snow.wgsl"
 
 /** Terse control literal. `key` has to match the WGSL `Params` member for single-pass effects. */
 const ctl = (
@@ -1918,6 +1921,58 @@ const ENTRIES: readonly Entry[] = [
       ctl("lamp", "Lamp", 0.4, 1.8, 0.01, 1),
     ],
     create: (setup) => createVinyl(setup, { deck: vinylDeck }),
+  },
+  {
+    id: "snow",
+    touch: "drag",
+    // Shaded per pixel with a shadow march and the tree's limbs; capped so laptop GPUs stay calm.
+    maxDpr: 1.25,
+    name: "First Snow",
+    published: "2026-11-26",
+    category: "Winter",
+    tagline: "Fresh snow on a garden bench; write in it and the falling snow fills your writing back in.",
+    summary:
+      "A teak garden bench seen from straight above under a fresh fall of snow, the snow cushioned over each slat and slumping round its edges, with dark gaps between. A low winter sun throws the long blue shadow of a bare tree across it, trunk first and then every limb and twig, softer the higher they are, swaying a little in the wind. Flakes still drift down past you, a few dry maple leaves lie dusted with snow, and here and there a crystal catches the sun. Press and drag to write: the fingertip digs a trench down to the wet wood, its walls lit on one side and blue on the other, the snow it moves heaped along both sides. New snow keeps settling, so whatever you write fills back in over a minute or two. Left alone, an unseen finger draws a heart. Finger sets how wide the fingertip is, Sun how high the sun stands, and Snowfall how many flakes are falling.",
+    explanation: [
+      { title: "A depth of snow", body: "The bench is a grid of numbers: how deep the snow lies at each point. It is laid once, a little uneven from the wind and rounded off over every slat's edge, and the picture is lit from it as a surface." },
+      { title: "A fingertip through it", body: "Each frame the fingertip sweeps a short stroke. Inside it the snow drops to a thin film with rounded walls; just beside it the snow pushed aside piles into a soft ridge. Every frame the whole grid also creeps back toward the depth it fell to, which is the new snow filling your marks in." },
+      { title: "Low winter light", body: "From every point the picture looks toward the sun across the snow, so trench walls, heaps and slat edges cast shadows. In shadow the snow takes the blue of the sky, and light scattered deep in a trench comes back out blue too." },
+      { title: "A tree you never see", body: "A bare tree is grown once, sixty three limbs forking from a trunk, and each limb is cast onto the bench along the sun. The higher a branch, the wider its penumbra, so the trunk's shadow is crisp and the twigs blur into a lace." },
+    ],
+    rationale: {
+      idea: "Fresh snow on a garden bench under a low winter sun, where a fingertip writes into it and the snow still falling slowly fills the writing back in.",
+      firstSeconds: "Teak slats under a cushion of new snow, the long blue shadow of a bare tree reaching across them and swaying, flakes drifting past, and then an unseen finger draws a heart into the snow.",
+      interaction: "Press and drag to write: the fingertip digs a real trench down to the wet wood, heaps snow along both sides and the low sun shades its walls, and because snow keeps falling every mark fills back in over a minute or two, so the bench is always ready for the next message.",
+      headline: "The lower left: plain snow on the slats, crossed only by the soft outer twigs of the tree's shadow.",
+      nearest: "Misted, where a finger also writes and the mark fades. There it is a fogged window lit from behind; here the mark is a trench in a surface lit by a low sun, with walls, heaps, wet wood at the bottom and shadows, and it fills in from above as snow falls.",
+      risks: "Snow easily reads as flat white, so it carries wind drift, crystal relief, glints, blue light in the hollows and a sun shadow over every edge. A tree shadow made of noise would look fake, so it is a grown tree cast along the sun with a penumbra that widens with height. Two passes, the snow one only a single texel read, capped at 1.25x pixel density.",
+    },
+    technical: {
+      insight: "Snow depth is a height field, so one march toward the sun over it shades writing, heaps and slat edges alike; and a tree shadow is just its limbs projected along the sun, p - L.xy / L.z * z, with blur proportional to z.",
+      pipeline: [
+        "fragment · snow: rgba16float depth per texel (r now, g as it fell); the fingertip's stroke this frame cuts a rounded trench to a thin film and heaps a ridge beside it, and every texel relaxes toward its fallen depth",
+        "fragment · picture: slats and gaps, snow lit from finite-difference normals with wrapped diffuse, blue sky fill, a fourteen-step shadow march, cavity shading and glints; wet teak where the snow is thin; dry leaves; 63 tree-shadow capsules inside their bounding box; 40 falling flakes with their shadows",
+        "cpu · the fingertip (or the unseen heart), the tree grown once and cast along the sun each frame with a little sway, and the falling flakes",
+      ],
+      techniques: [
+        "height field simulation",
+        "soft shadow march",
+        "projected shadows",
+        "procedural tree",
+        "subsurface tint",
+        "ping-pong textures",
+      ],
+      notes:
+        "Snow lies 0.024 screen heights deep; the fingertip is 0.016 across its radius and digs to 4% of the depth, with walls on smoothstep(0.25, 1, r / radius) squared and a ridge exp(-((r / radius - 1.35) / 0.35)^2) scaled by how far it moved, only beside the stroke so the rounded end leaves no ribs. Refill is 1 - exp(-dt / 45) per frame. The sun sits 9 to 43 degrees up from the upper right; the tree stands 0.44 tall with its foot placed so the crown's shadow lands lower left, and a limb's penumbra is 0.0012 + 0.012 times its height.",
+      source: "src/effects/snow",
+    },
+    accent: "#6f8fc8",
+    controls: [
+      ctl("tip", "Finger", 0.6, 1.8, 0.01, 1),
+      ctl("sun", "Sun", 0, 1, 0.01, 0.3),
+      ctl("snowfall", "Snowfall", 0, 1, 0.01, 1),
+    ],
+    create: (setup) => createSnow(setup, { snow: snowSnow, scene: snowScene }),
   },
 ]
 
