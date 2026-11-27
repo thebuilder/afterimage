@@ -104,6 +104,8 @@ import vinylDeck from "./vinyl/deck.wgsl"
 import { createSnow } from "./snow/pipeline"
 import snowScene from "./snow/scene.wgsl"
 import snowSnow from "./snow/snow.wgsl"
+import { createCradle } from "./cradle/pipeline"
+import cradleScene from "./cradle/scene.wgsl"
 
 /** Terse control literal. `key` has to match the WGSL `Params` member for single-pass effects. */
 const ctl = (
@@ -1924,6 +1926,57 @@ const ENTRIES: readonly Entry[] = [
       ctl("snowfall", "Snowfall", 0, 1, 0.01, 1),
     ],
     create: (setup) => createSnow(setup, { snow: snowSnow, scene: snowScene }),
+  },
+  {
+    id: "cradle",
+    touch: "drag",
+    sound: true,
+    // Ray traced with up to five mirror bounces and two rays a pixel; capped so laptop GPUs stay calm.
+    maxDpr: 1.25,
+    name: "Cradle",
+    published: "2026-11-27",
+    category: "Desk",
+    tagline: "A Newton's cradle on a desk; take hold of a ball, or three, and let go.",
+    summary:
+      "A Newton's cradle under a studio softbox: five polished steel balls hung on fine nylon lines from a chrome frame, standing in a lacquered walnut base on a dark linen desk. Every ball is a mirror, so each one carries the softbox, a cool strip light, a white card, the walnut and its neighbours, and the neighbours inside them; the lacquer mirrors the balls back at a glancing angle, and the softbox lays a soft shadow of each ball and rod on the wood. It starts with one ball let go, so it clacks at once, one in and one out, and an unseen hand lifts an end again once it has nearly settled. Press a ball to take hold of it and drag to lift it; pull a middle one and the balls beside it come too, so you can let go of two or three and watch the same number fly out the other side. Moving the pointer leans the camera a little, so the reflections slide over the steel. Touch it and it starts to sound, with a speaker button to mute it: each knock is a click of steel on steel, louder and brighter the harder they meet. Air sets how quickly the swing dies away and Volume the level of the clacks.",
+    explanation: [
+      { title: "Five pendulums", body: "Each ball hangs on a line, and gravity pulls it back toward the bottom. The swing is worked out sixteen times a frame from the true pull at each angle, so a high lift swings a little slower than a low one, as a real pendulum does." },
+      { title: "Knocks pass straight through", body: "Where two balls meet, their speeds are traded: equal steel balls swap almost exactly, so the moving one stops dead and the one it hit takes over, and that happens down the row in one instant. Two balls in send two out because the second one arrives a moment later and goes through the same way. Each knock loses a little, which slowly gets the middle balls moving." },
+      { title: "Mirrors all the way down", body: "For every pixel a ray goes out from the camera and bounces off whatever it hits: off a ball into the softbox, or into the next ball and back. Up to five bounces, so the balls show each other inside each other. The wood and linen take the softbox as a large light, so the shadows under the balls are soft." },
+    ],
+    rationale: {
+      idea: "A Newton's cradle on a desk, ray traced in polished steel, that you can take hold of: lift one, two or three balls and that many fly out the other side.",
+      firstSeconds: "A steel cradle on a walnut base in a dark studio, the end ball already swinging in, a knock, and the far ball flying out, the softbox sliding across every mirror as they move.",
+      interaction: "A press takes hold of a real ball and drags it on its arc; pull a middle ball and its neighbours come with it, so you can choose how many to release and see the same number answer, with a clack for every knock once the sound is on.",
+      headline: "The left side of a wide screen and the top of a tall one: dark studio wall and plain linen, with nothing moving there.",
+      nearest: "Side A, the other object you put your hand on, with sound. There it is a flat deck seen from above under one lamp; here it is a ray-traced 3D object of mirrors in a studio, and the interaction is physics: collisions that carry a swing through the row.",
+      risks: "Mirrors in a dark room can read as black blobs, so the studio has a big softbox, a strip light and a white card for the steel to show, and the walnut bounces warm colour into the bottom of every ball. Five bounces and two rays a pixel could be heavy, so everything is intersected exactly with no marching, and the page caps it at 1.25x pixel density. A gimmick after one swing is the other risk, so the hand picks how many balls go, and the unseen hand keeps it alive.",
+    },
+    technical: {
+      insight: "A Newton's cradle is just pendulums and swaps: with equal masses, an elastic knock exchanges the two speeds, and sweeping the exchanges down the row from the side the blow came from is what sends exactly as many balls out as came in.",
+      pipeline: [
+        "cpu · five pendulums on lines 0.72 long, gravity on sin θ, sixteen substeps a frame, air damping; touching balls trade speeds by sequential impulses swept from the side of the blow until none are approaching, restitution 0.994; a held ball follows the pointer's ray where it meets the swing plane and carries what it pushes",
+        "fragment · per pixel, two rays on a diagonal; each exactly intersects five balls, five eyelets, six capsules for the frame, the base box and the desk plane, and bounces up to five times off steel, chrome and lacquer into a studio of a softbox, a strip light, a white card and a dark wall",
+        "fragment · walnut and linen lit by the softbox as an area light, with soft shadows from overlap of the light's disc with each ball and rod, sphere occlusion under the balls, a bevel on the base's edges, and the nylon lines drawn as hairlines with coverage from their width over the pixel's footprint",
+      ],
+      techniques: [
+        "ray tracing",
+        "mutual reflections",
+        "rigid body impulses",
+        "pendulum physics",
+        "area light soft shadows",
+        "synthesized sound",
+      ],
+      notes:
+        "Balls are 0.1 in radius and touch at rest; g / L is 30, so a swing takes about 1.15 s. Contacts are judged on the angles, since equal lines on touching pivots meet exactly when θi reaches θi+1. Impulses use v' = mean -+ e (vi - vj) / 2 for free pairs and carry the free ball at the hand's speed when one is held, so pulling a middle ball lifts its neighbours rather than flinging them. A held ball moves at most 7 radians a second toward the pointer and stops at 1.25 rad. The soft shadow treats the softbox as a disc 0.34 radians in radius: a rod covers a strip of it, a ball a disc, and the cover is the overlap. A chrome rod's rim fades out below a grazing cosine of 0.25 so it cannot sparkle thinner than a pixel. The clack is a millisecond of filtered noise over four decaying inharmonic partials near 2.6, 4.2, 6.0 and 8.9 kHz, four takes in rotation, its level and brightness set by how fast the balls met, and panned to where.",
+      source: "src/effects/cradle",
+    },
+    accent: "#b8b4ac",
+    controls: [
+      ctl("volume", "Volume", 0, 1, 0.01, 0.6),
+      ctl("air", "Air", 0, 1, 0.01, 0.2),
+    ],
+    create: (setup) => createCradle(setup, { scene: cradleScene }),
   },
 ]
 

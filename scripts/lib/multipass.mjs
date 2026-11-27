@@ -81,6 +81,10 @@ export function multipassSpecs(gpu, tgt, { fluxCount = 60_000 } = {}) {
       const { createVinyl } = await import(path.join(root, "src/effects/vinyl/pipeline.ts"))
       return createVinyl({ gpu, target: tgt, quality: 1 }, { deck: await load("src/effects/vinyl/deck.wgsl") })
     },
+    cradle: async () => {
+      const { createCradle } = await import(path.join(root, "src/effects/cradle/pipeline.ts"))
+      return createCradle({ gpu, target: tgt, quality: 1 }, { scene: await load("src/effects/cradle/scene.wgsl") })
+    },
     koi: async () => {
       const { createKoi } = await import(path.join(root, "src/effects/koi/pipeline.ts"))
       return createKoi({ gpu, target: tgt, quality: 1 }, { water: await load("src/effects/koi/water.wgsl"), pond: await load("src/effects/koi/pond.wgsl") })
