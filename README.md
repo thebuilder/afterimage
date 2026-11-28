@@ -82,6 +82,7 @@ with `strictPort`, so a busy port fails loudly instead of moving; `shots.sh` and
 | 37 | **Side A** | a record deck from above under a still lamp, the pointer moving your eye: anisotropic groove reflection from dot(T, H) with diffraction fringes per wavelength, dust and scratches that glint as they turn, printed label, machined keys, pitch fader and tonearm reflecting a room environment with projected soft shadows, straight-grained walnut veneer; press to hold and scratch the record, motor torque brings it back; working START, 33/45 keys and pitch fader, opt-in Web Audio surface noise played at platter speed | volume, lamp |
 | 38 | **First Snow** | fresh snow on a teak bench from above as a ping-pong depth field: the fingertip digs a rounded trench to the wet wood and heaps a ridge beside it, every texel refills toward its fallen depth; fourteen-step sun shadow march, blue sky fill and scattered light in hollows, glints, a grown 63-limb bare tree cast along the sun with height-scaled penumbra, falling flakes with shadows; an unseen finger draws a heart | tip, sun, snowfall |
 | 39 | **Cradle** | a Newton's cradle, ray traced: five steel balls, eyelets, a capsule frame, a walnut box and a linen plane intersected exactly, up to five mirror bounces and two rays a pixel in a studio of softbox, strip and card; area-light soft shadows from disc overlap; CPU pendulums with sequential-impulse knocks swept from the side of the blow, grab a ball on its arc, synthesized clacks | volume, air |
+| 40 | **Mobile** | a hanging mobile in a gallery: six arms balanced from the plates' areas turning under room air, the hand's air (pointer velocity, passed up the chain) and a grabbed plate; plates as bent-ellipse outlines on vertical planes and wires as capsules, antialiased from neighbouring rays; two spotlights with cones, wall and floor shadows from outline distance against a lamp-size penumbra | air, light |
 
 ## Copy
 
@@ -185,7 +186,7 @@ These five are the gate, and the first four need nothing but Node:
 npm run typecheck           # tsc -b --noEmit
 npm run lint                # oxlint
 npm run build               # tsc -b && vite build
-npm run check:registry      # registry invariants: "39 effects checked, 0 problems"
+npm run check:registry      # registry invariants: "40 effects checked, 0 problems"
 npm run check:wgsl          # every .wgsl file: "27 shaders checked, 0 failing"
 ```
 
