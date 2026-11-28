@@ -31,14 +31,12 @@ const FLOOR = -1.05;
 const WR = 0.0032; // wire radius
 
 // Two spotlights: position, radius of the lamp, aim point, cone (cos inner, cos outer).
-const L1 = vec3f(-1.7, 2.7, 2.3);
-const L1R = 0.018;
-const L1AIM = vec3f(0.2, 0.25, -1.15);
-const L1COL = vec3f(1.0, 0.86, 0.68) * 1.05;
+const L1 = vec3f(-1.05, 2.05, 3.3);
+const L1R = 0.01;
+const L1AIM = vec3f(0.3, 0.05, -1.15);
+const L1COL = vec3f(1.0, 0.88, 0.72) * 1.15;
 const L2 = vec3f(1.6, 2.4, 3.0);
-const L2R = 0.1;
-const L2AIM = vec3f(0.35, 0.15, -1.15);
-const L2COL = vec3f(0.7, 0.8, 1.0) * 0.28;
+const L2COL = vec3f(0.75, 0.82, 1.0) * 0.12;
 
 fn sq(x: f32) -> f32 { return x * x; }
 
@@ -136,10 +134,12 @@ fn spot(p: vec3f, n: vec3f, lp: vec3f, aim: vec3f, ci: f32, co: f32) -> f32 {
 
 fn lightAt(p: vec3f, n: vec3f) -> vec3f {
   var c = vec3f(0.0);
-  let s1 = spot(p, n, L1, L1AIM, 0.94, 0.78);
+  // One spotlight makes the picture: a round pool on the wall with a soft
+  // but definite rim, and one shadow of everything in it.
+  let s1 = spot(p, n, L1, L1AIM, 0.955, 0.94);
   if (s1 > 0.0) { c += L1COL * s1 * visible(p, L1, L1R); }
-  let s2 = spot(p, n, L2, L2AIM, 0.9, 0.76);
-  if (s2 > 0.0) { c += L2COL * s2 * visible(p, L2, L2R); }
+  // The rest of the room's light, broad and shadowless.
+  c += L2COL * max(dot(n, normalize(L2 - p)), 0.0);
   return c * view.shift.z;
 }
 
@@ -192,6 +192,18 @@ fn aces(x: vec3f) -> vec3f {
 
   var col = room(ro, rd);
 
+  // A trace of dust in the air shows the spotlight's beam coming in from the
+  // upper left, so you can see where the light, and the shadows, come from.
+  let tw = (WALL - ro.z) / rd.z;
+  let axis = normalize(L1AIM - L1);
+  var beam = 0.0;
+  for (var k = 0; k < 12; k++) {
+    let q = ro + rd * (tw * (f32(k) + hash21(uv * view.res + f32(k))) / 12.0);
+    let l = normalize(q - L1);
+    beam += smoothstep(0.94, 0.958, dot(l, axis)) / (1.0 + 0.15 * dot(q - L1, q - L1));
+  }
+  col += L1COL * beam / 12.0 * tw * 0.05 * view.shift.z;
+
   // Everything in front of the wall that this pixel touches, back to front.
   var ts: array<f32, 8>;
   var cs: array<vec4f, 8>;
@@ -215,14 +227,14 @@ fn aces(x: vec3f) -> vec3f {
     let pa = view.paint[i];
     let brush = vnoise(vec2f(h.y * 6.0, h.z * 180.0) + f32(i) * 7.0);
     let alb = pa.rgb * (0.94 + 0.08 * brush);
-    var c = alb * (vec3f(0.11, 0.105, 0.1) + lightAt(p + n * 0.002, n));
+    var c = alb * (vec3f(0.07, 0.068, 0.066) + lightAt(p + n * 0.002, n));
     for (var k = 0; k < 2; k++) {
       let lp = select(L1, L2, k == 1);
       let lc = select(L1COL, L2COL, k == 1);
       let l = normalize(lp - p);
       let hv = normalize(l - rd);
-      let sp = pow(max(dot(n, hv), 0.0), 24.0) * pa.w * max(dot(n, l), 0.0);
-      c += lc * sp * 0.25 * view.shift.z;
+      let sp = pow(max(dot(n, hv), 0.0), 70.0) * pa.w * max(dot(n, l), 0.0);
+      c += lc * sp * 0.12 * view.shift.z;
     }
     // A hair of bright edge where the cut steel catches the lamp.
     c += vec3f(0.06) * smoothstep(-w * 2.0, 0.0, d) * a * max(dot(normalize(L1 - p), plateU(i)), 0.0);
